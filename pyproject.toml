@@ -19,6 +19,9 @@ dependencies = [
 requires = ["uv_build>=0.9.22,<0.10"]
 build-backend = "uv_build"
 
+[tool.uv.build-backend]
+module-root = ""
+
 [dependency-groups]
 dev = [
     "httpx>=0.28.1",
