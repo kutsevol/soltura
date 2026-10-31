@@ -1,6 +1,6 @@
 [project]
 name = "soltura"
-version = "0.6.0"
+version = "0.6.1"
 description = "Personal Spanish tutor that trains reading, writing, listening and speaking around one learner model."
 readme = "README.md"
 requires-python = ">=3.12"

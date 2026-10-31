@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.6.1 (2026-10-31)
+
+### Bug Fixes
+
+- **reading**: Keep texts natural when simplifying them
+  ([#11](https://github.com/kutsevol/soltura/pull/11),
+  [`ee8c3e0`](https://github.com/kutsevol/soltura/commit/ee8c3e0c2a543ac1c13dce280ffdb47429d01985))
+
+
 ## v0.6.0 (2026-10-31)
 
 ### Features
