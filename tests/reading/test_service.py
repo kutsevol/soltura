@@ -15,6 +15,7 @@ from soltura.learner.models import (
 )
 from soltura.reading.service import (
     UNRANKED,
+    GeneratedText,
     Gloss,
     prepare_text,
     save_tapped_word,
@@ -169,3 +170,26 @@ def test_split_for_reading_keeps_each_word_with_its_sentence() -> None:
     assert sentences == [["Ayer fue al médico.", "¿Qué te dijo?"], ["Nada, todo bien."]]
     words = [s.text for s in paragraphs[0][1] if s.is_word]
     assert words == ["Qué", "te", "dijo"]
+
+
+async def test_simplification_names_only_the_rarest_words_over_the_budget(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, know: KnowFn
+) -> None:
+    await know(f"{EASY_TEXT.title}. {EASY_TEXT.text}")
+    session.add_all(
+        [
+            LexemeFactory.build(lemma="nieto", frequency_rank=3000),
+            LexemeFactory.build(lemma="bicicleta", frequency_rank=2500),
+        ]
+    )
+    await session.flush()
+    long_text = (
+        " ".join([EASY_TEXT.text] * 2) + " Voy con mi nieto, mi bicicleta y mi arrendatario."
+    )
+    llm.answer(GeneratedText(title=EASY_TEXT.title, text=long_text), EASY_TEXT)
+
+    await prepare_text(session, llm, learner, NOW, topic="la playa")
+
+    named = llm.prompts[1].split(": ", 1)[1].split(". Replace", 1)[0]
+    # 39 words allow one unknown: the two rarest go, the more frequent "bicicleta" stays.
+    assert named == "arrendatario, nieto"

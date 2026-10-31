@@ -1,7 +1,8 @@
 <h2>{{ prepared.title }}</h2>
-{% if prepared.below_target %}
-  <p class="note">Текст може бути складним: знайомих слів {{ (prepared.coverage * 100) | round | int }}%.</p>
-{% endif %}
+<p class="note">
+  Знайомих слів: {{ (prepared.coverage * 100) | round | int }}%{% if prepared.attempts > 1 %} · спрощень: {{ prepared.attempts - 1 }}{% endif %}
+  {%- if prepared.below_target %} · текст може бути складним{% endif %}
+</p>
 {% for paragraph in paragraphs %}
   <p>
     {%- for sentence in paragraph -%}

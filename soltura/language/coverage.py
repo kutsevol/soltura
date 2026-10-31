@@ -1,6 +1,7 @@
+import math
 from collections import Counter
-from collections.abc import Set
-from dataclasses import dataclass
+from collections.abc import Mapping, Set
+from dataclasses import dataclass, field
 
 from soltura.language.nlp import Token
 
@@ -10,6 +11,7 @@ class Coverage:
     ratio: float
     total_words: int
     unknown_lemmas: list[str]
+    unknown_counts: dict[str, int] = field(default_factory=dict)
 
 
 def measure_coverage(tokens: list[Token], known_lemmas: Set[str]) -> Coverage:
@@ -24,4 +26,25 @@ def measure_coverage(tokens: list[Token], known_lemmas: Set[str]) -> Coverage:
         ratio=known_count / len(tokens),
         total_words=len(tokens),
         unknown_lemmas=[lemma for lemma, _ in unknown.most_common()],
+        unknown_counts=dict(unknown.most_common()),
     )
+
+
+def words_to_replace(coverage: Coverage, ranks: Mapping[str, int], target: float) -> list[str]:
+    # A text at the target still holds a few unknown words, and those are what the
+    # learner meets for the first time. Only the excess goes, rarest first; a lemma
+    # with no frequency rank counts as the rarest.
+    allowed = math.floor(coverage.total_words * (1 - target))
+    excess = sum(coverage.unknown_counts.values()) - allowed
+    if excess <= 0:
+        return []
+    rarest_first = sorted(
+        coverage.unknown_counts, key=lambda lemma: ranks.get(lemma, math.inf), reverse=True
+    )
+    chosen: list[str] = []
+    for lemma in rarest_first:
+        if excess <= 0:
+            break
+        chosen.append(lemma)
+        excess -= coverage.unknown_counts[lemma]
+    return chosen
