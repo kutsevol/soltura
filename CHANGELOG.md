@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.5.0 (2026-10-31)
+
+### Features
+
+- **srs**: Add the FSRS review service ([#9](https://github.com/kutsevol/soltura/pull/9),
+  [`405bf3d`](https://github.com/kutsevol/soltura/commit/405bf3d029eef635744e0c475bb5ee82ecd0a94c))
+
+
 ## v0.4.0 (2026-10-31)
 
 ### Features
