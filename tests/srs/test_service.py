@@ -209,8 +209,9 @@ async def test_forgetting_a_reviewed_card_sends_it_to_relearning(
         scheduler=scheduler,
     )
 
+    card_id = card.id
     session.expire_all()
-    stored = await session.get(MemoryCard, card.id)
+    stored = await session.get(MemoryCard, card_id)
     assert stored is not None
     assert stored.state == CardState.RELEARNING
     assert stored.due < NOW + timedelta(days=4)
