@@ -72,4 +72,4 @@ format:
 	uv run ruff format .
 
 type-check:
-	uv run mypy soltura/
+	uv run mypy soltura/ tests/

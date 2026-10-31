@@ -27,9 +27,18 @@ def database_url() -> Iterator[str]:
 
 @pytest.fixture
 async def session(database_url: str) -> AsyncIterator[AsyncSession]:
+    # Each test runs inside one outer transaction that is rolled back on teardown;
+    # commits in the code under test become savepoints, so no test sees another's rows.
     engine = create_async_engine(database_url, poolclass=NullPool)
-    async with AsyncSession(engine, expire_on_commit=False) as session:
-        yield session
+    async with engine.connect() as connection:
+        transaction = await connection.begin()
+        async with AsyncSession(
+            bind=connection,
+            expire_on_commit=False,
+            join_transaction_mode="create_savepoint",
+        ) as session:
+            yield session
+        await transaction.rollback()
     await engine.dispose()
 
 
