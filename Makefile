@@ -1,4 +1,4 @@
-.PHONY: help install up down ps logs db-shell run migrate migrate-down migrate-create migrate-history test lint format type-check
+.PHONY: help install up down ps logs db-shell run migrate migrate-down migrate-create migrate-history seed-lexemes test lint format type-check
 
 help:
 	@echo "Available commands:"
@@ -16,6 +16,7 @@ help:
 	@echo "  make migrate-down    - Roll back one migration"
 	@echo "  make migrate-create  - Create an empty migration to write by hand (MSG='description')"
 	@echo "  make migrate-history - Show migration history"
+	@echo "  make seed-lexemes    - Load ranked Spanish lemmas into the lexeme table"
 	@echo ""
 	@echo "  make test            - Run tests (needs Docker for the Postgres test container)"
 	@echo "  make lint            - Run ruff linter and format check"
@@ -59,6 +60,9 @@ migrate-create:
 
 migrate-history:
 	uv run alembic history --verbose
+
+seed-lexemes:
+	uv run python -m soltura.language.seed
 
 test:
 	uv run pytest

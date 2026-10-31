@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.4.0 (2026-10-31)
+
+### Features
+
+- **language**: Add lemmatization, coverage and the lexeme seed
+  ([#8](https://github.com/kutsevol/soltura/pull/8),
+  [`be4697f`](https://github.com/kutsevol/soltura/commit/be4697f996a1c23e23044da4d7f4083e3eb21b76))
+
+
 ## v0.3.0 (2026-10-31)
 
 ### Continuous Integration
