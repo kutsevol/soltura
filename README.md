@@ -71,6 +71,11 @@ Curriculum and frequency: Instituto Cervantes PCIC, RAE corpora (CREA, CORPES XX
 
 We do not copy protected textbook, podcast or article content: real materials are linked, adapted versions are generated.
 
+In use today:
+
+- Word frequencies: [wordfreq](https://github.com/rspeer/wordfreq) by Robyn Speer, data under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+- Lemmas and part-of-speech tags: spaCy's [`es_core_news_md`](https://github.com/explosion/spacy-models) model, GPL-3.0 (trained on AnCora); it runs only on the server and is not distributed.
+
 ## Roadmap
 
 1. **MVP:** learner model, FSRS, reading with adaptation and word saving, recall warm-up.

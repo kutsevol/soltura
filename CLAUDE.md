@@ -8,6 +8,7 @@ Everything visible outside the repo's working conversation is written in English
 
 ## Code Changes
 
+- **Never add or rename an import in a separate edit from the code that uses it.** A formatter runs after every edit and deletes imports that are unused at that moment, so the import vanishes and the next edit fails with a `NameError`. Put the import and its first use in the same edit, or `Write` the whole file.
 - Keep modifications minimal and localized. Do not modify base classes, shared helpers, or unrelated files unless explicitly asked. Prefer targeted edits over broad refactoring.
 - When cleaning up or deleting code/config, do it thoroughly in a single pass. Check ALL related references (imports, configs, migrations, tests) before presenting the result.
 - When the user shares code review feedback, analyze all comments first, then implement the valid ones in one focused pass. Do not expand scope beyond what the comments ask for.
