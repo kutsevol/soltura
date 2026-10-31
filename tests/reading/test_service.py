@@ -24,7 +24,8 @@ from soltura.reading.service import (
 )
 from soltura.srs.service import save_word
 from tests.factories import LexemeFactory
-from tests.reading.conftest import EASY_TEXT, HARD_TEXT, FakeLLM, KnowFn
+from tests.fakes import FakeLLM
+from tests.reading.conftest import EASY_TEXT, HARD_TEXT, KnowFn
 
 NOW = datetime(2026, 10, 31, 12, 0, tzinfo=UTC)
 

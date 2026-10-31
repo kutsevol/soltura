@@ -2,19 +2,24 @@ import logging
 import sys
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.config import settings
 from soltura.db import get_engine, get_session
+from soltura.learner.dependencies import current_learner
+from soltura.learner.models import Learner
+from soltura.learner.repository import get_due_cards
 from soltura.llm.client import LLMNotConfiguredError, LLMUnavailableError
 from soltura.reading.routes import router as reading_router
 from soltura.templating import templates
+from soltura.warmup.routes import router as warmup_router
 
 logger = logging.getLogger(__name__)
 
@@ -57,15 +62,24 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Soltura", lifespan=lifespan)
     app.add_exception_handler(LLMUnavailableError, llm_unavailable)
     app.include_router(reading_router)
+    app.include_router(warmup_router)
 
     @app.get("/health")
     async def health(session: Annotated[AsyncSession, Depends(get_session)]) -> HealthResponse:
         await session.execute(text("SELECT 1"))
         return HealthResponse(status="ok")
 
-    @app.get("/", response_class=HTMLResponse)
-    async def index(request: Request) -> HTMLResponse:
-        return templates.TemplateResponse(request, "index.html")
+    @app.get("/")
+    async def index(
+        session: Annotated[AsyncSession, Depends(get_session)],
+        learner: Annotated[Learner, Depends(current_learner)],
+    ) -> RedirectResponse:
+        # A session opens on the warm-up when cards are due and goes on to reading.
+        if learner.id is not None and await get_due_cards(
+            session, learner_id=learner.id, now=datetime.now(UTC), limit=1
+        ):
+            return RedirectResponse("/warmup", status_code=303)
+        return RedirectResponse("/reading", status_code=303)
 
     return app
 

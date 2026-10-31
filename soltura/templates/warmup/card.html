@@ -1,0 +1,20 @@
+<form hx-post="/warmup/answer" hx-target="#card" class="stack">
+  {% if item.knowledge_type == "recall" %}
+    <p class="note">Впишіть пропущене іспанське слово</p>
+    <p>{{ item.translation }}</p>
+    <p class="sentence">{{ before }}<span class="gap">_____</span>{{ after }}</p>
+    <input name="answer" autocomplete="off" autocapitalize="off" spellcheck="false" autofocus>
+  {% else %}
+    <p class="note">Що означає виділене слово в цьому реченні? Відповідь українською.</p>
+    <p class="sentence">{{ before }}<mark>{{ target }}</mark>{{ after }}</p>
+    <input name="answer" autocomplete="off" autofocus>
+  {% endif %}
+  <input type="hidden" name="item" value="{{ item_json }}">
+  <input type="hidden" name="queue" value="{{ queue_json }}">
+  <input type="hidden" name="started_at" value="{{ started_at }}">
+  <div class="row">
+    <button type="submit">Перевірити</button>
+    <button type="submit" name="give_up" value="1">Не знаю</button>
+  </div>
+  <p class="note">Ще карток: {{ remaining }}</p>
+</form>

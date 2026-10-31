@@ -10,7 +10,8 @@ from soltura.db import get_session
 from soltura.learner.models import Learner, Lexeme
 from soltura.llm.client import LLMClient, get_llm
 from soltura.reading.service import Gloss
-from tests.reading.conftest import EASY_TEXT, FakeLLM, KnowFn
+from tests.fakes import FakeLLM
+from tests.reading.conftest import EASY_TEXT, KnowFn
 
 
 @pytest.fixture
