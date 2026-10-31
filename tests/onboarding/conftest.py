@@ -1,10 +1,15 @@
+from collections.abc import AsyncIterator
 from typing import cast
 
 import pytest
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from soltura.learner.models import Lexeme
-from soltura.llm.client import Effort, SchemaT
+from soltura.app import create_app
+from soltura.config import settings
+from soltura.db import get_session
+from soltura.learner.models import Learner, Lexeme
+from soltura.llm.client import Effort, SchemaT, get_llm
 from soltura.onboarding.service import BANDS
 from soltura.practice.checking import TranslationVerdict
 from tests.factories import LexemeFactory
@@ -51,3 +56,15 @@ async def banded_lexemes(session: AsyncSession) -> list[Lexeme]:
     session.add_all(lexemes)
     await session.flush()
     return lexemes
+
+
+@pytest.fixture
+async def onboarding_client(
+    session: AsyncSession, learner: Learner, judge: JudgeByAnswer, monkeypatch: pytest.MonkeyPatch
+) -> AsyncIterator[AsyncClient]:
+    monkeypatch.setattr(settings.auth, "dev_telegram_user_id", learner.telegram_user_id)
+    app = create_app()
+    app.dependency_overrides[get_session] = lambda: session
+    app.dependency_overrides[get_llm] = lambda: judge
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        yield client
