@@ -97,6 +97,8 @@ async def save_word(
                     "lexeme_id": lexeme_id,
                     "knowledge_type": knowledge_type,
                     "due": now,
+                    # Core inserts skip model defaults; a new FSRS card starts at learning step 0.
+                    "step": 0,
                 }
                 for knowledge_type in KnowledgeType
             ]
@@ -143,7 +145,8 @@ async def review(
 
 def interleave(cards: list[MemoryCard]) -> list[MemoryCard]:
     # Keeps the oldest-first order but never puts the same word twice in a row, and
-    # switches between recognizing and recalling whenever the queue allows it.
+    # switches between recognizing and recalling whenever the queue allows it. When
+    # only one word's cards are left, they do come back to back.
     remaining = list(cards)
     ordered: list[MemoryCard] = []
     while remaining:

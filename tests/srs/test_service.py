@@ -11,6 +11,7 @@ from soltura.learner.models import (
     Learner,
     LearnerLexeme,
     Lexeme,
+    LexemeOrigin,
     LexemeStatus,
     MemoryCard,
     Rating,
@@ -37,6 +38,8 @@ async def test_saving_a_word_creates_both_cards_due_now(
         KnowledgeType.RECOGNIZE,
     ]
     assert all(card.due == NOW and card.state == CardState.LEARNING for card in cards)
+    assert all(card.step == 0 for card in cards)
+    assert all(card.stability is None and card.difficulty is None for card in cards)
     status = (await session.execute(select(LearnerLexeme.status))).scalar_one()
     assert status == LexemeStatus.LEARNING
 
@@ -162,3 +165,52 @@ async def test_the_due_queue_leaves_out_cards_not_yet_due(
     assert (
         await session.execute(select(MemoryCard.id).where(col(MemoryCard.due) > NOW))
     ).scalars().all() == [card.id]
+
+
+async def test_saving_a_known_word_marks_it_as_learning(
+    session: AsyncSession, learner: Learner, lexemes: list[Lexeme]
+) -> None:
+    assert learner.id is not None and lexemes[1].id is not None
+    session.add(
+        LearnerLexeme(
+            learner_id=learner.id,
+            lexeme_id=lexemes[1].id,
+            status=LexemeStatus.KNOWN,
+            origin=LexemeOrigin.ONBOARDING,
+        )
+    )
+    await session.flush()
+
+    await save_word(session, learner.id, lexemes[1].id, "Estoy en casa.", NOW)
+
+    session.expire_all()
+    row = (await session.execute(select(LearnerLexeme))).scalar_one()
+    assert (row.status, row.origin) == (LexemeStatus.LEARNING, LexemeOrigin.ONBOARDING)
+
+
+async def test_forgetting_a_reviewed_card_sends_it_to_relearning(
+    session: AsyncSession,
+    learner: Learner,
+    lexemes: list[Lexeme],
+    scheduler: fsrs.Scheduler,
+) -> None:
+    assert learner.id is not None and lexemes[0].id is not None
+    card, _ = await save_word(session, learner.id, lexemes[0].id, "Es tarde.", NOW)
+    for moment in [NOW, NOW + timedelta(minutes=10)]:
+        await review(session, card, Rating.GOOD, ReviewSource.WARMUP, moment, scheduler=scheduler)
+    assert card.state == CardState.REVIEW
+
+    await review(
+        session,
+        card,
+        Rating.AGAIN,
+        ReviewSource.WARMUP,
+        NOW + timedelta(days=3),
+        scheduler=scheduler,
+    )
+
+    session.expire_all()
+    stored = await session.get(MemoryCard, card.id)
+    assert stored is not None
+    assert stored.state == CardState.RELEARNING
+    assert stored.due < NOW + timedelta(days=4)
