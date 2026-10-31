@@ -89,4 +89,14 @@ We do not copy protected textbook, podcast or article content: real materials ar
 
 ## Development
 
-Python 3.12, dependencies managed with [uv](https://docs.astral.sh/uv/). Build and run commands will appear together with the first code.
+Requirements: Python 3.12, [uv](https://docs.astral.sh/uv/), Docker.
+
+```bash
+make install            # dependencies and pre-commit hooks
+cp .env.example .env
+make up                 # local Postgres on port 5433
+make migrate
+make run                # http://localhost:8000
+```
+
+`make test` runs the suite against a throwaway Postgres container, so it needs Docker but not `make up`. `make help` lists every command.
