@@ -2,6 +2,21 @@
 
 <!-- version list -->
 
+## v0.3.0 (2026-10-31)
+
+### Continuous Integration
+
+- Release on every push to main with python-semantic-release
+  ([#7](https://github.com/kutsevol/soltura/pull/7),
+  [`6775086`](https://github.com/kutsevol/soltura/commit/677508607bfaf41684ee0de7178366e41912c20e))
+
+### Features
+
+- **learner**: Add the learner model tables and repositories
+  ([#6](https://github.com/kutsevol/soltura/pull/6),
+  [`91e250a`](https://github.com/kutsevol/soltura/commit/91e250aab3c6d5304190e25d0bfeb6bddaf484ec))
+
+
 ## [0.2.0](https://github.com/kutsevol/soltura/compare/v0.1.0...v0.2.0) (2026-10-31)
 
 
