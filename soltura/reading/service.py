@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from soltura.language.coverage import measure_coverage
+from soltura.language.coverage import measure_coverage, words_to_replace
 from soltura.language.nlp import analyze
 from soltura.learner.models import (
     CefrLevel,
@@ -31,17 +31,20 @@ from soltura.srs.service import due_queue, review, save_word
 TARGET_COVERAGE = 0.95
 MAX_SIMPLIFICATIONS = 2
 # Until onboarding measures the learner, the most frequent lemmas stand in for what an
-# A2 learner knows, so the first texts are not all flagged as too hard.
-BASELINE_KNOWN_RANK = 1500
+# A2 learner knows. wordfreq ranks web text, so everyday words like "cocina", "beber"
+# or "cansado" sit between 1,500 and 3,000; at 1,500 live texts on family or sport
+# came out at 83-88% and were stripped of exactly those words.
+BASELINE_KNOWN_RANK = 3000
 MAX_DUE_LEMMAS = 10
-MAX_NAMED_UNKNOWN = 15
 UNRANKED = 1_000_000
 
 WRITER_SYSTEM = (
     "You write short Spanish reading texts for an adult Ukrainian speaker who lives in Spain "
     "and is learning Spanish. Write natural, everyday Spanish from Spain at the requested CEFR "
     "level: short sentences, frequent words, and the grammar a learner at that level has met. "
-    "Return only the title and the text: no translation, glossary or notes."
+    "Call things by their own word (nieto, bicicleta, traducir) rather than a roundabout "
+    "phrase. Return only the title and the finished text: no translation, glossary, notes or "
+    "corrections of yourself inside the text."
 )
 
 GLOSS_SYSTEM = (
@@ -120,12 +123,14 @@ def _first_draft_prompt(level: str, topic: str, due: list[str], source_text: str
     return f"CEFR level {level}. Topic: {topic}. About 120 to 180 words.{wanted}"
 
 
-def _simplify_prompt(level: str, draft: GeneratedText, unknown: list[str], due: list[str]) -> str:
+def _simplify_prompt(level: str, draft: GeneratedText, rare: list[str], due: list[str]) -> str:
     keep = f" Keep these words, the learner is reviewing them: {', '.join(due)}." if due else ""
     return (
-        f"This text is too hard for CEFR level {level}. Replace these words with simpler, more "
-        f"frequent ones, or rephrase around them, keeping the meaning and the length: "
-        f"{', '.join(unknown)}.{keep}\n\n<title>{draft.title}</title>\n<text>\n{draft.text}\n</text>"
+        f"A few words in this text are too rare for CEFR level {level}: {', '.join(rare)}. "
+        "Replace each with a simpler word that means the same, or rewrite its sentence without "
+        "it. Never describe a word with a roundabout phrase ('el hijo de mi hijo' for 'nieto'): "
+        f"if no simple word fits, keep the original. Change nothing else.{keep}"
+        f"\n\n<title>{draft.title}</title>\n<text>\n{draft.text}\n</text>"
     )
 
 
@@ -152,10 +157,15 @@ async def prepare_text(
     attempts = 1
     coverage = measure_coverage(analyze(f"{draft.title}. {draft.text}"), known)
     while coverage.ratio < TARGET_COVERAGE and attempts <= MAX_SIMPLIFICATIONS:
+        ranks = {
+            lexeme.lemma: lexeme.frequency_rank
+            for lexeme in await get_lexemes_by_lemmas(session, coverage.unknown_lemmas)
+        }
+        rare = words_to_replace(coverage, ranks, TARGET_COVERAGE)
         draft = await llm(
             GeneratedText,
             system=WRITER_SYSTEM,
-            prompt=_simplify_prompt(level, draft, coverage.unknown_lemmas[:MAX_NAMED_UNKNOWN], due),
+            prompt=_simplify_prompt(level, draft, rare, due),
             effort="medium",
         )
         attempts += 1
