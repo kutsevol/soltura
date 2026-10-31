@@ -1,0 +1,16 @@
+<div class="stack">
+  {% if result.known_rank %}
+    <p><strong>Готово.</strong> Знайомими позначено {{ result.known_rank }} найчастотніших слів.</p>
+  {% else %}
+    <p><strong>Готово.</strong> Поки що жодна частотна група не пройдена: тексти лишаться найпростішими.</p>
+  {% endif %}
+  <table>
+    <thead><tr><th>Слова за частотністю</th><th>Правильно</th></tr></thead>
+    <tbody>
+      {% for band in result.bands %}
+        <tr><td>до {{ band.max_rank }}</td><td>{{ band.correct }} з {{ band.total }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p><a href="/reading">Перейти до читання</a></p>
+</div>

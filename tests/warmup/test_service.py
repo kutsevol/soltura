@@ -14,13 +14,13 @@ from soltura.learner.models import (
 )
 from soltura.llm.client import LLMUnavailableError
 from soltura.practice.checking import TranslationVerdict
+from soltura.practice.text import split_around
 from soltura.warmup.service import (
     ContextSentence,
     WarmupItem,
     answer_item,
     build_warmup,
     recall_before_recognize,
-    split_around,
 )
 from tests.factories import LearnerFactory
 from tests.fakes import FakeLLM
