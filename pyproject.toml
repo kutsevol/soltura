@@ -57,3 +57,34 @@ ignore_missing_imports = true
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+commit_message = "chore(release): {version}"
+tag_format = "v{version}"
+allow_zero_version = true
+major_on_zero = false
+# uv.lock records the project's own version, and semantic-release does not know about
+# it. `version` applies the new version to pyproject.toml, stages `assets`, and only
+# then runs build_command, so `uv lock` reads the bumped version and the refreshed lock
+# lands in the same release commit.
+build_command = "uv lock"
+assets = ["uv.lock"]
+
+[tool.semantic_release.branches.main]
+match = "main"
+
+[tool.semantic_release.commit_parser_options]
+allowed_tags = ["feat", "fix", "perf", "refactor", "docs", "test", "build", "ci", "chore"]
+minor_tags = ["feat"]
+patch_tags = ["fix", "perf"]
+
+[tool.semantic_release.changelog]
+mode = "update"
+exclude_commit_patterns = ['^chore\(release\):']
+
+[tool.semantic_release.changelog.default_templates]
+changelog_file = "CHANGELOG.md"
+
+[tool.semantic_release.remote]
+type = "github"
