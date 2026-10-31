@@ -7,6 +7,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlmodel import SQLModel
 
+import soltura.learner.models  # noqa: F401  (registers the tables on SQLModel.metadata)
 from soltura.config import settings
 
 config = context.config
