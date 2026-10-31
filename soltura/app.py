@@ -12,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.config import settings
 from soltura.db import get_engine, get_session
+from soltura.llm.client import LLMNotConfiguredError, LLMUnavailableError
+from soltura.reading.routes import router as reading_router
 from soltura.templating import templates
 
 logger = logging.getLogger(__name__)
@@ -38,9 +40,23 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     await get_engine().dispose()
 
 
+async def llm_unavailable(request: Request, error: Exception) -> HTMLResponse:
+    logger.warning(f"LLM unavailable: {error}")
+    message = (
+        "Модель не налаштована: додайте ANTHROPIC_API_KEY у .env і перезапустіть застосунок."
+        if isinstance(error, LLMNotConfiguredError)
+        else "Зараз не вдається отримати відповідь від моделі. Спробуйте ще раз."
+    )
+    return templates.TemplateResponse(
+        request, "reading/error.html", {"message": message}, status_code=503
+    )
+
+
 def create_app() -> FastAPI:
     configure_logging(settings.logging.level)
     app = FastAPI(title="Soltura", lifespan=lifespan)
+    app.add_exception_handler(LLMUnavailableError, llm_unavailable)
+    app.include_router(reading_router)
 
     @app.get("/health")
     async def health(session: Annotated[AsyncSession, Depends(get_session)]) -> HealthResponse:

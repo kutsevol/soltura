@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Читання · Soltura{% endblock %}
+
+{% block content %}
+  <h1>Читання</h1>
+
+  <form hx-post="/reading/text" hx-target="#text" hx-indicator="#loading" class="stack">
+    <label>
+      Тема
+      <input name="topic" placeholder="напр. en el mercado, alquilar un piso">
+    </label>
+    <label>
+      …або вставте іспанський текст, щоб адаптувати його під ваш рівень
+      <textarea name="source_text" rows="4"></textarea>
+    </label>
+    <button type="submit">Дати текст</button>
+    <span id="loading" class="htmx-indicator">Готую текст…</span>
+  </form>
+
+  <article id="text"></article>
+  <aside id="gloss" aria-live="polite"></aside>
+{% endblock %}
