@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -28,6 +28,14 @@ class LLMSettings(BaseConfig):
     model: str = Field(
         default="claude-sonnet-5-5",
         description="Claude model used for text generation, glosses and answer judging",
+    )
+    # The SDK's own variable name. pydantic-settings reads .env into these models
+    # without exporting it to the process environment, so the key is passed to the
+    # client explicitly rather than left for the SDK to find.
+    api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias="ANTHROPIC_API_KEY",
+        description="Anthropic API key; unset means LLM features are unavailable",
     )
 
 
