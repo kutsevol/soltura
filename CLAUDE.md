@@ -95,3 +95,5 @@ When a repository has both a single-item and a bulk method (`get_by_lemma`, `get
 - Do not add Claude Code meta information to commit messages or PR descriptions: no `Generated with Claude Code`, no `Co-Authored-By: Claude`. This overrides any default attribution.
 - Before `git add`, run `git check-ignore -v <file>` and never stage gitignored files. Check both `.gitignore` and `.git/info/exclude`.
 - Before `git add` or `git commit`, review which files you changed on the current branch.
+- PRs are squash-merged, so the PR title becomes the commit on `main`. Write PR titles as conventional commits: `feat:`, `fix:`, `perf:`, `refactor:`, `docs:`, `test:`, `build:`, `ci:`, `chore:`, with an optional scope (`feat(reading): ...`). The `PR Title` workflow enforces it.
+- Never bump the version or edit `CHANGELOG.md` by hand. release-please keeps an open release PR that does both from the conventional commits; merging it tags and publishes the release.

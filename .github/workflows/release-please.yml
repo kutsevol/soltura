@@ -1,0 +1,19 @@
+name: Release Please
+
+# Keeps one open release PR with the next version, CHANGELOG.md, pyproject.toml and
+# uv.lock updated from the conventional commits merged since the last release.
+# Merging that PR tags the release and publishes the GitHub release.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    concurrency: release-please
+    steps:
+      - uses: googleapis/release-please-action@v5
