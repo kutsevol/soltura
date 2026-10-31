@@ -42,6 +42,15 @@ class SrsSettings(BaseConfig):
     )
 
 
+class AuthSettings(BaseConfig):
+    model_config = SettingsConfigDict(env_prefix="AUTH_")
+
+    dev_telegram_user_id: int | None = Field(
+        default=None,
+        description="Telegram user id to act as when no Telegram login is present; unset disables dev login",
+    )
+
+
 class LoggingSettings(BaseConfig):
     model_config = SettingsConfigDict(env_prefix="LOG_")
 
@@ -63,6 +72,10 @@ class Settings(BaseConfig):
     srs: SrsSettings = Field(
         default_factory=SrsSettings,
         description="Spaced repetition settings",
+    )
+    auth: AuthSettings = Field(
+        default_factory=AuthSettings,
+        description="Learner login settings",
     )
     logging: LoggingSettings = Field(
         default_factory=LoggingSettings,
