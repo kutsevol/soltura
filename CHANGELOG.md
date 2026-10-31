@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.7.0 (2026-10-31)
+
+### Features
+
+- **warmup**: Add the recall warm-up with checked answers
+  ([#12](https://github.com/kutsevol/soltura/pull/12),
+  [`f9109b4`](https://github.com/kutsevol/soltura/commit/f9109b470d27e88c178b06ae8f88788cb93b23d8))
+
+
 ## v0.6.1 (2026-10-31)
 
 ### Bug Fixes
