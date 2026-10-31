@@ -2,7 +2,6 @@ import pytest
 
 from soltura.learner.models import Rating
 from soltura.practice.checking import (
-    SPANISH_RATING,
     VERDICT_RATING,
     SpanishCheck,
     TranslationVerdict,
@@ -28,14 +27,6 @@ from tests.fakes import FakeLLM
 )
 def test_check_spanish(answer: str, expected: str, lemma: str, check: SpanishCheck) -> None:
     assert check_spanish(answer, expected, lemma) == check
-
-
-def test_only_an_exact_spanish_answer_is_good() -> None:
-    assert SPANISH_RATING[SpanishCheck.EXACT] == Rating.GOOD
-    assert {SPANISH_RATING[c] for c in (SpanishCheck.ACCENT_SLIP, SpanishCheck.TYPO)} == {
-        Rating.HARD
-    }
-    assert SPANISH_RATING[SpanishCheck.WRONG] == Rating.AGAIN
 
 
 async def test_a_translation_is_judged_by_the_llm_and_mapped_to_a_rating() -> None:

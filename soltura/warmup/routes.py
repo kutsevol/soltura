@@ -12,7 +12,7 @@ from soltura.learner.dependencies import current_learner
 from soltura.learner.models import Learner, Rating
 from soltura.llm.client import LLMClient, get_llm
 from soltura.templating import templates
-from soltura.warmup.service import WarmupItem, answer_item, build_warmup
+from soltura.warmup.service import WarmupItem, answer_item, build_warmup, split_around
 
 router = APIRouter(prefix="/warmup")
 
@@ -36,16 +36,12 @@ def _now_ms() -> int:
     return time.time_ns() // 1_000_000
 
 
-def _split_around(sentence: str, form: str) -> tuple[str, str, str]:
-    start = sentence.lower().find(form.lower())
-    if start < 0:
-        return sentence, "", ""
-    end = start + len(form)
-    return sentence[:start], sentence[start:end], sentence[end:]
-
-
 def _card_context(item: WarmupItem, queue: list[WarmupItem]) -> dict[str, Any]:
-    before, target, after = _split_around(item.sentence, item.target_form)
+    before, target, after = split_around(item.sentence, item.target_form) or (
+        item.sentence,
+        "",
+        "",
+    )
     return {
         "item": item,
         "item_json": ITEM.dump_json(item).decode(),

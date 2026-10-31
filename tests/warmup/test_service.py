@@ -20,6 +20,7 @@ from soltura.warmup.service import (
     answer_item,
     build_warmup,
     recall_before_recognize,
+    split_around,
 )
 from tests.factories import LearnerFactory
 from tests.fakes import FakeLLM
@@ -233,3 +234,38 @@ def test_a_words_recall_card_comes_before_its_recognize_card() -> None:
     ]
 
     assert [i.card_id for i in recall_before_recognize(queue)] == [3, 2, 1, 4]
+
+
+@pytest.mark.parametrize(
+    ("sentence", "form", "parts"),
+    [
+        ("Estoy seguro de que es verdad.", "es", ("Estoy seguro de que ", "es", " verdad.")),
+        ("Vamos a ir a la playa.", "a", ("Vamos ", "a", " ir a la playa.")),
+        ("Aunque llueve, salimos.", "aunque", ("", "Aunque", " llueve, salimos.")),
+        ("Estoy en casa.", "es", None),
+    ],
+)
+def test_the_target_form_is_found_only_as_a_whole_word(
+    sentence: str, form: str, parts: tuple[str, str, str] | None
+) -> None:
+    assert split_around(sentence, form) == parts
+
+
+async def test_a_sentence_holding_the_form_only_inside_another_word_is_discarded(
+    session: AsyncSession,
+    learner: Learner,
+    saved_aunque: dict[KnowledgeType, MemoryCard],
+    llm: FakeLLM,
+) -> None:
+    assert learner.id is not None
+    inside = ContextSentence(
+        sentence="Aunquemente no existe.", target_form="aunque", translation="Такого слова немає."
+    )
+    llm.answer(inside, RECALL_CONTEXT)
+
+    items = await build_warmup(session, llm, learner.id, NOW)
+
+    assert [(item.knowledge_type, item.sentence) for item in items] == [
+        (KnowledgeType.RECALL, RECALL_CONTEXT.sentence),
+        (KnowledgeType.RECOGNIZE, "Aunque llueve, salimos."),
+    ]
