@@ -1,0 +1,10 @@
+<p>
+  <strong>{{ result.word }}</strong>{% if result.lemma != result.word | lower %} → <em>{{ result.lemma }}</em>{% endif %}:
+  {{ result.translation }}
+</p>
+{% if result.reviewed %}
+  <p class="note">Це слово було на повторенні, тож воно повернеться раніше.</p>
+{% endif %}
+<button type="button"
+        hx-post="/reading/save" hx-target="#gloss"
+        hx-vals='{{ {"lemma": result.lemma, "sentence": sentence, "topic": topic} | tojson }}'>Зберегти слово</button>

@@ -5,7 +5,14 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
-from soltura.learner.models import Learner, LearnerLexeme, Lexeme, MemoryCard
+from soltura.learner.models import (
+    KnowledgeType,
+    Learner,
+    LearnerLexeme,
+    Lexeme,
+    LexemeStatus,
+    MemoryCard,
+)
 
 
 async def get_or_create_learner(session: AsyncSession, telegram_user_id: int) -> Learner:
@@ -51,3 +58,47 @@ async def get_due_cards(
         .limit(limit)
     )
     return list(result.scalars())
+
+
+async def get_lexemes_by_ids(session: AsyncSession, lexeme_ids: Iterable[int]) -> list[Lexeme]:
+    result = await session.execute(select(Lexeme).where(col(Lexeme.id).in_(set(lexeme_ids))))
+    return list(result.scalars())
+
+
+async def get_learner_lemmas(
+    session: AsyncSession, learner_id: int, statuses: Iterable[LexemeStatus]
+) -> set[str]:
+    result = await session.execute(
+        select(Lexeme.lemma)
+        .join(LearnerLexeme, col(LearnerLexeme.lexeme_id) == col(Lexeme.id))
+        .where(
+            col(LearnerLexeme.learner_id) == learner_id,
+            col(LearnerLexeme.status).in_(set(statuses)),
+        )
+    )
+    return set(result.scalars())
+
+
+async def get_most_frequent_lemmas(session: AsyncSession, max_rank: int) -> set[str]:
+    result = await session.execute(
+        select(Lexeme.lemma).where(col(Lexeme.frequency_rank) <= max_rank)
+    )
+    return set(result.scalars())
+
+
+async def get_due_card(
+    session: AsyncSession,
+    learner_id: int,
+    lexeme_id: int,
+    knowledge_type: KnowledgeType,
+    now: datetime,
+) -> MemoryCard | None:
+    result = await session.execute(
+        select(MemoryCard).where(
+            col(MemoryCard.learner_id) == learner_id,
+            col(MemoryCard.lexeme_id) == lexeme_id,
+            col(MemoryCard.knowledge_type) == knowledge_type,
+            col(MemoryCard.due) <= now,
+        )
+    )
+    return result.scalar_one_or_none()

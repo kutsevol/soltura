@@ -1,0 +1,20 @@
+<h2>{{ prepared.title }}</h2>
+{% if prepared.below_target %}
+  <p class="note">Текст може бути складним: знайомих слів {{ (prepared.coverage * 100) | round | int }}%.</p>
+{% endif %}
+{% for paragraph in paragraphs %}
+  <p>
+    {%- for sentence in paragraph -%}
+      {%- set sentence_text = sentence | map(attribute="text") | join("") | trim -%}
+      {%- for segment in sentence -%}
+        {%- if segment.is_word -%}
+          <button type="button" class="word"
+                  hx-post="/reading/tap" hx-target="#gloss"
+                  hx-vals='{{ {"word": segment.text, "sentence": sentence_text, "topic": topic} | tojson }}'>{{ segment.text }}</button>
+        {%- else -%}
+          {{ segment.text }}
+        {%- endif -%}
+      {%- endfor -%}
+    {%- endfor -%}
+  </p>
+{% endfor %}
