@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.6.0 (2026-10-31)
+
+### Features
+
+- **reading**: Generate and adapt texts to the learner's coverage
+  ([#10](https://github.com/kutsevol/soltura/pull/10),
+  [`07067ad`](https://github.com/kutsevol/soltura/commit/07067ad91d688b4e4075b0c390d50a0cf0fe9962))
+
+
 ## v0.5.0 (2026-10-31)
 
 ### Features
