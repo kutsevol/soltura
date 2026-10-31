@@ -11,6 +11,8 @@ from testcontainers.community.postgres import PostgresContainer
 
 from soltura.app import create_app
 from soltura.db import get_session
+from soltura.learner.models import Learner, Lexeme
+from tests.factories import LearnerFactory, LexemeFactory
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -48,3 +50,22 @@ async def client(session: AsyncSession) -> AsyncIterator[AsyncClient]:
     app.dependency_overrides[get_session] = lambda: session
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client
+
+
+@pytest.fixture
+async def learner(session: AsyncSession) -> Learner:
+    learner = LearnerFactory.build()
+    session.add(learner)
+    await session.flush()
+    return learner
+
+
+@pytest.fixture
+async def lexemes(session: AsyncSession) -> list[Lexeme]:
+    lexemes = [
+        LexemeFactory.build(lemma=lemma, frequency_rank=rank)
+        for rank, lemma in enumerate(["ser", "estar", "aunque"], start=1)
+    ]
+    session.add_all(lexemes)
+    await session.flush()
+    return lexemes
