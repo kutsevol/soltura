@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.8.0 (2026-10-31)
+
+### Features
+
+- **onboarding**: Add the placement test that seeds known words
+  ([#13](https://github.com/kutsevol/soltura/pull/13),
+  [`07f90cb`](https://github.com/kutsevol/soltura/commit/07f90cb21d0b726bc952fe6468f84b3b3e5f186d))
+
+
 ## v0.7.0 (2026-10-31)
 
 ### Features
