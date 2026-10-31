@@ -11,8 +11,9 @@ from soltura.db import get_session
 from soltura.learner.dependencies import current_learner
 from soltura.learner.models import Learner, Rating
 from soltura.llm.client import LLMClient, get_llm
+from soltura.practice.text import split_around
 from soltura.templating import templates
-from soltura.warmup.service import WarmupItem, answer_item, build_warmup, split_around
+from soltura.warmup.service import WarmupItem, answer_item, build_warmup
 
 router = APIRouter(prefix="/warmup")
 

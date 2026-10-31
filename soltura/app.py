@@ -17,6 +17,7 @@ from soltura.learner.dependencies import current_learner
 from soltura.learner.models import Learner
 from soltura.learner.repository import get_due_cards
 from soltura.llm.client import LLMNotConfiguredError, LLMUnavailableError
+from soltura.onboarding.routes import router as onboarding_router
 from soltura.reading.routes import router as reading_router
 from soltura.templating import templates
 from soltura.warmup.routes import router as warmup_router
@@ -63,6 +64,7 @@ def create_app() -> FastAPI:
     app.add_exception_handler(LLMUnavailableError, llm_unavailable)
     app.include_router(reading_router)
     app.include_router(warmup_router)
+    app.include_router(onboarding_router)
 
     @app.get("/health")
     async def health(session: Annotated[AsyncSession, Depends(get_session)]) -> HealthResponse:

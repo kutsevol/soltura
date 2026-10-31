@@ -1,18 +1,22 @@
 from collections.abc import Iterable
 from datetime import datetime
 
+from sqlalchemy import func, literal
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import col, select
+from sqlmodel import SQLModel, col, select
 
 from soltura.learner.models import (
     KnowledgeType,
     Learner,
     LearnerLexeme,
     Lexeme,
+    LexemeOrigin,
     LexemeStatus,
     MemoryCard,
 )
+
+_LEARNER_LEXEME = SQLModel.metadata.tables["learner_lexeme"]
 
 
 async def get_or_create_learner(session: AsyncSession, telegram_user_id: int) -> Learner:
@@ -102,3 +106,36 @@ async def get_due_card(
         )
     )
     return result.scalar_one_or_none()
+
+
+async def sample_lexemes(
+    session: AsyncSession, min_rank: int, max_rank: int, pos: Iterable[str], limit: int
+) -> list[Lexeme]:
+    result = await session.execute(
+        select(Lexeme)
+        .where(
+            col(Lexeme.frequency_rank).between(min_rank, max_rank),
+            col(Lexeme.pos).in_(set(pos)),
+        )
+        .order_by(func.random())
+        .limit(limit)
+    )
+    return list(result.scalars())
+
+
+async def mark_known_up_to_rank(session: AsyncSession, learner_id: int, max_rank: int) -> None:
+    # Words already being learned keep their status: the tap that saved them is
+    # better evidence than a placement estimate. The literals carry the enum column
+    # types, or Postgres would refuse varchar values for an enum column.
+    rows = select(
+        literal(learner_id),
+        col(Lexeme.id),
+        literal(LexemeStatus.KNOWN, type_=_LEARNER_LEXEME.c.status.type),
+        literal(LexemeOrigin.ONBOARDING, type_=_LEARNER_LEXEME.c.origin.type),
+    ).where(col(Lexeme.frequency_rank) <= max_rank)
+    await session.execute(
+        insert(LearnerLexeme)
+        .from_select(["learner_id", "lexeme_id", "status", "origin"], rows)
+        .on_conflict_do_nothing(index_elements=["learner_id", "lexeme_id"])
+    )
+    await session.commit()
