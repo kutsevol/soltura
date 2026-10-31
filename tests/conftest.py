@@ -13,6 +13,7 @@ from soltura.app import create_app
 from soltura.db import get_session
 from soltura.learner.models import Learner, Lexeme
 from tests.factories import LearnerFactory, LexemeFactory
+from tests.fakes import FakeLLM
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -69,3 +70,8 @@ async def lexemes(session: AsyncSession) -> list[Lexeme]:
     session.add_all(lexemes)
     await session.flush()
     return lexemes
+
+
+@pytest.fixture
+def llm() -> FakeLLM:
+    return FakeLLM()
