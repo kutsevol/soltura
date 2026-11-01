@@ -1,1 +1,1 @@
-<p>Збережено <strong>{{ lemma }}</strong>: слово з'явиться в наступній розминці.</p>
+<p>Збережено: {% for lemma in lemmas %}<strong>{{ lemma }}</strong>{% if not loop.last %}, {% endif %}{% endfor %}. Слова з'являться в наступній розминці.</p>

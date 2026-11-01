@@ -1,17 +1,21 @@
+import asyncio
 import logging
 from dataclasses import dataclass
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.language.nlp import analyze
-from soltura.learner.repository import get_saved_words
-from soltura.llm.client import LLMClient
+from soltura.learner.models import LexemeStatus
+from soltura.learner.repository import get_learner_lemmas
+from soltura.llm.client import LLMClient, LLMNotConfiguredError, LLMUnavailableError
 from soltura.practice.text import split_around
 
 logger = logging.getLogger(__name__)
 
 ATTEMPTS = 2
+MAX_WORDS = 20
 
 ENTRY_SYSTEM = (
     "You are a Spanish dictionary for an adult Ukrainian speaker who lives in Spain and is at "
@@ -40,12 +44,33 @@ class WordLookupFailedError(Exception):
     pass
 
 
+class Problem(StrEnum):
+    MULTIPLE_WORDS = "multiple_words"
+    NOT_SPANISH = "not_spanish"
+    NO_EXAMPLE = "no_example"
+    UNAVAILABLE = "unavailable"
+
+
 @dataclass(frozen=True)
 class WordLookup:
     lemma: str
     translation: str
     sentence: str
     saved: bool
+
+
+@dataclass(frozen=True)
+class LineResult:
+    word: str
+    lookup: WordLookup | None = None
+    problem: Problem | None = None
+
+
+def parse_words(text: str) -> list[str]:
+    # One word per line; blank lines and repeats (ignoring case) are dropped, order kept.
+    return list(
+        dict.fromkeys(line.strip().casefold() for line in text.splitlines() if line.strip())
+    )
 
 
 def _uses_word(sentence: str, typed: str, lemma: str) -> bool:
@@ -58,9 +83,7 @@ def _uses_word(sentence: str, typed: str, lemma: str) -> bool:
     )
 
 
-async def look_up_word(
-    session: AsyncSession, llm: LLMClient, learner_id: int, word: str
-) -> WordLookup:
+async def _ask(llm: LLMClient, word: str) -> WordEntry:
     for attempt in range(1, ATTEMPTS + 1):
         entry = await llm(
             WordEntry,
@@ -73,12 +96,53 @@ async def look_up_word(
             raise NotASpanishWordError(word)
         lemma = entry.lemma.strip().lower()
         if lemma and _uses_word(entry.sentence, word, lemma):
-            saved = await get_saved_words(session, learner_id, lemma)
-            return WordLookup(
-                lemma=lemma,
-                translation=entry.translation.strip(),
-                sentence=entry.sentence.strip(),
-                saved=any(saved_word.lemma == lemma for saved_word in saved),
+            return entry.model_copy(
+                update={
+                    "lemma": lemma,
+                    "translation": entry.translation.strip(),
+                    "sentence": entry.sentence.strip(),
+                }
             )
         logger.debug(f"Discarded entry for {word!r} (attempt {attempt}): {entry.sentence!r}")
     raise WordLookupFailedError(word)
+
+
+async def _ask_line(llm: LLMClient, word: str) -> WordEntry | Problem:
+    if len(word.split()) > 1:
+        return Problem.MULTIPLE_WORDS
+    try:
+        return await _ask(llm, word)
+    except NotASpanishWordError:
+        return Problem.NOT_SPANISH
+    except WordLookupFailedError:
+        return Problem.NO_EXAMPLE
+    except LLMNotConfiguredError:
+        raise
+    except LLMUnavailableError as error:
+        logger.warning(f"Lookup of {word!r} failed: {error}")
+        return Problem.UNAVAILABLE
+
+
+async def look_up_words(
+    session: AsyncSession, llm: LLMClient, learner_id: int, words: list[str]
+) -> list[LineResult]:
+    # Only the model calls run concurrently: one AsyncSession cannot serve two queries
+    # at once, so the saved-word check is a single query after they finish.
+    outcomes = await asyncio.gather(*(_ask_line(llm, word) for word in words))
+    saved = await get_learner_lemmas(session, learner_id, {LexemeStatus.LEARNING})
+    results: list[LineResult] = []
+    seen: set[str] = set()
+    for word, outcome in zip(words, outcomes, strict=True):
+        if isinstance(outcome, Problem):
+            results.append(LineResult(word=word, problem=outcome))
+        elif outcome.lemma not in seen:
+            # "nieto" and "nietos" are one word: the first line keeps it.
+            seen.add(outcome.lemma)
+            lookup = WordLookup(
+                lemma=outcome.lemma,
+                translation=outcome.translation,
+                sentence=outcome.sentence,
+                saved=outcome.lemma in saved,
+            )
+            results.append(LineResult(word=word, lookup=lookup))
+    return results

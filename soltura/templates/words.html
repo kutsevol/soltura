@@ -6,11 +6,9 @@
 {% block content %}
   <article>
     <form hx-post="/words/lookup" hx-target="#preview" hx-indicator="#lookup-loading">
-      <label for="word">Додати слово</label>
-      <fieldset role="group">
-        <input id="word" name="word" placeholder="напр. nieto" autocomplete="off" autocapitalize="off" spellcheck="false">
-        <button type="submit">Знайти</button>
-      </fieldset>
+      <label for="words-input">Додати слова: по одному в рядку, до 20</label>
+      <textarea id="words-input" name="words" rows="3" placeholder="nieto&#10;suegra&#10;vecino" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+      <button type="submit">Знайти</button>
       <span id="lookup-loading" class="htmx-indicator" aria-busy="true">Шукаю…</span>
     </form>
     <div id="preview" aria-live="polite"></div>

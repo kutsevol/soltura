@@ -12,7 +12,7 @@ from soltura.learner.repository import get_saved_words
 from soltura.llm.client import LLMClient, get_llm
 from soltura.reading.service import save_tapped_word
 from soltura.templating import templates
-from soltura.words.service import NotASpanishWordError, WordLookupFailedError, look_up_word
+from soltura.words.service import MAX_WORDS, Problem, look_up_words, parse_words
 
 router = APIRouter(prefix="/words")
 
@@ -21,6 +21,12 @@ LearnerDep = Annotated[Learner, Depends(current_learner)]
 LLMDep = Annotated[LLMClient, Depends(get_llm)]
 
 STATUS_LABEL = {LexemeStatus.LEARNING: "Вивчаю", LexemeStatus.KNOWN: "Знаю"}
+PROBLEM_LABEL = {
+    Problem.MULTIPLE_WORDS: "введіть одне слово в рядку.",
+    Problem.NOT_SPANISH: "не схоже на іспанське слово, перевірте написання.",
+    Problem.NO_EXAMPLE: "не вдалося підібрати приклад, спробуйте ще раз.",
+    Problem.UNAVAILABLE: "модель зараз недоступна, спробуйте ще раз.",
+}
 MAX_LEMMA_LENGTH = 64
 MAX_SENTENCE_LENGTH = 500
 
@@ -35,9 +41,12 @@ def _learner_id(learner: Learner) -> int:
     return learner.id
 
 
-def _message(request: Request, text: str, status_code: int) -> HTMLResponse:
+def _message(request: Request, text: str) -> HTMLResponse:
     return templates.TemplateResponse(
-        request, "words/message.html", {"message": text}, status_code=status_code
+        request,
+        "words/message.html",
+        {"message": text},
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
     )
 
 
@@ -70,44 +79,46 @@ async def search_words(
 
 
 @router.post("/lookup", response_class=HTMLResponse)
-async def lookup_word(
+async def lookup_words(
     request: Request,
     session: SessionDep,
     learner: LearnerDep,
     llm: LLMDep,
-    word: Annotated[str, Form()] = "",
+    words: Annotated[str, Form()] = "",
 ) -> HTMLResponse:
-    word = word.strip()
-    if not word or len(word.split()) > 1 or len(word) > MAX_LEMMA_LENGTH:
-        return _message(
-            request, "Введіть одне іспанське слово.", status.HTTP_422_UNPROCESSABLE_CONTENT
-        )
-    try:
-        lookup = await look_up_word(session, llm, _learner_id(learner), word)
-    except NotASpanishWordError:
-        return _message(
-            request,
-            f"«{word}» не схоже на іспанське слово. Перевірте написання.",
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-        )
-    except WordLookupFailedError:
-        return _message(
-            request, "Не вдалося підібрати приклад. Спробуйте ще раз.", status.HTTP_502_BAD_GATEWAY
-        )
-    return templates.TemplateResponse(request, "words/preview.html", {"lookup": lookup})
+    lines = parse_words(words)
+    if not lines:
+        return _message(request, "Введіть слово.")
+    if len(lines) > MAX_WORDS:
+        return _message(request, f"Не більше {MAX_WORDS} слів за раз.")
+    results = await look_up_words(session, llm, _learner_id(learner), lines)
+    return templates.TemplateResponse(
+        request, "words/preview.html", {"results": results, "problem_label": PROBLEM_LABEL}
+    )
 
 
 @router.post("/add", response_class=HTMLResponse)
-async def add_word(
+async def add_words(
     request: Request,
     session: SessionDep,
     learner: LearnerDep,
-    lemma: Annotated[str, Form(min_length=1, max_length=MAX_LEMMA_LENGTH)],
-    sentence: Annotated[str, Form(min_length=1, max_length=MAX_SENTENCE_LENGTH)],
+    lemma: Annotated[list[str] | None, Form()] = None,
+    sentence: Annotated[list[str] | None, Form()] = None,
 ) -> HTMLResponse:
-    await save_tapped_word(session, _learner_id(learner), lemma, sentence, datetime.now(UTC))
+    lemmas, sentences = lemma or [], sentence or []
+    pairs = list(zip(lemmas, sentences, strict=False))
+    if (
+        not 0 < len(lemmas) <= MAX_WORDS
+        or len(lemmas) != len(sentences)
+        or any(not 0 < len(item.strip()) <= MAX_LEMMA_LENGTH for item, _ in pairs)
+        or any(not 0 < len(text.strip()) <= MAX_SENTENCE_LENGTH for _, text in pairs)
+    ):
+        return _message(request, "Не вдалося зберегти: перевірте слова й спробуйте ще раз.")
+    now = datetime.now(UTC)
+    for item, text in pairs:
+        await save_tapped_word(session, _learner_id(learner), item, text, now)
     response = templates.TemplateResponse(
-        request, "words/added.html", {"lemma": lemma.strip().lower()}
+        request, "words/added.html", {"lemmas": [item.strip().lower() for item in lemmas]}
     )
     response.headers["HX-Trigger"] = "wordsChanged"
     return response

@@ -1,11 +1,20 @@
-{% if lookup.saved %}
-  <p><strong>{{ lookup.lemma }}</strong> ({{ lookup.translation }}) уже є у вашому словнику.</p>
-{% else %}
-  <h3>{{ lookup.lemma }} <span class="note">— {{ lookup.translation }}</span></h3>
-  <blockquote>{{ lookup.sentence }}</blockquote>
+{% set found = results | selectattr("lookup") | rejectattr("lookup.saved") | list %}
+{% for result in results %}
+  {% if result.problem %}
+    <p class="error">«{{ result.word }}»: {{ problem_label[result.problem] }}</p>
+  {% elif result.lookup.saved %}
+    <p><strong>{{ result.lookup.lemma }}</strong> ({{ result.lookup.translation }}) уже є у вашому словнику.</p>
+  {% else %}
+    <h3>{{ result.lookup.lemma }} <span class="note">— {{ result.lookup.translation }}</span></h3>
+    <blockquote>{{ result.lookup.sentence }}</blockquote>
+  {% endif %}
+{% endfor %}
+{% if found %}
   <form hx-post="/words/add" hx-target="#preview">
-    <input type="hidden" name="lemma" value="{{ lookup.lemma }}">
-    <input type="hidden" name="sentence" value="{{ lookup.sentence }}">
-    <button type="submit">Зберегти</button>
+    {% for result in found %}
+      <input type="hidden" name="lemma" value="{{ result.lookup.lemma }}">
+      <input type="hidden" name="sentence" value="{{ result.lookup.sentence }}">
+    {% endfor %}
+    <button type="submit">{% if found | length > 1 %}Зберегти все ({{ found | length }}){% else %}Зберегти{% endif %}</button>
   </form>
 {% endif %}
