@@ -1,3 +1,4 @@
+import asyncio
 from typing import cast
 
 from pydantic import BaseModel
@@ -32,3 +33,27 @@ class FakeLLM(LLMClient):
         if isinstance(response, Exception):
             raise response
         return cast(SchemaT, response)
+
+
+class GatedLLM(FakeLLM):
+    # Holds every call until `parties` calls are in flight, so a test using it passes
+    # only if the code under test really issues them concurrently.
+    def __init__(self, parties: int) -> None:
+        super().__init__()
+        self._parties = parties
+        self._arrived = 0
+        self._all_in = asyncio.Event()
+
+    async def __call__(
+        self,
+        schema: type[SchemaT],
+        system: str,
+        prompt: str,
+        effort: Effort,
+        max_tokens: int = 16_000,
+    ) -> SchemaT:
+        self._arrived += 1
+        if self._arrived >= self._parties:
+            self._all_in.set()
+        await asyncio.wait_for(self._all_in.wait(), timeout=2)
+        return await super().__call__(schema, system, prompt, effort, max_tokens)
