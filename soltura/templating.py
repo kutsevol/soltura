@@ -9,14 +9,25 @@ class NavItem:
     href: str
     label: str
     icon: str
+    purpose: str
 
 
 # The bottom tab bar, in order. A screen joins it in the change that adds the screen,
 # so no tab ever points at a page that does not exist yet.
 NAV: list[NavItem] = [
-    NavItem(href="/", label="Головна", icon="home"),
-    NavItem(href="/warmup", label="Розминка", icon="zap"),
-    NavItem(href="/reading", label="Читання", icon="book"),
+    NavItem(href="/", label="Головна", icon="home", purpose="Що робити зараз"),
+    NavItem(
+        href="/warmup",
+        label="Розминка",
+        icon="zap",
+        purpose="Короткі вправи на слова, які ви зберегли",
+    ),
+    NavItem(
+        href="/reading",
+        label="Читання",
+        icon="book",
+        purpose="Текст під ваш рівень; тапніть слово, щоб побачити переклад і зберегти",
+    ),
 ]
 
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")

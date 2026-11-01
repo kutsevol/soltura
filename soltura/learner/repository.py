@@ -64,6 +64,25 @@ async def get_due_cards(
     return list(result.scalars())
 
 
+async def count_due_cards(session: AsyncSession, learner_id: int, now: datetime) -> int:
+    result = await session.execute(
+        select(func.count()).where(
+            col(MemoryCard.learner_id) == learner_id, col(MemoryCard.due) <= now
+        )
+    )
+    return result.scalar_one()
+
+
+async def count_learning_words(session: AsyncSession, learner_id: int) -> int:
+    result = await session.execute(
+        select(func.count()).where(
+            col(LearnerLexeme.learner_id) == learner_id,
+            col(LearnerLexeme.status) == LexemeStatus.LEARNING,
+        )
+    )
+    return result.scalar_one()
+
+
 async def get_lexemes_by_ids(session: AsyncSession, lexeme_ids: Iterable[int]) -> list[Lexeme]:
     result = await session.execute(select(Lexeme).where(col(Lexeme.id).in_(set(lexeme_ids))))
     return list(result.scalars())

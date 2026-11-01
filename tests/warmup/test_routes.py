@@ -22,20 +22,6 @@ def _hidden(html: str, name: str) -> str:
     )
 
 
-async def test_the_index_opens_the_warmup_when_cards_are_due(
-    warmup_client: AsyncClient, saved_aunque: dict[KnowledgeType, MemoryCard]
-) -> None:
-    response = await warmup_client.get("/")
-
-    assert (response.status_code, response.headers["location"]) == (303, "/warmup")
-
-
-async def test_the_index_opens_reading_when_nothing_is_due(warmup_client: AsyncClient) -> None:
-    response = await warmup_client.get("/")
-
-    assert (response.status_code, response.headers["location"]) == (303, "/reading")
-
-
 async def test_a_session_goes_through_every_card_and_on_to_reading(
     warmup_client: AsyncClient,
     session: AsyncSession,

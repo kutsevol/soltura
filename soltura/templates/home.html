@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Головна · Soltura{% endblock %}
+{% block heading %}Головна{% endblock %}
+
+{% block content %}
+  <article>
+    {% if due %}
+      <h2>Карток до повторення: {{ due }}</h2>
+      <p class="note">Розминка на 2–3 хвилини, потім читання.</p>
+      <a href="/warmup" role="button">Почати розминку</a>
+    {% else %}
+      <h2>На зараз повторювати нічого</h2>
+      <p class="note">Прочитайте текст і збережіть нові слова — вони з’являться в розминці.</p>
+      <a href="/reading" role="button">Перейти до читання</a>
+    {% endif %}
+    <p class="note">Слів у вивченні: {{ learning }}</p>
+  </article>
+
+  {% for item in nav if item.href != "/" %}
+    <article>
+      <h3><a href="{{ item.href }}">{{ item.label }}</a></h3>
+      <p class="note">{{ item.purpose }}</p>
+    </article>
+  {% endfor %}
+  <article>
+    <h3><a href="/onboarding">Визначення рівня</a></h3>
+    <p class="note">Короткий тест із перекладом: за ним тексти одразу підлаштуються під ваш словник.</p>
+  </article>
+{% endblock %}
