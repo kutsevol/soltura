@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.14.2 (2026-11-01)
+
+### Bug Fixes
+
+- **ui**: Lay the topic buttons out as one-line chips
+  ([#21](https://github.com/kutsevol/soltura/pull/21),
+  [`67c73ac`](https://github.com/kutsevol/soltura/commit/67c73ac4a1a912e8e7138bc76e4a8453114607e3))
+
+
 ## v0.14.1 (2026-11-01)
 
 ### Bug Fixes
