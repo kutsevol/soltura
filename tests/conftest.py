@@ -10,8 +10,10 @@ from sqlalchemy.pool import NullPool
 from testcontainers.community.postgres import PostgresContainer
 
 from soltura.app import create_app
+from soltura.config import settings
 from soltura.db import get_session
 from soltura.learner.models import Learner, Lexeme
+from soltura.llm.client import get_llm
 from tests.factories import LearnerFactory, LexemeFactory
 from tests.fakes import FakeLLM
 
@@ -49,6 +51,18 @@ async def session(database_url: str) -> AsyncIterator[AsyncSession]:
 async def client(session: AsyncSession) -> AsyncIterator[AsyncClient]:
     app = create_app()
     app.dependency_overrides[get_session] = lambda: session
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        yield client
+
+
+@pytest.fixture
+async def learner_client(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, monkeypatch: pytest.MonkeyPatch
+) -> AsyncIterator[AsyncClient]:
+    monkeypatch.setattr(settings.auth, "dev_telegram_user_id", learner.telegram_user_id)
+    app = create_app()
+    app.dependency_overrides[get_session] = lambda: session
+    app.dependency_overrides[get_llm] = lambda: llm
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client
 

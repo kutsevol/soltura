@@ -1,12 +1,13 @@
-<form hx-post="/onboarding/answer" hx-target="#card" hx-indicator="#scoring" class="stack">
+<form hx-post="/onboarding/answer" hx-target="#card" hx-indicator="#scoring">
+  <progress value="{{ position - 1 }}" max="{{ total }}"></progress>
   <p class="note">Слово {{ position }} з {{ total }} · що означає виділене слово? Відповідь українською.</p>
   <p class="sentence">{{ before }}<mark>{{ target }}</mark>{{ after }}</p>
-  <input name="answer" autocomplete="off" autofocus>
+  <input name="answer" aria-label="Переклад" autocomplete="off" autofocus>
   <input type="hidden" name="queue" value="{{ queue_json }}">
   <input type="hidden" name="answered" value="{{ answered_json }}">
-  <div class="row">
+  <div class="grid">
     <button type="submit">Далі</button>
-    <button type="submit" name="give_up" value="1">Не знаю</button>
+    <button type="submit" name="give_up" value="1" class="secondary outline">Не знаю</button>
   </div>
-  {% if position == total %}<span id="scoring" class="htmx-indicator">Перевіряю відповіді…</span>{% endif %}
+  {% if position == total %}<span id="scoring" class="htmx-indicator" aria-busy="true">Перевіряю відповіді…</span>{% endif %}
 </form>

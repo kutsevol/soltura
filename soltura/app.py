@@ -3,10 +3,12 @@ import sys
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,6 +25,8 @@ from soltura.templating import templates
 from soltura.warmup.routes import router as warmup_router
 
 logger = logging.getLogger(__name__)
+
+STATIC_DIR = Path(__file__).parent / "static"
 
 
 class HealthResponse(BaseModel):
@@ -62,6 +66,7 @@ def create_app() -> FastAPI:
     configure_logging(settings.logging.level)
     app = FastAPI(title="Soltura", lifespan=lifespan)
     app.add_exception_handler(LLMUnavailableError, llm_unavailable)
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     app.include_router(reading_router)
     app.include_router(warmup_router)
     app.include_router(onboarding_router)

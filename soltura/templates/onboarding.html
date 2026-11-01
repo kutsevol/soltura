@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
 {% block title %}Визначення рівня · Soltura{% endblock %}
+{% block heading %}Визначення рівня{% endblock %}
 
 {% block content %}
-  <h1>Визначення рівня</h1>
-  <section id="card" class="stack">
+  <article id="card">
     <p>
       Покажу {{ words }} іспанських слів у коротких реченнях, від найчастотніших до рідших.
       Для кожного напишіть, що воно означає українською. Якщо не знаєте — натисніть «Не знаю».
@@ -14,6 +14,6 @@
       і тексти для читання одразу підлаштуються під ваш словник. Займе 6–8 хвилин.
     </p>
     <button hx-post="/onboarding/start" hx-target="#card" hx-indicator="#loading">Почати</button>
-    <span id="loading" class="htmx-indicator">Готую речення…</span>
-  </section>
+    <span id="loading" class="htmx-indicator" aria-busy="true">Готую речення…</span>
+  </article>
 {% endblock %}
