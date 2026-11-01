@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.10.0 (2026-11-01)
+
+### Features
+
+- **home**: Turn the home page into the hub ([#15](https://github.com/kutsevol/soltura/pull/15),
+  [`ed3875d`](https://github.com/kutsevol/soltura/commit/ed3875dea986fb77949a963e7571b2ce35d7d012))
+
+
 ## v0.9.0 (2026-11-01)
 
 ### Features
