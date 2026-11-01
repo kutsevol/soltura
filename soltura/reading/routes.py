@@ -10,6 +10,7 @@ from soltura.learner.dependencies import current_learner
 from soltura.learner.models import Learner
 from soltura.llm.client import LLMClient, get_llm
 from soltura.reading.service import prepare_text, save_tapped_word, split_for_reading, tap_word
+from soltura.reading.topics import TOPICS
 from soltura.templating import templates
 
 router = APIRouter(prefix="/reading")
@@ -27,7 +28,7 @@ def _learner_id(learner: Learner) -> int:
 
 @router.get("", response_class=HTMLResponse)
 async def reading_page(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(request, "reading.html")
+    return templates.TemplateResponse(request, "reading.html", {"topics": TOPICS})
 
 
 @router.post("/text", response_class=HTMLResponse)

@@ -1,3 +1,6 @@
+import json
+import re
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +11,7 @@ from soltura.db import get_session
 from soltura.learner.models import Learner, Lexeme
 from soltura.llm.client import LLMClient, get_llm
 from soltura.reading.service import Gloss
+from soltura.reading.topics import TOPICS
 from tests.fakes import FakeLLM
 from tests.reading.conftest import EASY_TEXT, KnowFn
 
@@ -73,3 +77,21 @@ async def test_a_missing_api_key_is_named_instead_of_failing(
     assert missing_key.status_code == 503
     assert "ANTHROPIC_API_KEY" in missing_key.text
     assert no_topic.status_code == 422
+
+
+async def test_every_topic_button_generates_a_text_on_its_topic(
+    reading_client: AsyncClient, llm: FakeLLM, know: KnowFn
+) -> None:
+    await know(f"{EASY_TEXT.title}. {EASY_TEXT.text}")
+    page = await reading_client.get("/reading")
+    buttons = re.findall(r"hx-vals='([^']*)'[^>]*>([^<]+)</button>", page.text)
+    assert [label for _, label in buttons] == [topic.label for topic in TOPICS]
+
+    for vals, _ in buttons:
+        llm.answer(EASY_TEXT)
+        topic = json.loads(vals)["topic"]
+
+        response = await reading_client.post("/reading/text", data={"topic": topic})
+
+        assert response.status_code == 200
+        assert f"Topic: {topic}." in llm.prompts[-1]
