@@ -50,6 +50,25 @@ main.container {
 
 .titlebar .screen {
   color: var(--pico-muted-color);
+  flex: 1;
+}
+
+.titlebar .help-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1.5px solid var(--pico-primary);
+  border-radius: 50%;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--pico-primary);
+  align-self: center;
+}
+
+article.intro {
+  background: var(--highlight);
 }
 
 /* Bottom tab bar */

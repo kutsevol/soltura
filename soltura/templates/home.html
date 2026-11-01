@@ -4,6 +4,14 @@
 {% block heading %}Головна{% endblock %}
 
 {% block content %}
+  {# Shown until the first word is saved, which is when the loop needs explaining. #}
+  {% if not learning %}
+    <article class="intro">
+      <h2>Вперше тут?</h2>
+      <p class="note">Хвилина, щоб зрозуміти, як слово з тексту потрапляє в повторення.</p>
+      <a href="/help" role="button" class="outline">Як це працює</a>
+    </article>
+  {% endif %}
   <article>
     {% if due %}
       <h2>Карток до повторення: {{ due }}</h2>
