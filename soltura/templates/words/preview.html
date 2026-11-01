@@ -1,0 +1,11 @@
+{% if lookup.saved %}
+  <p><strong>{{ lookup.lemma }}</strong> ({{ lookup.translation }}) уже є у вашому словнику.</p>
+{% else %}
+  <h3>{{ lookup.lemma }} <span class="note">— {{ lookup.translation }}</span></h3>
+  <blockquote>{{ lookup.sentence }}</blockquote>
+  <form hx-post="/words/add" hx-target="#preview">
+    <input type="hidden" name="lemma" value="{{ lookup.lemma }}">
+    <input type="hidden" name="sentence" value="{{ lookup.sentence }}">
+    <button type="submit">Зберегти</button>
+  </form>
+{% endif %}
