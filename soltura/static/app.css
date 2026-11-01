@@ -90,11 +90,12 @@ article.intro {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 0.15rem;
   margin: 0;
-  padding: 0;
+  padding: 0.5rem 0 0;
   font-size: 0.75rem;
+  line-height: 1.15;
   color: var(--pico-muted-color);
   text-decoration: none;
 }
@@ -167,6 +168,23 @@ button.word:focus-visible {
 
 .grid > button {
   margin-bottom: 0;
+}
+
+/* Topic chips: content-sized pills on one line each, wrapping as a group. */
+
+.topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: var(--pico-spacing);
+}
+
+.topics button {
+  width: auto;
+  margin: 0;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  white-space: nowrap;
 }
 
 /* Warm-up verdicts */
