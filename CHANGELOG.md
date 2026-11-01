@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.11.0 (2026-11-01)
+
+### Features
+
+- **words**: Add the My words page ([#16](https://github.com/kutsevol/soltura/pull/16),
+  [`61bbfb8`](https://github.com/kutsevol/soltura/commit/61bbfb8fe943fe2a3a43dff931f0798c50f8078f))
+
+
 ## v0.10.0 (2026-11-01)
 
 ### Features
