@@ -5,6 +5,14 @@
 
 {% block content %}
   <article>
+    <p class="note">Оберіть тему одним дотиком:</p>
+    <div class="grid">
+      {% for topic in topics %}
+        <button type="button" class="outline secondary"
+                hx-post="/reading/text" hx-target="#text" hx-indicator="#loading"
+                hx-vals='{{ {"topic": topic.prompt} | tojson }}'>{{ topic.label }}</button>
+      {% endfor %}
+    </div>
     <form hx-post="/reading/text" hx-target="#text" hx-indicator="#loading">
       <label>
         Тема
