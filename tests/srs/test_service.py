@@ -87,6 +87,23 @@ async def test_a_good_review_moves_due_forward_and_logs_it(
     ]
 
 
+@pytest.mark.parametrize("rating", [Rating.GOOD, Rating.AGAIN])
+async def test_the_first_answer_schedules_a_new_card_days_ahead_not_minutes(
+    session: AsyncSession,
+    learner: Learner,
+    lexemes: list[Lexeme],
+    scheduler: fsrs.Scheduler,
+    rating: Rating,
+) -> None:
+    assert learner.id is not None and lexemes[0].id is not None
+    card, _ = await save_word(session, learner.id, lexemes[0].id, "Es tarde.", NOW)
+
+    await review(session, card, rating, ReviewSource.WARMUP, NOW, scheduler=scheduler)
+
+    assert card.state == CardState.REVIEW
+    assert card.due >= NOW + timedelta(days=1)
+
+
 async def test_reviews_follow_the_fsrs_schedule(
     session: AsyncSession,
     learner: Learner,
@@ -196,8 +213,7 @@ async def test_forgetting_a_reviewed_card_sends_it_to_relearning(
 ) -> None:
     assert learner.id is not None and lexemes[0].id is not None
     card, _ = await save_word(session, learner.id, lexemes[0].id, "Es tarde.", NOW)
-    for moment in [NOW, NOW + timedelta(minutes=10)]:
-        await review(session, card, Rating.GOOD, ReviewSource.WARMUP, moment, scheduler=scheduler)
+    await review(session, card, Rating.GOOD, ReviewSource.WARMUP, NOW, scheduler=scheduler)
     assert card.state == CardState.REVIEW
 
     await review(
