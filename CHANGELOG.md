@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.9.0 (2026-11-01)
+
+### Features
+
+- **ui**: Give every page one app shell and look
+  ([#14](https://github.com/kutsevol/soltura/pull/14),
+  [`f03aa05`](https://github.com/kutsevol/soltura/commit/f03aa05f98144bae9803784eb9591599940ebf67))
+
+
 ## v0.8.0 (2026-10-31)
 
 ### Features
