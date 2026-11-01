@@ -38,7 +38,10 @@ FSRS_RATING = {
 
 @cache
 def get_scheduler() -> fsrs.Scheduler:
-    return fsrs.Scheduler(desired_retention=settings.srs.desired_retention)
+    # No minute-long learning steps: a warm-up builds its queue once, so a card due in
+    # ten minutes would only come back in the next session, a day later, still "new".
+    # The first answer goes straight to a day-scale interval, which FSRS then grows.
+    return fsrs.Scheduler(desired_retention=settings.srs.desired_retention, learning_steps=())
 
 
 def to_fsrs_card(card: MemoryCard) -> fsrs.Card:
