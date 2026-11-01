@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.13.0 (2026-11-01)
+
+### Features
+
+- **reading**: Offer five everyday topics on the reading page
+  ([#18](https://github.com/kutsevol/soltura/pull/18),
+  [`f64a7ca`](https://github.com/kutsevol/soltura/commit/f64a7caadbae09998d3d0cf833435b7556cbf6b2))
+
+
 ## v0.12.0 (2026-11-01)
 
 ### Features
