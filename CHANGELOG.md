@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.14.1 (2026-11-01)
+
+### Bug Fixes
+
+- **srs**: Schedule a new card days ahead on its first answer
+  ([#20](https://github.com/kutsevol/soltura/pull/20),
+  [`d56818c`](https://github.com/kutsevol/soltura/commit/d56818c8818d2d46187a2c675906b463ec781292))
+
+
 ## v0.14.0 (2026-11-01)
 
 ### Features
