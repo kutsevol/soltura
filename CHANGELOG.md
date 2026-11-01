@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.12.0 (2026-11-01)
+
+### Features
+
+- **help**: Explain how the app works ([#17](https://github.com/kutsevol/soltura/pull/17),
+  [`ea55253`](https://github.com/kutsevol/soltura/commit/ea552538338413c0e5f593704f36a3f4de8a400b))
+
+
 ## v0.11.0 (2026-11-01)
 
 ### Features
