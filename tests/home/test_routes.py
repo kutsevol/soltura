@@ -35,3 +35,20 @@ async def test_every_screen_is_listed_with_its_purpose(learner_client: AsyncClie
             assert f'<h3><a href="{item.href}">{item.label}</a></h3>' in response.text
             assert item.purpose in response.text
     assert '<a href="/onboarding">' in response.text
+
+
+async def test_a_learner_without_saved_words_is_offered_the_help(
+    learner_client: AsyncClient,
+) -> None:
+    response = await learner_client.get("/")
+
+    assert "Вперше тут?" in response.text
+    assert '<a href="/help" role="button" class="outline">' in response.text
+
+
+async def test_the_help_offer_goes_away_after_the_first_saved_word(
+    learner_client: AsyncClient, saved_word: None
+) -> None:
+    response = await learner_client.get("/")
+
+    assert "Вперше тут?" not in response.text

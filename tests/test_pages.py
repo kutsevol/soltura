@@ -32,6 +32,16 @@ async def test_every_page_shows_the_tab_bar_with_its_own_tab_marked(
     assert tabs(response.text) == {item.href: item.href == current for item in NAV}
 
 
+@pytest.mark.parametrize("path", ["/", "/reading", "/warmup", "/words", "/help", "/onboarding"])
+async def test_every_page_has_the_help_link_in_the_title_bar(
+    learner_client: AsyncClient, path: str
+) -> None:
+    response = await learner_client.get(path)
+
+    titlebar = response.text[: response.text.index("</header>")]
+    assert '<a href="/help" class="help-link" aria-label="Як це працює">?</a>' in titlebar
+
+
 async def test_the_stylesheet_is_served(learner_client: AsyncClient) -> None:
     response = await learner_client.get("/static/app.css")
 
