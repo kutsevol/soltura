@@ -2,6 +2,21 @@
 
 <!-- version list -->
 
+## v0.15.0 (2026-11-01)
+
+### Documentation
+
+- Bring the README up to date with the built MVP
+  ([#22](https://github.com/kutsevol/soltura/pull/22),
+  [`0c0eb5b`](https://github.com/kutsevol/soltura/commit/0c0eb5b2e0f9eb575f51e0485b1f7369e07cbcb0))
+
+### Features
+
+- **words**: Add a word to the dictionary by hand
+  ([#23](https://github.com/kutsevol/soltura/pull/23),
+  [`7a3ecf6`](https://github.com/kutsevol/soltura/commit/7a3ecf6671023a383192ec9d87da023b1fec63d4))
+
+
 ## v0.14.2 (2026-11-01)
 
 ### Bug Fixes
