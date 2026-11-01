@@ -6,7 +6,7 @@
 {% block content %}
   <article>
     <p class="note">Оберіть тему одним дотиком:</p>
-    <div class="grid">
+    <div class="topics">
       {% for topic in topics %}
         <button type="button" class="outline secondary"
                 hx-post="/reading/text" hx-target="#text" hx-indicator="#loading"
