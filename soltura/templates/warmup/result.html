@@ -1,13 +1,11 @@
-<div class="stack">
-  <p class="verdict verdict-{{ result.rating.value }}"><strong>{{ label }}</strong></p>
-  {% if answer %}<p class="note">Ваша відповідь: {{ answer }}</p>{% endif %}
-  <p>{{ result.explanation }}</p>
-  {% if result.expected and result.rating.value != "good" %}
-    <p>Очікувалось: <strong>{{ result.expected }}</strong></p>
-  {% endif %}
-  <p class="note">{{ item.sentence }}</p>
-  <form hx-post="/warmup/next" hx-target="#card">
-    <input type="hidden" name="queue" value="{{ queue_json }}">
-    <button type="submit" autofocus>Далі</button>
-  </form>
-</div>
+<p class="verdict verdict-{{ result.rating.value }}"><strong>{{ label }}</strong></p>
+{% if answer %}<p class="note">Ваша відповідь: {{ answer }}</p>{% endif %}
+<p>{{ result.explanation }}</p>
+{% if result.expected and result.rating.value != "good" %}
+  <p>Очікувалось: <strong>{{ result.expected }}</strong></p>
+{% endif %}
+<p class="note">{{ item.sentence }}</p>
+<form hx-post="/warmup/next" hx-target="#card">
+  <input type="hidden" name="queue" value="{{ queue_json }}">
+  <button type="submit" autofocus>Далі</button>
+</form>

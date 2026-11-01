@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
 {% block title %}Розминка · Soltura{% endblock %}
+{% block heading %}Розминка{% endblock %}
 
 {% block content %}
-  <h1>Розминка</h1>
-  <section id="card">
+  <article id="card">
     {% if empty %}
       {% include "warmup/done.html" %}
     {% else %}
       {% include "warmup/card.html" %}
     {% endif %}
-  </section>
+  </article>
 {% endblock %}
