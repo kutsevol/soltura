@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.14.0 (2026-11-01)
+
+### Features
+
+- **home**: Make How it works reachable from the first screen
+  ([#19](https://github.com/kutsevol/soltura/pull/19),
+  [`93a3ce5`](https://github.com/kutsevol/soltura/commit/93a3ce5483210be200686f930c63ced514bacac2))
+
+
 ## v0.13.0 (2026-11-01)
 
 ### Features
