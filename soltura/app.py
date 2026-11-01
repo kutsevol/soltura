@@ -17,6 +17,7 @@ from soltura.db import get_engine, get_session
 from soltura.home.routes import router as home_router
 from soltura.llm.client import LLMNotConfiguredError, LLMUnavailableError
 from soltura.onboarding.routes import router as onboarding_router
+from soltura.pages.routes import router as pages_router
 from soltura.reading.routes import router as reading_router
 from soltura.templating import templates
 from soltura.warmup.routes import router as warmup_router
@@ -66,6 +67,7 @@ def create_app() -> FastAPI:
     app.add_exception_handler(LLMUnavailableError, llm_unavailable)
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     app.include_router(home_router)
+    app.include_router(pages_router)
     app.include_router(reading_router)
     app.include_router(warmup_router)
     app.include_router(words_router)

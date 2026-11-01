@@ -34,6 +34,12 @@ NAV: list[NavItem] = [
         icon="list",
         purpose="Усі збережені слова: коли їх повторювати і з яких речень вони",
     ),
+    NavItem(
+        href="/help",
+        label="Як це працює",
+        icon="info",
+        purpose="Від тапу на слово до розминки, на одному прикладі",
+    ),
 ]
 
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")

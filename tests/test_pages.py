@@ -19,6 +19,7 @@ def tabs(html: str) -> dict[str, bool]:
         ("/reading", "/reading"),
         ("/warmup", "/warmup"),
         ("/words", "/words"),
+        ("/help", "/help"),
         ("/onboarding", None),
     ],
 )
@@ -36,3 +37,15 @@ async def test_the_stylesheet_is_served(learner_client: AsyncClient) -> None:
 
     assert response.status_code == 200
     assert "text/css" in response.headers["content-type"]
+
+
+async def test_every_screen_the_help_page_mentions_is_a_working_link(
+    learner_client: AsyncClient,
+) -> None:
+    page = (await learner_client.get("/help")).text
+    links = set(re.findall(r'href="(/[^"]*)"', page[page.index("<main") : page.index("</main>")]))
+
+    assert {item.href for item in NAV} - {"/", "/help"} <= links
+    assert "/onboarding" in links
+    for link in links:
+        assert (await learner_client.get(link)).status_code == 200, link
