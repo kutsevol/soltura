@@ -4,9 +4,20 @@
 {% block heading %}Слова{% endblock %}
 
 {% block content %}
+  <article>
+    <form hx-post="/words/lookup" hx-target="#preview" hx-indicator="#lookup-loading">
+      <label for="word">Додати слово</label>
+      <fieldset role="group">
+        <input id="word" name="word" placeholder="напр. nieto" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button type="submit">Знайти</button>
+      </fieldset>
+      <span id="lookup-loading" class="htmx-indicator" aria-busy="true">Шукаю…</span>
+    </form>
+    <div id="preview" aria-live="polite"></div>
+  </article>
   <input type="search" name="q" value="{{ search }}" placeholder="Знайти слово" aria-label="Знайти слово"
          hx-get="/words/search" hx-trigger="input changed delay:300ms, search" hx-target="#words">
-  <div id="words">
+  <div id="words" hx-get="/words/search" hx-trigger="wordsChanged from:body" hx-include="[name='q']">
     {% include "words/list.html" %}
   </div>
 {% endblock %}
