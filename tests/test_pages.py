@@ -15,7 +15,12 @@ def tabs(html: str) -> dict[str, bool]:
 
 @pytest.mark.parametrize(
     ("path", "current"),
-    [("/reading", "/reading"), ("/warmup", "/warmup"), ("/onboarding", None)],
+    [
+        ("/reading", "/reading"),
+        ("/warmup", "/warmup"),
+        ("/words", "/words"),
+        ("/onboarding", None),
+    ],
 )
 async def test_every_page_shows_the_tab_bar_with_its_own_tab_marked(
     learner_client: AsyncClient, path: str, current: str | None

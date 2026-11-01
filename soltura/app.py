@@ -20,6 +20,7 @@ from soltura.onboarding.routes import router as onboarding_router
 from soltura.reading.routes import router as reading_router
 from soltura.templating import templates
 from soltura.warmup.routes import router as warmup_router
+from soltura.words.routes import router as words_router
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,7 @@ def create_app() -> FastAPI:
     app.include_router(home_router)
     app.include_router(reading_router)
     app.include_router(warmup_router)
+    app.include_router(words_router)
     app.include_router(onboarding_router)
 
     @app.get("/health")

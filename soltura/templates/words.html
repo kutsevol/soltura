@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Слова · Soltura{% endblock %}
+{% block heading %}Слова{% endblock %}
+
+{% block content %}
+  <input type="search" name="q" value="{{ search }}" placeholder="Знайти слово" aria-label="Знайти слово"
+         hx-get="/words/search" hx-trigger="input changed delay:300ms, search" hx-target="#words">
+  <div id="words">
+    {% include "words/list.html" %}
+  </div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% for word in words %}
+  <article>
+    <header>
+      <strong>{{ word.lemma }}</strong>
+      <span class="note">· {{ status_label[word.status] }}</span>
+    </header>
+    <p class="note">
+      Упізнавання: {{ due_label(word.recognize_due, now) }} · Згадування: {{ due_label(word.recall_due, now) }}
+    </p>
+    {% for sentence in word.sentences %}
+      <blockquote>{{ sentence }}</blockquote>
+    {% endfor %}
+  </article>
+{% else %}
+  <article>
+    {% if search %}
+      <p>Нічого не знайдено за запитом «{{ search }}».</p>
+    {% else %}
+      <p>Збережених слів ще немає.</p>
+      <p class="note">Відкрийте текст для читання, тапніть незнайоме слово й натисніть «Зберегти»: слово з’явиться тут і в розминці.</p>
+      <a href="/reading" role="button">Перейти до читання</a>
+    {% endif %}
+  </article>
+{% endfor %}

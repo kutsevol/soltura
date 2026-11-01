@@ -28,6 +28,12 @@ NAV: list[NavItem] = [
         icon="book",
         purpose="Текст під ваш рівень; тапніть слово, щоб побачити переклад і зберегти",
     ),
+    NavItem(
+        href="/words",
+        label="Слова",
+        icon="list",
+        purpose="Усі збережені слова: коли їх повторювати і з яких речень вони",
+    ),
 ]
 
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")

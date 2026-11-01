@@ -1,9 +1,12 @@
+from collections import defaultdict
 from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import func, literal
+from sqlalchemy import and_, func, literal
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 from sqlmodel import SQLModel, col, select
 
 from soltura.learner.models import (
@@ -14,9 +17,19 @@ from soltura.learner.models import (
     LexemeOrigin,
     LexemeStatus,
     MemoryCard,
+    WordContext,
 )
 
 _LEARNER_LEXEME = SQLModel.metadata.tables["learner_lexeme"]
+
+
+@dataclass(frozen=True)
+class SavedWord:
+    lemma: str
+    status: LexemeStatus
+    recognize_due: datetime
+    recall_due: datetime
+    sentences: list[str]
 
 
 async def get_or_create_learner(session: AsyncSession, telegram_user_id: int) -> Learner:
@@ -158,3 +171,55 @@ async def mark_known_up_to_rank(session: AsyncSession, learner_id: int, max_rank
         .on_conflict_do_nothing(index_elements=["learner_id", "lexeme_id"])
     )
     await session.commit()
+
+
+async def get_saved_words(
+    session: AsyncSession, learner_id: int, search: str = ""
+) -> list[SavedWord]:
+    # A saved word is one with both cards; placement-seeded known words have none.
+    recognize = aliased(MemoryCard)
+    recall = aliased(MemoryCard)
+    query = (
+        select(Lexeme, LearnerLexeme.status, recognize.due, recall.due)
+        .join(LearnerLexeme, col(LearnerLexeme.lexeme_id) == col(Lexeme.id))
+        .join(
+            recognize,
+            and_(
+                col(recognize.lexeme_id) == col(Lexeme.id),
+                col(recognize.learner_id) == learner_id,
+                col(recognize.knowledge_type) == KnowledgeType.RECOGNIZE,
+            ),
+        )
+        .join(
+            recall,
+            and_(
+                col(recall.lexeme_id) == col(Lexeme.id),
+                col(recall.learner_id) == learner_id,
+                col(recall.knowledge_type) == KnowledgeType.RECALL,
+            ),
+        )
+        .where(col(LearnerLexeme.learner_id) == learner_id)
+        .order_by(func.least(recognize.due, recall.due), col(Lexeme.lemma))
+    )
+    if search:
+        query = query.where(col(Lexeme.lemma).icontains(search, autoescape=True))
+    rows = [
+        (lexeme.id, lexeme.lemma, LexemeStatus(status), recognize_due, recall_due)
+        for lexeme, status, recognize_due, recall_due in (await session.execute(query)).all()
+        if lexeme.id is not None
+    ]
+    contexts = await session.execute(
+        select(WordContext.lexeme_id, WordContext.sentence)
+        .where(
+            col(WordContext.learner_id) == learner_id,
+            col(WordContext.lexeme_id).in_({lexeme_id for lexeme_id, *_ in rows}),
+        )
+        .order_by(col(WordContext.created_at).desc(), col(WordContext.id).desc())
+    )
+    sentences: defaultdict[int, list[str]] = defaultdict(list)
+    for lexeme_id, sentence in contexts:
+        sentences[lexeme_id].append(sentence)
+    return [
+        SavedWord(lemma, status, recognize_due, recall_due, sentences[lexeme_id])
+        for lexeme_id, lemma, status, recognize_due, recall_due in rows
+    ]
