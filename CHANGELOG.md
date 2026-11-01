@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.16.0 (2026-11-01)
+
+### Features
+
+- **words**: Add several words at once ([#24](https://github.com/kutsevol/soltura/pull/24),
+  [`f5fb26b`](https://github.com/kutsevol/soltura/commit/f5fb26bbea10d3b2608addf1e7921562b9af0dac))
+
+
 ## v0.15.0 (2026-11-01)
 
 ### Documentation
