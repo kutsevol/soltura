@@ -2,6 +2,20 @@
 
 <!-- version list -->
 
+## v0.18.0 (2026-11-03)
+
+### Features
+
+- **words**: Show a vocabulary coverage map on the Words page
+  ([#29](https://github.com/kutsevol/soltura/pull/29),
+  [`852a327`](https://github.com/kutsevol/soltura/commit/852a3275ca7ed94325656d5c70c792f75719492c))
+
+### Refactoring
+
+- Move the app lifespan into its own module ([#28](https://github.com/kutsevol/soltura/pull/28),
+  [`df37c55`](https://github.com/kutsevol/soltura/commit/df37c5508449945725ec855f4510a0fa35ca622f))
+
+
 ## v0.17.0 (2026-11-03)
 
 ### Features
