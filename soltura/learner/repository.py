@@ -1,9 +1,9 @@
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import and_, func, literal
+from sqlalchemy import and_, case, func, literal, literal_column
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -171,6 +171,51 @@ async def mark_known_up_to_rank(session: AsyncSession, learner_id: int, max_rank
         .on_conflict_do_nothing(index_elements=["learner_id", "lexeme_id"])
     )
     await session.commit()
+
+
+@dataclass(frozen=True)
+class BandCounts:
+    total: int
+    known: int
+    learning: int
+
+
+async def get_vocabulary_bands(
+    session: AsyncSession, learner_id: int, edges: Sequence[tuple[int, int]]
+) -> list[BandCounts]:
+    # Names say nothing about vocabulary, and a rank outside every band (a word the
+    # frequency seed never saw) belongs to none. The band index is a literal because a
+    # bound parameter in SELECT and again in GROUP BY would be two different values to
+    # Postgres.
+    band = case(
+        *(
+            (col(Lexeme.frequency_rank).between(low, high), literal_column(str(index)))
+            for index, (low, high) in enumerate(edges)
+        )
+    ).label("band")
+    result = await session.execute(
+        select(
+            band,
+            func.count(),
+            func.count().filter(col(LearnerLexeme.status) == LexemeStatus.KNOWN),
+            func.count().filter(col(LearnerLexeme.status) == LexemeStatus.LEARNING),
+        )
+        .select_from(Lexeme)
+        .outerjoin(
+            LearnerLexeme,
+            and_(
+                col(LearnerLexeme.lexeme_id) == col(Lexeme.id),
+                col(LearnerLexeme.learner_id) == learner_id,
+            ),
+        )
+        .where(
+            col(Lexeme.pos) != "PROPN",
+            col(Lexeme.frequency_rank).between(edges[0][0], edges[-1][1]),
+        )
+        .group_by(band)
+    )
+    counts = {index: BandCounts(total, known, learning) for index, total, known, learning in result}
+    return [counts.get(index, BandCounts(0, 0, 0)) for index in range(len(edges))]
 
 
 async def get_saved_words(

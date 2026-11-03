@@ -1,6 +1,6 @@
 from polyfactory.factories.sqlalchemy_factory import SQLAlchemyFactory
 
-from soltura.learner.models import Learner, Lexeme, MemoryCard
+from soltura.learner.models import Learner, LearnerLexeme, Lexeme, MemoryCard
 
 
 class LearnerFactory(SQLAlchemyFactory[Learner]):
@@ -10,6 +10,11 @@ class LearnerFactory(SQLAlchemyFactory[Learner]):
 
 class LexemeFactory(SQLAlchemyFactory[Lexeme]):
     __model__ = Lexeme
+    __set_primary_key__ = False
+
+
+class LearnerLexemeFactory(SQLAlchemyFactory[LearnerLexeme]):
+    __model__ = LearnerLexeme
     __set_primary_key__ = False
 
 

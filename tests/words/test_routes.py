@@ -4,7 +4,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import func, select
 
-from soltura.learner.models import KnowledgeType, MemoryCard, ReviewLog
+from soltura.learner.models import KnowledgeType, Lexeme, MemoryCard, ReviewLog
 from soltura.words.service import WordEntry
 from tests.fakes import FakeLLM
 
@@ -201,3 +201,35 @@ async def test_saving_with_mismatched_or_empty_fields_is_rejected(
 
         assert response.status_code == 422
     assert await _count(session, MemoryCard) == 0
+
+
+async def test_the_page_draws_one_bar_per_band_with_the_learners_counts(
+    learner_client: AsyncClient, vocabulary_words: None
+) -> None:
+    response = await learner_client.get("/words")
+
+    assert response.status_code == 200
+    assert "Карта словника · знаю 2 з 5" in response.text
+    assert 'aria-label="Слова 1–250: знаю 33%, вивчаю 33%"' in response.text
+    assert 'aria-label="Слова 251–500: знаю 100%, вивчаю 0%"' in response.text
+    assert 'aria-label="Слова 8001+: знаю 0%, вивчаю 0%"' in response.text
+    assert 'hx-get="/words/map" hx-trigger="wordsChanged from:body"' in response.text
+
+
+async def test_a_learner_without_words_sees_empty_bars_and_a_zero_headline(
+    learner_client: AsyncClient, vocabulary_lexemes: dict[str, Lexeme]
+) -> None:
+    response = await learner_client.get("/words")
+
+    assert "Карта словника · знаю 0 з 5" in response.text
+    assert 'aria-label="Слова 1–250: знаю 0%, вивчаю 0%"' in response.text
+
+
+async def test_the_map_fragment_is_served_without_the_page_around_it(
+    learner_client: AsyncClient, vocabulary_words: None
+) -> None:
+    response = await learner_client.get("/words/map")
+
+    assert response.status_code == 200
+    assert "Карта словника · знаю 2 з 5" in response.text
+    assert "<html" not in response.text

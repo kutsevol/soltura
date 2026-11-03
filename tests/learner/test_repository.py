@@ -3,7 +3,13 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.learner.models import KnowledgeType, Learner, Lexeme
-from soltura.learner.repository import get_due_cards, get_lexemes_by_lemmas, get_or_create_learner
+from soltura.learner.repository import (
+    BandCounts,
+    get_due_cards,
+    get_lexemes_by_lemmas,
+    get_or_create_learner,
+    get_vocabulary_bands,
+)
 from tests.factories import MemoryCardFactory
 
 NOW = datetime(2026, 10, 31, 12, 0, tzinfo=UTC)
@@ -60,6 +66,24 @@ async def test_get_due_cards_returns_only_the_learners_due_cards_oldest_first(
     due = await get_due_cards(session, learner_id=learner.id, now=NOW, limit=10)
 
     assert [card.id for card in due] == [older.id, newer.id]
+
+
+async def test_get_vocabulary_bands_counts_the_learners_words_per_band(
+    session: AsyncSession, learner: Learner, vocabulary_words: None
+) -> None:
+    assert learner.id is not None
+
+    bands = await get_vocabulary_bands(
+        session, learner.id, [(1, 250), (251, 500), (501, 10_000), (20_000, 30_000)]
+    )
+
+    # Names, words the seed never ranked and another learner's words count nowhere.
+    assert bands == [
+        BandCounts(total=3, known=1, learning=1),
+        BandCounts(total=1, known=1, learning=0),
+        BandCounts(total=1, known=0, learning=0),
+        BandCounts(total=0, known=0, learning=0),
+    ]
 
 
 async def test_get_due_cards_stops_at_the_limit(

@@ -4,6 +4,9 @@
 {% block heading %}Слова{% endblock %}
 
 {% block content %}
+  <div id="vocabulary-map" hx-get="/words/map" hx-trigger="wordsChanged from:body">
+    {% include "words/map.html" %}
+  </div>
   <article>
     <form hx-post="/words/lookup" hx-target="#preview" hx-indicator="#lookup-loading">
       <label for="words-input">Додати слова: по одному в рядку, до 20</label>

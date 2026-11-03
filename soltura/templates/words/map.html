@@ -1,0 +1,18 @@
+<article>
+  <header><strong>{{ vocabulary.headline }}</strong></header>
+  {% for band in vocabulary.bands %}
+    <div class="map-row">
+      <span class="note">{{ band.label }}</span>
+      <div class="bar" role="img" aria-label="{{ band.description }}">
+        <span class="bar-known" style="width: {{ band.known_width }}%"></span>
+        <span class="bar-learning" style="width: {{ band.learning_width }}%"></span>
+      </div>
+      <span class="note map-share">{{ band.share }}%</span>
+    </div>
+  {% endfor %}
+  <p class="note legend">
+    <span><i class="key key-known"></i>знаю</span>
+    <span><i class="key key-learning"></i>вивчаю</span>
+    <span><i class="key"></i>ще не зустрічав</span>
+  </p>
+</article>

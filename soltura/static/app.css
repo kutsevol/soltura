@@ -439,3 +439,57 @@ button.word:focus-visible {
 .htmx-request.htmx-indicator {
   display: inline;
 }
+
+/* Vocabulary map: one stacked bar per frequency band. */
+
+.map-row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr 2.75rem;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.map-share {
+  text-align: right;
+}
+
+.bar {
+  display: flex;
+  height: 0.65rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+.bar-known {
+  background: var(--accent);
+}
+
+.bar-learning {
+  background: var(--verdict-hard);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0.75rem 0 0;
+}
+
+.key {
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  margin-right: 0.35rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+.key-known {
+  background: var(--accent);
+}
+
+.key-learning {
+  background: var(--verdict-hard);
+}

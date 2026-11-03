@@ -12,9 +12,10 @@ from testcontainers.community.postgres import PostgresContainer
 from soltura.app import create_app
 from soltura.config import settings
 from soltura.db import get_session
-from soltura.learner.models import Learner, Lexeme
+from soltura.learner.models import Learner, Lexeme, LexemeOrigin, LexemeStatus
 from soltura.llm.client import get_llm
-from tests.factories import LearnerFactory, LexemeFactory
+from soltura.reading.service import UNRANKED
+from tests.factories import LearnerFactory, LearnerLexemeFactory, LexemeFactory
 from tests.fakes import FakeLLM
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -84,6 +85,54 @@ async def lexemes(session: AsyncSession) -> list[Lexeme]:
     session.add_all(lexemes)
     await session.flush()
     return lexemes
+
+
+@pytest.fixture
+async def vocabulary_lexemes(session: AsyncSession) -> dict[str, Lexeme]:
+    ranks = {
+        "known": (10, "VERB"),
+        "learning": (20, "NOUN"),
+        "unmet": (30, "ADJ"),
+        "name": (40, "PROPN"),
+        "second_band": (300, "NOUN"),
+        "tail": (9_000, "NOUN"),
+        "unranked": (UNRANKED, "X"),
+    }
+    lexemes = {
+        lemma: LexemeFactory.build(lemma=lemma, pos=pos, frequency_rank=rank)
+        for lemma, (rank, pos) in ranks.items()
+    }
+    session.add_all(lexemes.values())
+    await session.flush()
+    return lexemes
+
+
+@pytest.fixture
+async def vocabulary_words(
+    session: AsyncSession, learner: Learner, vocabulary_lexemes: dict[str, Lexeme]
+) -> None:
+    other = LearnerFactory.build()
+    session.add(other)
+    await session.flush()
+    assert learner.id is not None and other.id is not None
+    owned = [
+        (learner.id, "known", LexemeStatus.KNOWN),
+        (learner.id, "learning", LexemeStatus.LEARNING),
+        (learner.id, "name", LexemeStatus.KNOWN),
+        (learner.id, "second_band", LexemeStatus.KNOWN),
+        (learner.id, "unranked", LexemeStatus.LEARNING),
+        (other.id, "unmet", LexemeStatus.KNOWN),
+    ]
+    session.add_all(
+        LearnerLexemeFactory.build(
+            learner_id=learner_id,
+            lexeme_id=vocabulary_lexemes[lemma].id,
+            status=status,
+            origin=LexemeOrigin.READING,
+        )
+        for learner_id, lemma, status in owned
+    )
+    await session.flush()
 
 
 @pytest.fixture

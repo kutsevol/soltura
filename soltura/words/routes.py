@@ -13,6 +13,8 @@ from soltura.llm.client import LLMClient, get_llm
 from soltura.reading.service import save_tapped_word
 from soltura.templating import templates
 from soltura.words.service import MAX_WORDS, Problem, look_up_words, parse_words
+from soltura.words.views import VocabularyView, vocabulary_view
+from soltura.words.vocabulary import build_vocabulary_map
 
 router = APIRouter(prefix="/words")
 
@@ -60,12 +62,27 @@ async def _words_context(session: AsyncSession, learner: Learner, search: str) -
     }
 
 
+async def _vocabulary(session: AsyncSession, learner: Learner) -> VocabularyView:
+    return vocabulary_view(await build_vocabulary_map(session, _learner_id(learner)))
+
+
 @router.get("", response_class=HTMLResponse)
 async def words_page(
     request: Request, session: SessionDep, learner: LearnerDep, q: str = ""
 ) -> HTMLResponse:
+    context = {
+        **await _words_context(session, learner, q),
+        "vocabulary": await _vocabulary(session, learner),
+    }
+    return templates.TemplateResponse(request, "words.html", context)
+
+
+@router.get("/map", response_class=HTMLResponse)
+async def vocabulary_map(
+    request: Request, session: SessionDep, learner: LearnerDep
+) -> HTMLResponse:
     return templates.TemplateResponse(
-        request, "words.html", await _words_context(session, learner, q)
+        request, "words/map.html", {"vocabulary": await _vocabulary(session, learner)}
     )
 
 
