@@ -1,27 +1,239 @@
-/* Our layer over Pico's orange theme: the app shell, tappable words and verdicts. */
+/* Our layer over Pico: a warm, glassy terracotta look in light and dark, the app shell, tappable words and verdicts. */
+
+/* Palette. Light is the default; dark follows the system. */
 
 :root {
   --tabbar-height: 4rem;
-  --highlight: #fff1e5;
+  --bg: #faf6f1;
+  --surface: #ffffff;
+  --surface-hover: #f4ece3;
+  --field: #ffffff;
+  --ghost: #2a232008;
+  --card-fill: linear-gradient(180deg, #ffffff, #fffaf4);
+  --border: #2a232018;
+  --border-strong: #2a232030;
+  --edge: #ffffffb0;
+  --ink: #2a2320;
+  --ink-muted: #75695f;
+  --accent: #a8573a;
+  --accent-hover: #8f4529;
+  --accent-soft: #c3765a1f;
+  --glow: #e8a36a45;
+  --glow-side: #c3765a26;
+  --highlight: #f6e1d2;
+  --shadow: 0 6px 24px #4a2c1a14;
+  --tone-reading: #2f6fb0;
+  --tone-words: #1a7f37;
+  --tone-help: #6b4fc4;
   --verdict-good: #1a7f37;
   --verdict-hard: #9a6700;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --highlight: #3b2512;
+    --bg: #111113;
+    --surface: #1b1b1f;
+    --surface-hover: #222227;
+    --field: #ffffff0a;
+    --ghost: #ffffff08;
+    --card-fill: linear-gradient(180deg, #ffffff0d, #ffffff03);
+    --border: #ffffff1c;
+    --border-strong: #ffffff29;
+    --edge: #ffffff0d;
+    --ink: #f0efed;
+    --ink-muted: #a3a1a8;
+    --accent: #e8a36a;
+    --accent-hover: #f2b988;
+    --accent-soft: #c3765a2b;
+    --glow: #c3765a52;
+    --glow-side: #c3765a2e;
+    --highlight: #3b2518;
+    --shadow: 0 8px 32px #00000047;
+    --tone-reading: #7eb6f6;
+    --tone-words: #2dd86a;
+    --tone-help: #b7a6ff;
     --verdict-good: #3fb950;
     --verdict-hard: #d29922;
   }
 }
 
-body {
-  padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
+/* The three-class selector outranks Pico's own theme blocks whatever the system theme is. */
+
+:root:root:root {
+  --pico-font-family: "Onest", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --pico-border-radius: 0.65rem;
+  --pico-background-color: var(--bg);
+  --pico-color: var(--ink);
+  --pico-muted-color: var(--ink-muted);
+  --pico-muted-border-color: var(--border);
+  --pico-primary: var(--accent);
+  --pico-primary-underline: var(--accent-soft);
+  --pico-primary-hover: var(--accent-hover);
+  --pico-primary-hover-underline: var(--accent-hover);
+  --pico-primary-background: #d48668;
+  --pico-primary-border: #d48668;
+  --pico-primary-hover-background: #e0956f;
+  --pico-primary-hover-border: #e0956f;
+  --pico-primary-focus: var(--accent-soft);
+  --pico-primary-inverse: #180c07;
+  --pico-secondary: var(--ink-muted);
+  --pico-secondary-background: var(--ghost);
+  --pico-secondary-border: var(--border-strong);
+  --pico-secondary-hover: var(--ink);
+  --pico-secondary-hover-background: var(--surface-hover);
+  --pico-secondary-hover-border: var(--ink-muted);
+  --pico-secondary-focus: var(--accent-soft);
+  --pico-secondary-inverse: var(--ink);
+  --pico-h1-color: var(--ink);
+  --pico-h2-color: var(--ink);
+  --pico-h3-color: var(--ink);
+  --pico-h4-color: var(--ink);
+  --pico-h5-color: var(--ink);
+  --pico-h6-color: var(--ink);
+  --pico-blockquote-border-color: var(--accent);
+  --pico-card-background-color: var(--surface);
+  --pico-card-border-color: var(--border);
+  --pico-card-box-shadow: var(--shadow);
+  --pico-card-sectioning-background-color: var(--ghost);
+  --pico-form-element-background-color: var(--field);
+  --pico-form-element-selected-background-color: var(--surface-hover);
+  --pico-form-element-border-color: var(--border-strong);
+  --pico-form-element-color: var(--ink);
+  --pico-form-element-placeholder-color: var(--ink-muted);
+  --pico-form-element-active-background-color: var(--field);
+  --pico-form-element-active-border-color: var(--accent);
+  --pico-form-element-focus-color: var(--accent-soft);
+  --pico-form-element-disabled-background-color: var(--ghost);
+  --pico-form-element-disabled-border-color: var(--border);
+  --pico-mark-background-color: var(--highlight);
+  --pico-mark-color: var(--ink);
 }
 
-main.container {
-  max-width: 42rem;
-  padding-top: 1rem;
+body {
+  padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(ellipse 80% 460px at 8% -160px, var(--glow), transparent 72%) no-repeat,
+    radial-gradient(ellipse 60% 360px at 100% 0, var(--glow-side), transparent 72%) no-repeat,
+    var(--bg);
+}
+
+/* Headings: heavy and tight, with a small spaced-out label above where a card needs one. */
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+
+article h2 {
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.eyebrow + h2 {
+  margin-top: 0;
+}
+
+.eyebrow {
+  margin-bottom: 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+/* Cards: a glassy fill, a hairline edge, tinted when a screen has its own colour. */
+
+article {
+  background-image: var(--card-fill);
+  border: 1px solid var(--border);
+  border-radius: 1.2rem;
+}
+
+article > footer {
+  border-top: 1px solid var(--border);
+}
+
+article.focus {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background-image:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%),
+    var(--card-fill);
+  box-shadow: 0 0 0 1px var(--accent-soft), 0 14px 44px var(--glow);
+}
+
+article.module {
+  --tone: var(--accent);
+  border-left: 3px solid var(--tone);
+  background-image:
+    linear-gradient(90deg, color-mix(in srgb, var(--tone) 13%, transparent), transparent 65%),
+    var(--card-fill);
+}
+
+article.module h3 {
+  margin-bottom: 0.35rem;
+}
+
+article.module h3 a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+article.module p {
+  margin-bottom: 0;
+}
+
+.module.reading {
+  --tone: var(--tone-reading);
+}
+
+.module.words {
+  --tone: var(--tone-words);
+}
+
+.module.help {
+  --tone: var(--tone-help);
+}
+
+/* Buttons: tall pills. The main one is a three-step warm gradient with a lit top edge and a glow. */
+
+main :is(button, [role="button"]) {
+  padding: 0.9rem 1.4rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  line-height: 1.25;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+button:not(.outline):not(.secondary):not(.word),
+[role="button"]:not(.outline):not(.secondary) {
+  background-image: linear-gradient(180deg, #e8a36a 0%, #d48668 55%, #c3765a 100%);
+  border-color: transparent;
+  color: #180c07;
+  box-shadow: inset 0 1px 0 #ffffff61, 0 8px 22px #c3765a52;
+}
+
+button:not(.outline):not(.secondary):not(.word):hover,
+[role="button"]:not(.outline):not(.secondary):hover {
+  filter: brightness(1.07);
+}
+
+button.outline,
+[role="button"].outline {
+  background-color: var(--ghost);
+  border-color: var(--border-strong);
+  color: var(--ink);
+  box-shadow: inset 0 1px 0 var(--edge);
+}
+
+input,
+select,
+textarea {
+  border-radius: 0.65rem;
 }
 
 /* Title bar */
@@ -31,8 +243,9 @@ main.container {
   top: 0;
   z-index: 10;
   padding: 0;
-  background: var(--pico-background-color);
-  border-bottom: 1px solid var(--pico-muted-border-color);
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
 }
 
 .titlebar .container {
@@ -45,7 +258,11 @@ main.container {
 
 .titlebar .brand {
   font-weight: 700;
+  letter-spacing: -0.03em;
   text-decoration: none;
+  background: linear-gradient(90deg, var(--ink) 30%, var(--accent));
+  background-clip: text;
+  color: transparent;
 }
 
 .titlebar .screen {
@@ -59,16 +276,24 @@ main.container {
   justify-content: center;
   width: 2rem;
   height: 2rem;
-  border: 1.5px solid var(--pico-primary);
+  border: 1px solid var(--border-strong);
   border-radius: 50%;
+  background: var(--ghost);
   font-weight: 700;
   text-decoration: none;
-  color: var(--pico-primary);
+  color: var(--accent);
   align-self: center;
 }
 
 article.intro {
-  background: var(--highlight);
+  background-image: none;
+  background-color: var(--highlight);
+  border-color: var(--accent-soft);
+}
+
+main.container {
+  max-width: 42rem;
+  padding-top: 1rem;
 }
 
 /* Bottom tab bar */
@@ -82,8 +307,9 @@ article.intro {
   grid-auto-columns: 1fr;
   height: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
-  background: var(--pico-background-color);
-  border-top: 1px solid var(--pico-muted-border-color);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--border);
 }
 
 .tabbar a {
@@ -183,8 +409,11 @@ button.word:focus-visible {
   width: auto;
   margin: 0;
   padding: 0.4rem 1rem;
-  border-radius: 999px;
   white-space: nowrap;
+  background-color: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+  color: var(--accent);
+  box-shadow: none;
 }
 
 /* Warm-up verdicts */

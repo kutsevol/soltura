@@ -2,7 +2,6 @@ import logging
 import sys
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Request
@@ -19,13 +18,11 @@ from soltura.llm.client import LLMNotConfiguredError, LLMUnavailableError
 from soltura.onboarding.routes import router as onboarding_router
 from soltura.pages.routes import router as pages_router
 from soltura.reading.routes import router as reading_router
-from soltura.templating import templates
+from soltura.templating import STATIC_DIR, templates
 from soltura.warmup.routes import router as warmup_router
 from soltura.words.routes import router as words_router
 
 logger = logging.getLogger(__name__)
-
-STATIC_DIR = Path(__file__).parent / "static"
 
 
 class HealthResponse(BaseModel):

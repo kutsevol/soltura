@@ -1,9 +1,12 @@
+import os
 import re
+from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
 
-from soltura.templating import NAV
+from soltura import templating
+from soltura.templating import NAV, asset_version
 
 TAB = re.compile(r'<a href="(?P<href>[^"]+)"(?P<current> aria-current="page")?>')
 
@@ -47,6 +50,28 @@ async def test_the_stylesheet_is_served(learner_client: AsyncClient) -> None:
 
     assert response.status_code == 200
     assert "text/css" in response.headers["content-type"]
+
+
+async def test_the_page_links_the_stylesheet_with_the_version_of_the_file(
+    learner_client: AsyncClient,
+) -> None:
+    page = (await learner_client.get("/help")).text
+
+    assert f'/static/app.css?v={asset_version("app.css")}"' in page
+
+
+def test_the_asset_version_changes_when_the_file_does(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(templating, "STATIC_DIR", tmp_path)
+    stylesheet = tmp_path / "app.css"
+    stylesheet.write_text("body {}")
+    os.utime(stylesheet, (1_000_000, 1_000_000))
+    before = asset_version("app.css")
+
+    os.utime(stylesheet, (2_000_000, 2_000_000))
+
+    assert asset_version("app.css") != before
 
 
 async def test_every_screen_the_help_page_mentions_is_a_working_link(
