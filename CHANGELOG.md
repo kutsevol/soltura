@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.19.0 (2026-11-03)
+
+### Features
+
+- **home**: Show known words on the hub ([#30](https://github.com/kutsevol/soltura/pull/30),
+  [`b6247f0`](https://github.com/kutsevol/soltura/commit/b6247f0156ecb05c30970634448b5b4a3c9179db))
+
+
 ## v0.18.0 (2026-11-03)
 
 ### Features
