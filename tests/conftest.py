@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator, Iterator
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -12,10 +13,23 @@ from testcontainers.community.postgres import PostgresContainer
 from soltura.app import create_app
 from soltura.config import settings
 from soltura.db import get_session
-from soltura.learner.models import Learner, Lexeme, LexemeOrigin, LexemeStatus
+from soltura.learner.models import (
+    KnowledgeType,
+    Learner,
+    Lexeme,
+    LexemeOrigin,
+    LexemeStatus,
+    MemoryCard,
+    UnitKind,
+)
 from soltura.llm.client import get_llm
 from soltura.reading.service import UNRANKED
-from tests.factories import LearnerFactory, LearnerLexemeFactory, LexemeFactory
+from tests.factories import (
+    LearnerFactory,
+    LearnerLexemeFactory,
+    LexemeFactory,
+    MemoryCardFactory,
+)
 from tests.fakes import FakeLLM
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -138,3 +152,20 @@ async def vocabulary_words(
 @pytest.fixture
 def llm() -> FakeLLM:
     return FakeLLM()
+
+
+@pytest.fixture
+async def due_conjugation_card(session: AsyncSession, learner: Learner) -> MemoryCard:
+    # Due long before any test's clock, and without a lexeme: the shape every
+    # non-word card has.
+    card = MemoryCardFactory.build(
+        learner_id=learner.id,
+        unit_kind=UnitKind.CONJUGATION,
+        unit_key="tener|preterite|ellos",
+        lexeme_id=None,
+        knowledge_type=KnowledgeType.RECALL,
+        due=datetime(2020, 1, 1, tzinfo=UTC),
+    )
+    session.add(card)
+    await session.flush()
+    return card

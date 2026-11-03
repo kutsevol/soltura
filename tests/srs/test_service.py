@@ -17,6 +17,7 @@ from soltura.learner.models import (
     Rating,
     ReviewLog,
     ReviewSource,
+    UnitKind,
     WordContext,
 )
 from soltura.srs.service import due_queue, interleave, review, save_word
@@ -39,6 +40,8 @@ async def test_saving_a_word_creates_both_cards_due_now(
     ]
     assert all(card.due == NOW and card.state == CardState.LEARNING for card in cards)
     assert all(card.step == 0 for card in cards)
+    assert all(card.unit_kind == UnitKind.WORD for card in cards)
+    assert all(card.unit_key == str(lexemes[2].id) for card in cards)
     assert all(card.stability is None and card.difficulty is None for card in cards)
     status = (await session.execute(select(LearnerLexeme.status))).scalar_one()
     assert status == LexemeStatus.LEARNING
@@ -140,10 +143,29 @@ async def test_the_due_queue_never_shows_one_words_cards_back_to_back(
         assert lexeme.id is not None
         await save_word(session, learner.id, lexeme.id, f"Frase con {lexeme.lemma}.", NOW)
 
-    queue = await due_queue(session, learner.id, now=NOW, limit=10)
+    queue = await due_queue(session, learner.id, now=NOW, limit=10, unit_kind=UnitKind.WORD)
 
     assert len(queue) == 6
-    assert all(a.lexeme_id != b.lexeme_id for a, b in zip(queue, queue[1:], strict=False))
+    assert all(a.unit_key != b.unit_key for a, b in zip(queue, queue[1:], strict=False))
+
+
+async def test_the_word_queue_leaves_out_other_units(
+    session: AsyncSession,
+    learner: Learner,
+    lexemes: list[Lexeme],
+    due_conjugation_card: MemoryCard,
+) -> None:
+    assert learner.id is not None and lexemes[0].id is not None
+    await save_word(session, learner.id, lexemes[0].id, "Es tarde.", NOW)
+
+    words = await due_queue(session, learner.id, now=NOW, limit=10, unit_kind=UnitKind.WORD)
+    conjugations = await due_queue(
+        session, learner.id, now=NOW, limit=10, unit_kind=UnitKind.CONJUGATION
+    )
+
+    assert {card.unit_kind for card in words} == {UnitKind.WORD}
+    assert len(words) == 2
+    assert [card.id for card in conjugations] == [due_conjugation_card.id]
 
 
 def test_interleave_alternates_knowledge_types_when_it_can() -> None:
@@ -161,11 +183,11 @@ def test_interleave_alternates_knowledge_types_when_it_can() -> None:
 
     ordered = interleave(cards)
 
-    assert [(card.lexeme_id, card.knowledge_type) for card in ordered] == [
-        (1, KnowledgeType.RECOGNIZE),
-        (2, KnowledgeType.RECALL),
-        (1, KnowledgeType.RECALL),
-        (2, KnowledgeType.RECOGNIZE),
+    assert [(card.unit_key, card.knowledge_type) for card in ordered] == [
+        ("1", KnowledgeType.RECOGNIZE),
+        ("2", KnowledgeType.RECALL),
+        ("1", KnowledgeType.RECALL),
+        ("2", KnowledgeType.RECOGNIZE),
     ]
 
 
@@ -176,7 +198,7 @@ async def test_the_due_queue_leaves_out_cards_not_yet_due(
     card, other = await save_word(session, learner.id, lexemes[0].id, "Es tarde.", NOW)
     await review(session, card, Rating.GOOD, ReviewSource.WARMUP, NOW, scheduler=scheduler)
 
-    queue = await due_queue(session, learner.id, now=NOW, limit=10)
+    queue = await due_queue(session, learner.id, now=NOW, limit=10, unit_kind=UnitKind.WORD)
 
     assert [queued.id for queued in queue] == [other.id]
     assert (

@@ -8,7 +8,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
 from soltura.language.nlp import analyze
-from soltura.learner.models import KnowledgeType, MemoryCard, Rating, ReviewSource, WordContext
+from soltura.learner.models import (
+    KnowledgeType,
+    MemoryCard,
+    Rating,
+    ReviewSource,
+    UnitKind,
+    WordContext,
+)
 from soltura.learner.repository import get_lexemes_by_ids
 from soltura.llm.client import LLMClient, LLMUnavailableError
 from soltura.practice.checking import (
@@ -92,12 +99,15 @@ async def _fresh_context(llm: LLMClient, lemma: str, seen: list[str]) -> Context
 async def build_warmup(
     session: AsyncSession, llm: LLMClient, learner_id: int, now: datetime
 ) -> list[WarmupItem]:
-    cards = await due_queue(session, learner_id, now=now, limit=WARMUP_SIZE)
+    queue = await due_queue(
+        session, learner_id, now=now, limit=WARMUP_SIZE, unit_kind=UnitKind.WORD
+    )
+    cards = [(card, card.lexeme_id) for card in queue if card.lexeme_id is not None]
     if not cards:
         return []
     lemmas = {
         lexeme.id: lexeme.lemma
-        for lexeme in await get_lexemes_by_ids(session, {card.lexeme_id for card in cards})
+        for lexeme in await get_lexemes_by_ids(session, {lexeme_id for _, lexeme_id in cards})
     }
     saved = await session.execute(
         select(WordContext.lexeme_id, WordContext.sentence)
@@ -113,17 +123,14 @@ async def build_warmup(
 
     # One concurrent batch: a warm-up of 15 cards should not wait for 15 calls in a row.
     contexts = await asyncio.gather(
-        *(
-            _fresh_context(llm, lemmas[card.lexeme_id], seen.get(card.lexeme_id, []))
-            for card in cards
-        )
+        *(_fresh_context(llm, lemmas[lexeme_id], seen.get(lexeme_id, [])) for _, lexeme_id in cards)
     )
 
     items: list[WarmupItem] = []
-    for card, context in zip(cards, contexts, strict=True):
+    for (card, lexeme_id), context in zip(cards, contexts, strict=True):
         if card.id is None:
             continue
-        lemma = lemmas[card.lexeme_id]
+        lemma = lemmas[lexeme_id]
         if context is not None:
             items.append(
                 WarmupItem(
@@ -138,7 +145,7 @@ async def build_warmup(
             continue
         # Without a fresh sentence a recall card has no Ukrainian prompt to answer, so
         # it waits for the next warm-up; recognize falls back to the saved sentence.
-        fallback = seen.get(card.lexeme_id, [])
+        fallback = seen.get(lexeme_id, [])
         form = _form_in_saved_sentence(fallback[-1], lemma) if fallback else None
         if card.knowledge_type == KnowledgeType.RECOGNIZE and fallback and form:
             items.append(

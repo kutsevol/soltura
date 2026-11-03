@@ -17,6 +17,7 @@ from soltura.learner.models import (
     LexemeOrigin,
     LexemeStatus,
     MemoryCard,
+    UnitKind,
     WordContext,
 )
 
@@ -66,21 +67,29 @@ async def get_learner_lexemes(
 
 
 async def get_due_cards(
-    session: AsyncSession, learner_id: int, now: datetime, limit: int
+    session: AsyncSession, learner_id: int, now: datetime, limit: int, unit_kind: UnitKind
 ) -> list[MemoryCard]:
     result = await session.execute(
         select(MemoryCard)
-        .where(col(MemoryCard.learner_id) == learner_id, col(MemoryCard.due) <= now)
+        .where(
+            col(MemoryCard.learner_id) == learner_id,
+            col(MemoryCard.unit_kind) == unit_kind,
+            col(MemoryCard.due) <= now,
+        )
         .order_by(col(MemoryCard.due), col(MemoryCard.id))
         .limit(limit)
     )
     return list(result.scalars())
 
 
-async def count_due_cards(session: AsyncSession, learner_id: int, now: datetime) -> int:
+async def count_due_cards(
+    session: AsyncSession, learner_id: int, now: datetime, unit_kind: UnitKind
+) -> int:
     result = await session.execute(
         select(func.count()).where(
-            col(MemoryCard.learner_id) == learner_id, col(MemoryCard.due) <= now
+            col(MemoryCard.learner_id) == learner_id,
+            col(MemoryCard.unit_kind) == unit_kind,
+            col(MemoryCard.due) <= now,
         )
     )
     return result.scalar_one()

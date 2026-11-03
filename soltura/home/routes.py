@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.db import get_session
 from soltura.learner.dependencies import current_learner
-from soltura.learner.models import Learner
+from soltura.learner.models import Learner, UnitKind
 from soltura.learner.repository import count_due_cards, count_learning_words
 from soltura.templating import templates
 from soltura.words.views import known_summary
@@ -24,7 +24,7 @@ async def home_page(
 ) -> HTMLResponse:
     if learner.id is None:
         raise ValueError("current_learner returned an unsaved learner")
-    due = await count_due_cards(session, learner.id, datetime.now(UTC))
+    due = await count_due_cards(session, learner.id, datetime.now(UTC), UnitKind.WORD)
     learning = await count_learning_words(session, learner.id)
     vocabulary = await build_vocabulary_map(session, learner.id)
     return templates.TemplateResponse(
