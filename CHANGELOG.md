@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.21.0 (2026-11-03)
+
+### Features
+
+- **conjugation**: Conjugate a verb by code ([#33](https://github.com/kutsevol/soltura/pull/33),
+  [`a7de507`](https://github.com/kutsevol/soltura/commit/a7de5073dde71f1ffff42237cc83438d8ee7577b))
+
+
 ## v0.20.0 (2026-11-03)
 
 ### Features
