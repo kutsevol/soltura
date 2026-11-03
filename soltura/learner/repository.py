@@ -23,6 +23,9 @@ from soltura.learner.models import (
 
 _LEARNER_LEXEME = SQLModel.metadata.tables["learner_lexeme"]
 
+# spaCy tags ser, estar, poder and deber as auxiliaries; they are verbs to conjugate.
+VERB_TAGS = ("VERB", "AUX")
+
 
 @dataclass(frozen=True)
 class SavedWord:
@@ -93,6 +96,39 @@ async def count_due_cards(
         )
     )
     return result.scalar_one()
+
+
+async def get_unit_keys(session: AsyncSession, learner_id: int, unit_kind: UnitKind) -> set[str]:
+    result = await session.execute(
+        select(MemoryCard.unit_key).where(
+            col(MemoryCard.learner_id) == learner_id,
+            col(MemoryCard.unit_kind) == unit_kind,
+            col(MemoryCard.unit_key).is_not(None),
+        )
+    )
+    return set(result.scalars())
+
+
+async def count_unreviewed_cards(
+    session: AsyncSession, learner_id: int, unit_kind: UnitKind
+) -> int:
+    result = await session.execute(
+        select(func.count()).where(
+            col(MemoryCard.learner_id) == learner_id,
+            col(MemoryCard.unit_kind) == unit_kind,
+            col(MemoryCard.last_review).is_(None),
+        )
+    )
+    return result.scalar_one()
+
+
+async def get_verb_lemmas(session: AsyncSession) -> list[str]:
+    result = await session.execute(
+        select(Lexeme.lemma)
+        .where(col(Lexeme.pos).in_(VERB_TAGS))
+        .order_by(col(Lexeme.frequency_rank), col(Lexeme.lemma))
+    )
+    return list(result.scalars())
 
 
 async def count_learning_words(session: AsyncSession, learner_id: int) -> int:

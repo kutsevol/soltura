@@ -64,7 +64,9 @@ def conjugate(verb: str, tense: Tense, person: Person) -> str | None:
         conjugation = get_conjugator().conjugate_mood_tense(
             verb, MoodEs.Indicativo, TENSES[tense], conjugate_pronouns=False
         )
-    except VerbNotFoundError:
+    except (VerbNotFoundError, IndexError):
+        # IndexError: for a verb whose template only has third-person endings (pasar,
+        # resultar, suceder) verbecc fails while building the voseo form.
         return None
     pronoun = PRONOUNS[person]
     return next((entry["c"][0] for entry in conjugation.get_data() if entry["pr"] == pronoun), None)

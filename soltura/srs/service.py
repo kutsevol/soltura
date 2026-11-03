@@ -123,6 +123,36 @@ async def save_word(
     return cards
 
 
+async def schedule_units(
+    session: AsyncSession,
+    learner_id: int,
+    unit_kind: UnitKind,
+    unit_keys: list[str],
+    knowledge_type: KnowledgeType,
+    now: datetime,
+) -> None:
+    await session.execute(
+        insert(MemoryCard)
+        .values(
+            [
+                {
+                    "learner_id": learner_id,
+                    "unit_kind": unit_kind,
+                    "unit_key": unit_key,
+                    "knowledge_type": knowledge_type,
+                    "due": now,
+                    "step": 0,
+                }
+                for unit_key in unit_keys
+            ]
+        )
+        .on_conflict_do_nothing(
+            index_elements=["learner_id", "unit_kind", "unit_key", "knowledge_type"]
+        )
+    )
+    await session.commit()
+
+
 async def review(
     session: AsyncSession,
     card: MemoryCard,

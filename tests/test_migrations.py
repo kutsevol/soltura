@@ -78,3 +78,36 @@ def test_existing_word_cards_keep_their_schedule_through_the_card_unit_migration
     finally:
         command.downgrade(config, "base")
         command.upgrade(config, "head")
+
+
+def test_undoing_the_review_source_migration_drops_the_conjugation_reviews(
+    database_url: str,
+) -> None:
+    config = _alembic_config(database_url)
+    sources = "SELECT source::text FROM review_log"
+    values = "SELECT enum_range(NULL::review_source)::text"
+    try:
+        asyncio.run(
+            _run(
+                database_url,
+                "INSERT INTO learner (id, telegram_user_id) VALUES (1, 1)",
+                """
+                INSERT INTO memory_card (learner_id, unit_kind, unit_key, knowledge_type, due)
+                VALUES (1, 'conjugation', 'ser|present|yo', 'recall', now())
+                """,
+                "INSERT INTO review_log (card_id, rating, source, reviewed_at) "
+                "SELECT id, 'good', 'conjugation'::review_source, now() FROM memory_card",
+                "INSERT INTO review_log (card_id, rating, source, reviewed_at) "
+                "SELECT id, 'good', 'warmup'::review_source, now() FROM memory_card",
+            )
+        )
+
+        command.downgrade(config, "0002")
+        assert asyncio.run(_run(database_url, sources)) == [("warmup",)]
+        assert asyncio.run(_run(database_url, values)) == [("{warmup,reading_tap}",)]
+
+        command.upgrade(config, "head")
+        assert asyncio.run(_run(database_url, values)) == [("{warmup,reading_tap,conjugation}",)]
+    finally:
+        command.downgrade(config, "base")
+        command.upgrade(config, "head")
