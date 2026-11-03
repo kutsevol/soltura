@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.19.1 (2026-11-03)
+
+### Bug Fixes
+
+- **words**: Label a tiny share as under 1% on the vocabulary map
+  ([#31](https://github.com/kutsevol/soltura/pull/31),
+  [`9e3a14d`](https://github.com/kutsevol/soltura/commit/9e3a14dfbbd888fe6a06794e9ad077a9d9e1b8a2))
+
+
 ## v0.19.0 (2026-11-03)
 
 ### Features
