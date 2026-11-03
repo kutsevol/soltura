@@ -52,3 +52,21 @@ async def test_the_help_offer_goes_away_after_the_first_saved_word(
     response = await learner_client.get("/")
 
     assert "Вперше тут?" not in response.text
+
+
+async def test_the_hub_shows_the_known_total_and_links_to_the_words_page(
+    learner_client: AsyncClient, vocabulary_words: None
+) -> None:
+    response = await learner_client.get("/")
+
+    assert response.status_code == 200
+    assert '<a href="/words">Знаю слів: 2 з 5</a>' in response.text
+
+
+async def test_a_learner_without_words_sees_zero_known_words(
+    learner_client: AsyncClient,
+) -> None:
+    response = await learner_client.get("/")
+
+    assert response.status_code == 200
+    assert '<a href="/words">Знаю слів: 0 з 0</a>' in response.text

@@ -24,6 +24,7 @@
       <a href="/reading" role="button">Перейти до читання</a>
     {% endif %}
     <p class="note">Слів у вивченні: {{ learning }}</p>
+    <p class="note"><a href="/words">{{ known_summary }}</a></p>
   </article>
 
   {% for item in nav if item.href != "/" %}
