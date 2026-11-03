@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.20.0 (2026-11-03)
+
+### Features
+
+- **srs**: Let a memory card hold a unit other than a word
+  ([#32](https://github.com/kutsevol/soltura/pull/32),
+  [`e025012`](https://github.com/kutsevol/soltura/commit/e0250120b42a5a5251c05f1e7f4c953703023837))
+
+
 ## v0.19.1 (2026-11-03)
 
 ### Bug Fixes
