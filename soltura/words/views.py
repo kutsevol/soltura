@@ -39,6 +39,10 @@ def _band_view(band: BandProgress) -> BandView:
     )
 
 
+def known_summary(vocabulary: VocabularyMap) -> str:
+    return f"Знаю слів: {_number(vocabulary.known)} з {_number(vocabulary.total)}"
+
+
 def vocabulary_view(vocabulary: VocabularyMap) -> VocabularyView:
     return VocabularyView(
         headline=(

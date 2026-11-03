@@ -10,6 +10,8 @@ from soltura.learner.dependencies import current_learner
 from soltura.learner.models import Learner
 from soltura.learner.repository import count_due_cards, count_learning_words
 from soltura.templating import templates
+from soltura.words.views import known_summary
+from soltura.words.vocabulary import build_vocabulary_map
 
 router = APIRouter()
 
@@ -24,4 +26,9 @@ async def home_page(
         raise ValueError("current_learner returned an unsaved learner")
     due = await count_due_cards(session, learner.id, datetime.now(UTC))
     learning = await count_learning_words(session, learner.id)
-    return templates.TemplateResponse(request, "home.html", {"due": due, "learning": learning})
+    vocabulary = await build_vocabulary_map(session, learner.id)
+    return templates.TemplateResponse(
+        request,
+        "home.html",
+        {"due": due, "learning": learning, "known_summary": known_summary(vocabulary)},
+    )
