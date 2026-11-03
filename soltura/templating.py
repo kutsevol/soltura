@@ -42,5 +42,15 @@ NAV: list[NavItem] = [
     ),
 ]
 
+STATIC_DIR = Path(__file__).parent / "static"
+
+
+def asset_version(path: str) -> int:
+    # Starlette sends no Cache-Control for static files, so a browser may keep a stale
+    # stylesheet; the file's mtime in the URL makes every edit a new address.
+    return int((STATIC_DIR / path).stat().st_mtime)
+
+
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 templates.env.globals["nav"] = NAV
+templates.env.globals["asset_version"] = asset_version
