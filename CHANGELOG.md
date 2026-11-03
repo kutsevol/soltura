@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.22.0 (2026-11-03)
+
+### Features
+
+- **conjugation**: Schedule conjugation cards with FSRS
+  ([#34](https://github.com/kutsevol/soltura/pull/34),
+  [`a7ffa20`](https://github.com/kutsevol/soltura/commit/a7ffa20bbcb739cc3ca3adf84f4655144f460bc5))
+
+
 ## v0.21.0 (2026-11-03)
 
 ### Features
