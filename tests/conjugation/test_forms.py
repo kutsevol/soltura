@@ -32,8 +32,8 @@ def test_every_person_gets_its_own_form() -> None:
     assert forms == ["tengo", "tienes", "tiene", "tenemos", "tenéis", "tienen"]
 
 
-@pytest.mark.parametrize("verb", ["zzzxx", "haber"])
-def test_a_verb_without_a_template_or_with_a_wrong_one_returns_nothing(verb: str) -> None:
+@pytest.mark.parametrize("verb", ["zzzxx", "haber", "resultar"])
+def test_a_verb_without_a_usable_template_returns_nothing(verb: str) -> None:
     assert conjugate(verb, Tense.PRESENT, Person.EL) is None
 
 
