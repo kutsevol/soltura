@@ -1,22 +1,158 @@
-/* Our layer over Pico's orange theme: the app shell, tappable words and verdicts. */
+/* Our layer over Pico: a warm terracotta palette in light and dark, the app shell, tappable words and verdicts. */
+
+/* Palette. Light is the default; dark follows the system. */
 
 :root {
   --tabbar-height: 4rem;
-  --highlight: #fff1e5;
+  --bg: #faf6f1;
+  --surface: #ffffff;
+  --surface-hover: #f4ece3;
+  --border: #2a232018;
+  --border-strong: #2a232030;
+  --ink: #2a2320;
+  --ink-muted: #75695f;
+  --accent: #a8573a;
+  --accent-hover: #8f4529;
+  --accent-soft: #c3765a1f;
+  --glow: #e8a36a38;
+  --highlight: #f6e1d2;
+  --shadow: 0 6px 24px #4a2c1a14;
   --verdict-good: #1a7f37;
   --verdict-hard: #9a6700;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --highlight: #3b2512;
+    --bg: #111113;
+    --surface: #1b1b1f;
+    --surface-hover: #222227;
+    --border: #ffffff13;
+    --border-strong: #ffffff24;
+    --ink: #f0efed;
+    --ink-muted: #a3a1a8;
+    --accent: #e8a36a;
+    --accent-hover: #f2b988;
+    --accent-soft: #c3765a2b;
+    --glow: #c3765a40;
+    --highlight: #3b2518;
+    --shadow: 0 8px 32px #00000047;
     --verdict-good: #3fb950;
     --verdict-hard: #d29922;
   }
 }
 
+/* The three-class selector outranks Pico's own theme blocks whatever the system theme is. */
+
+:root:root:root {
+  --pico-font-family: "Onest", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --pico-border-radius: 0.75rem;
+  --pico-background-color: var(--bg);
+  --pico-color: var(--ink);
+  --pico-muted-color: var(--ink-muted);
+  --pico-muted-border-color: var(--border);
+  --pico-primary: var(--accent);
+  --pico-primary-underline: var(--accent-soft);
+  --pico-primary-hover: var(--accent-hover);
+  --pico-primary-hover-underline: var(--accent-hover);
+  --pico-primary-background: #d98d6b;
+  --pico-primary-border: #d98d6b;
+  --pico-primary-hover-background: #e49b79;
+  --pico-primary-hover-border: #e49b79;
+  --pico-primary-focus: var(--accent-soft);
+  --pico-primary-inverse: #1f130d;
+  --pico-secondary: var(--ink-muted);
+  --pico-secondary-background: var(--surface-hover);
+  --pico-secondary-border: var(--border-strong);
+  --pico-secondary-hover: var(--ink);
+  --pico-secondary-hover-background: var(--surface-hover);
+  --pico-secondary-hover-border: var(--ink-muted);
+  --pico-secondary-focus: var(--accent-soft);
+  --pico-secondary-inverse: var(--ink);
+  --pico-h1-color: var(--ink);
+  --pico-h2-color: var(--ink);
+  --pico-h3-color: var(--ink);
+  --pico-h4-color: var(--ink);
+  --pico-h5-color: var(--ink);
+  --pico-h6-color: var(--ink);
+  --pico-blockquote-border-color: var(--accent);
+  --pico-card-background-color: var(--surface);
+  --pico-card-border-color: var(--border);
+  --pico-card-box-shadow: var(--shadow);
+  --pico-card-sectioning-background-color: var(--surface-hover);
+  --pico-form-element-background-color: var(--surface);
+  --pico-form-element-selected-background-color: var(--surface-hover);
+  --pico-form-element-border-color: var(--border-strong);
+  --pico-form-element-color: var(--ink);
+  --pico-form-element-placeholder-color: var(--ink-muted);
+  --pico-form-element-active-background-color: var(--surface);
+  --pico-form-element-active-border-color: var(--accent);
+  --pico-form-element-focus-color: var(--accent-soft);
+  --pico-form-element-disabled-background-color: var(--surface-hover);
+  --pico-form-element-disabled-border-color: var(--border);
+  --pico-mark-background-color: var(--highlight);
+  --pico-mark-color: var(--ink);
+}
+
 body {
   padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(ellipse 90% 320px at 50% -80px, var(--glow), transparent 70%) no-repeat,
+    var(--bg);
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.02em;
+}
+
+/* Cards and buttons */
+
+article {
+  border: 1px solid var(--border);
+  border-radius: 1.1rem;
+}
+
+article > footer {
+  border-top: 1px solid var(--border);
+}
+
+button,
+[role="button"] {
+  border-radius: 999px;
+}
+
+main button,
+main [role="button"] {
+  font-weight: 600;
+}
+
+button:not(.outline):not(.secondary):not(.word),
+[role="button"]:not(.outline):not(.secondary) {
+  background-image: linear-gradient(180deg, #eeaf84, #cf7f60);
+  border-color: transparent;
+  box-shadow: 0 4px 16px var(--accent-soft);
+}
+
+button:not(.outline):not(.secondary):not(.word):hover,
+[role="button"]:not(.outline):not(.secondary):hover {
+  filter: brightness(1.07);
+}
+
+button.outline,
+[role="button"].outline {
+  border-color: var(--border-strong);
+  color: var(--ink);
+}
+
+input,
+select,
+textarea {
+  border-radius: 0.75rem;
+}
+
+input[type="search"] {
+  border-radius: 999px;
 }
 
 main.container {
@@ -31,8 +167,9 @@ main.container {
   top: 0;
   z-index: 10;
   padding: 0;
-  background: var(--pico-background-color);
-  border-bottom: 1px solid var(--pico-muted-border-color);
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
 }
 
 .titlebar .container {
@@ -45,7 +182,9 @@ main.container {
 
 .titlebar .brand {
   font-weight: 700;
+  letter-spacing: -0.02em;
   text-decoration: none;
+  color: var(--ink);
 }
 
 .titlebar .screen {
@@ -59,16 +198,18 @@ main.container {
   justify-content: center;
   width: 2rem;
   height: 2rem;
-  border: 1.5px solid var(--pico-primary);
+  border: 1px solid var(--border-strong);
   border-radius: 50%;
+  background: var(--surface);
   font-weight: 700;
   text-decoration: none;
-  color: var(--pico-primary);
+  color: var(--accent);
   align-self: center;
 }
 
 article.intro {
   background: var(--highlight);
+  border-color: var(--accent-soft);
 }
 
 /* Bottom tab bar */
@@ -82,8 +223,9 @@ article.intro {
   grid-auto-columns: 1fr;
   height: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
-  background: var(--pico-background-color);
-  border-top: 1px solid var(--pico-muted-border-color);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--border);
 }
 
 .tabbar a {
@@ -183,7 +325,6 @@ button.word:focus-visible {
   width: auto;
   margin: 0;
   padding: 0.4rem 1rem;
-  border-radius: 999px;
   white-space: nowrap;
 }
 
