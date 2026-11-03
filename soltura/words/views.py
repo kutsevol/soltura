@@ -2,13 +2,17 @@ from dataclasses import dataclass
 
 from soltura.words.vocabulary import OPEN_END, BandProgress, VocabularyMap
 
+# One word in a band of hundreds is under a percent: it still gets a sliver the eye can
+# see and a label that says "some", not "none".
+MIN_VISIBLE_WIDTH = 1.0
+
 
 @dataclass(frozen=True)
 class BandView:
     label: str
     known_width: float
     learning_width: float
-    share: int
+    share_label: str
     description: str
 
 
@@ -23,7 +27,16 @@ def _number(value: int) -> str:
 
 
 def _percent(part: int, whole: int) -> float:
-    return round(100 * part / whole, 1) if whole else 0.0
+    return 100 * part / whole if whole else 0.0
+
+
+def _width(percent: float) -> float:
+    return round(max(percent, MIN_VISIBLE_WIDTH), 1) if percent > 0 else 0.0
+
+
+def _share_label(percent: float) -> str:
+    rounded = round(percent)
+    return "<1%" if percent > 0 and rounded == 0 else f"{rounded}%"
 
 
 def _band_view(band: BandProgress) -> BandView:
@@ -32,10 +45,10 @@ def _band_view(band: BandProgress) -> BandView:
     learning = _percent(band.learning, band.total)
     return BandView(
         label=label,
-        known_width=known,
-        learning_width=learning,
-        share=round(known + learning),
-        description=f"Слова {label}: знаю {round(known)}%, вивчаю {round(learning)}%",
+        known_width=_width(known),
+        learning_width=_width(learning),
+        share_label=_share_label(known + learning),
+        description=(f"Слова {label}: знаю {_share_label(known)}, вивчаю {_share_label(learning)}"),
     )
 
 
