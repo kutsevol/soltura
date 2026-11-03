@@ -17,6 +17,7 @@ from soltura.learner.models import (
     Rating,
     ReviewLog,
     ReviewSource,
+    UnitKind,
     WordContext,
 )
 from soltura.learner.repository import get_due_cards
@@ -97,6 +98,8 @@ async def save_word(
             [
                 {
                     "learner_id": learner_id,
+                    "unit_kind": UnitKind.WORD,
+                    "unit_key": str(lexeme_id),
                     "lexeme_id": lexeme_id,
                     "knowledge_type": knowledge_type,
                     "due": now,
@@ -106,7 +109,9 @@ async def save_word(
                 for knowledge_type in KnowledgeType
             ]
         )
-        .on_conflict_do_nothing(index_elements=["learner_id", "lexeme_id", "knowledge_type"])
+        .on_conflict_do_nothing(
+            index_elements=["learner_id", "unit_kind", "unit_key", "knowledge_type"]
+        )
     )
     result = await session.execute(
         select(MemoryCard)
@@ -147,23 +152,23 @@ async def review(
 
 
 def interleave(cards: list[MemoryCard]) -> list[MemoryCard]:
-    # Keeps the oldest-first order but never puts the same word twice in a row, and
+    # Keeps the oldest-first order but never puts the same unit twice in a row, and
     # switches between recognizing and recalling whenever the queue allows it. When
-    # only one word's cards are left, they do come back to back.
+    # only one unit's cards are left, they do come back to back.
     remaining = list(cards)
     ordered: list[MemoryCard] = []
     while remaining:
         last = ordered[-1] if ordered else None
-        other_words = [
-            card for card in remaining if last is None or card.lexeme_id != last.lexeme_id
+        other_units = [
+            card for card in remaining if last is None or card.unit_key != last.unit_key
         ] or remaining
         pick = next(
             (
                 card
-                for card in other_words
+                for card in other_units
                 if last is None or card.knowledge_type != last.knowledge_type
             ),
-            other_words[0],
+            other_units[0],
         )
         remaining.remove(pick)
         ordered.append(pick)
@@ -171,6 +176,10 @@ def interleave(cards: list[MemoryCard]) -> list[MemoryCard]:
 
 
 async def due_queue(
-    session: AsyncSession, learner_id: int, now: datetime, limit: int
+    session: AsyncSession, learner_id: int, now: datetime, limit: int, unit_kind: UnitKind
 ) -> list[MemoryCard]:
-    return interleave(await get_due_cards(session, learner_id=learner_id, now=now, limit=limit))
+    return interleave(
+        await get_due_cards(
+            session, learner_id=learner_id, now=now, limit=limit, unit_kind=unit_kind
+        )
+    )

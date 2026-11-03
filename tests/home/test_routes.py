@@ -1,5 +1,6 @@
 from httpx import AsyncClient
 
+from soltura.learner.models import MemoryCard
 from soltura.templating import NAV
 
 
@@ -13,6 +14,14 @@ async def test_the_main_button_starts_the_warmup_and_counts_due_cards(
     assert "Слів у вивченні: 1" in response.text
     assert '<a href="/warmup" role="button">' in response.text
     assert '<a href="/reading" role="button">' not in response.text
+
+
+async def test_the_due_count_is_words_only(
+    learner_client: AsyncClient, saved_word: None, due_conjugation_card: MemoryCard
+) -> None:
+    response = await learner_client.get("/")
+
+    assert "Карток до повторення: 2" in response.text
 
 
 async def test_the_main_button_offers_reading_when_nothing_is_due(

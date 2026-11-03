@@ -16,6 +16,7 @@ from soltura.learner.models import (
     MemoryCard,
     Rating,
     ReviewSource,
+    UnitKind,
 )
 from soltura.learner.models import Lexeme as LexemeRow
 from soltura.learner.repository import (
@@ -99,8 +100,12 @@ async def lemmas_counted_as_known(session: AsyncSession, learner_id: int) -> set
 
 
 async def due_lemmas(session: AsyncSession, learner_id: int, now: datetime) -> list[str]:
-    cards = await due_queue(session, learner_id, now=now, limit=MAX_DUE_LEMMAS * 2)
-    lexeme_ids = list(dict.fromkeys(card.lexeme_id for card in cards))[:MAX_DUE_LEMMAS]
+    cards = await due_queue(
+        session, learner_id, now=now, limit=MAX_DUE_LEMMAS * 2, unit_kind=UnitKind.WORD
+    )
+    lexeme_ids = list(
+        dict.fromkeys(card.lexeme_id for card in cards if card.lexeme_id is not None)
+    )[:MAX_DUE_LEMMAS]
     by_id = {lexeme.id: lexeme.lemma for lexeme in await get_lexemes_by_ids(session, lexeme_ids)}
     return [by_id[lexeme_id] for lexeme_id in lexeme_ids if lexeme_id in by_id]
 

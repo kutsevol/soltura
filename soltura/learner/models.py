@@ -44,6 +44,12 @@ class KnowledgeType(StrEnum):
     RECALL = "recall"
 
 
+class UnitKind(StrEnum):
+    WORD = "word"
+    CONJUGATION = "conjugation"
+    GRAMMAR = "grammar"
+
+
 class CardState(StrEnum):
     LEARNING = "learning"
     REVIEW = "review"
@@ -193,6 +199,7 @@ class MemoryCard(SQLModel, table=True):
     __tablename__ = "memory_card"
     __table_args__ = (
         UniqueConstraint("learner_id", "lexeme_id", "knowledge_type"),
+        UniqueConstraint("learner_id", "unit_kind", "unit_key", "knowledge_type"),
         Index("ix_memory_card_learner_id_due", "learner_id", "due"),
     )
 
@@ -201,7 +208,23 @@ class MemoryCard(SQLModel, table=True):
         sa_column=Column(Integer, ForeignKey("learner.id", ondelete="CASCADE"), nullable=False),
         description="Learner the card belongs to",
     )
-    lexeme_id: int = _lexeme_fk()
+    unit_kind: UnitKind = Field(
+        default=UnitKind.WORD,
+        sa_column=_enum_column(UnitKind, "unit_kind", server_default=UnitKind.WORD.value),
+        description="What the card schedules: a word, a conjugated form or a grammar item",
+    )
+    # Nullable until a later release tightens it: the migration backfills existing rows,
+    # and code from before it still inserts cards without a key.
+    unit_key: str | None = Field(
+        default=None,
+        sa_column=Column(String(64), nullable=True),
+        description="Identifies the unit within its kind; for a word, its lexeme id",
+    )
+    lexeme_id: int | None = Field(
+        default=None,
+        sa_column=Column(Integer, ForeignKey("lexeme.id", ondelete="CASCADE"), nullable=True),
+        description="Spanish lemma of a word card; unset for every other kind of unit",
+    )
     knowledge_type: KnowledgeType = Field(
         sa_column=_enum_column(KnowledgeType, "knowledge_type"),
         description="Which kind of knowing this card schedules",

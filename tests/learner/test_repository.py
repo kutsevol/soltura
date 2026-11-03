@@ -2,9 +2,10 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from soltura.learner.models import KnowledgeType, Learner, Lexeme
+from soltura.learner.models import KnowledgeType, Learner, Lexeme, UnitKind
 from soltura.learner.repository import (
     BandCounts,
+    count_due_cards,
     get_due_cards,
     get_lexemes_by_lemmas,
     get_or_create_learner,
@@ -63,7 +64,9 @@ async def test_get_due_cards_returns_only_the_learners_due_cards_oldest_first(
     await session.flush()
 
     assert learner.id is not None
-    due = await get_due_cards(session, learner_id=learner.id, now=NOW, limit=10)
+    due = await get_due_cards(
+        session, learner_id=learner.id, now=NOW, limit=10, unit_kind=UnitKind.WORD
+    )
 
     assert [card.id for card in due] == [older.id, newer.id]
 
@@ -101,6 +104,43 @@ async def test_get_due_cards_stops_at_the_limit(
     await session.flush()
 
     assert learner.id is not None
-    due = await get_due_cards(session, learner_id=learner.id, now=NOW, limit=2)
+    due = await get_due_cards(
+        session, learner_id=learner.id, now=NOW, limit=2, unit_kind=UnitKind.WORD
+    )
 
     assert len(due) == 2
+
+
+async def test_due_cards_are_asked_for_by_unit_kind(
+    session: AsyncSession, learner: Learner, lexemes: list[Lexeme]
+) -> None:
+    word = MemoryCardFactory.build(
+        learner_id=learner.id,
+        lexeme_id=lexemes[0].id,
+        knowledge_type=KnowledgeType.RECOGNIZE,
+        due=NOW - timedelta(days=1),
+    )
+    conjugation = MemoryCardFactory.build(
+        learner_id=learner.id,
+        unit_kind=UnitKind.CONJUGATION,
+        unit_key="tener|preterite|ellos",
+        lexeme_id=None,
+        knowledge_type=KnowledgeType.RECALL,
+        due=NOW - timedelta(days=2),
+    )
+    session.add_all([word, conjugation])
+    await session.flush()
+
+    assert learner.id is not None
+    words = await get_due_cards(
+        session, learner_id=learner.id, now=NOW, limit=10, unit_kind=UnitKind.WORD
+    )
+    conjugations = await get_due_cards(
+        session, learner_id=learner.id, now=NOW, limit=10, unit_kind=UnitKind.CONJUGATION
+    )
+
+    assert [card.id for card in words] == [word.id]
+    assert [card.id for card in conjugations] == [conjugation.id]
+    assert await count_due_cards(session, learner.id, NOW, UnitKind.WORD) == 1
+    assert await count_due_cards(session, learner.id, NOW, UnitKind.CONJUGATION) == 1
+    assert await count_due_cards(session, learner.id, NOW, UnitKind.GRAMMAR) == 0

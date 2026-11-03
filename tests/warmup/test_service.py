@@ -59,6 +59,21 @@ async def test_the_warmup_shows_each_due_card_in_a_fresh_sentence(
     assert "Aunque llueve, salimos." in llm.prompts[0]
 
 
+async def test_the_warmup_ignores_cards_of_other_units(
+    session: AsyncSession,
+    learner: Learner,
+    saved_aunque: dict[KnowledgeType, MemoryCard],
+    due_conjugation_card: MemoryCard,
+    llm: FakeLLM,
+) -> None:
+    assert learner.id is not None
+    llm.answer(RECOGNIZE_CONTEXT, RECALL_CONTEXT)
+
+    items = await build_warmup(session, llm, learner.id, NOW)
+
+    assert {item.card_id for item in items} == {card.id for card in saved_aunque.values()}
+
+
 async def test_without_a_fresh_sentence_recognize_falls_back_and_recall_waits(
     session: AsyncSession,
     learner: Learner,

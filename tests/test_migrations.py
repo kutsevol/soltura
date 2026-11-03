@@ -1,7 +1,12 @@
+import asyncio
+from datetime import UTC, datetime
 from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.pool import NullPool
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -21,3 +26,55 @@ def test_migrations_downgrade_and_upgrade_again(database_url: str) -> None:
 
     command.downgrade(config, "base")
     command.upgrade(config, "head")
+
+
+async def _run(database_url: str, *statements: str) -> list[tuple[object, ...]]:
+    engine = create_async_engine(database_url, poolclass=NullPool)
+    rows: list[tuple[object, ...]] = []
+    async with engine.begin() as connection:
+        for statement in statements:
+            result = await connection.execute(text(statement))
+            rows = [tuple(row) for row in result] if result.returns_rows else []
+    await engine.dispose()
+    return rows
+
+
+def test_existing_word_cards_keep_their_schedule_through_the_card_unit_migration(
+    database_url: str,
+) -> None:
+    config = _alembic_config(database_url)
+    due = datetime(2026, 5, 1, 9, 30, tzinfo=UTC)
+    history = "state, stability, difficulty, due, last_review"
+    command.downgrade(config, "0001")
+    try:
+        asyncio.run(
+            _run(
+                database_url,
+                "INSERT INTO learner (id, telegram_user_id) VALUES (1, 1)",
+                "INSERT INTO lexeme (id, lemma, pos, frequency_rank) VALUES (7, 'ser', 'AUX', 1)",
+                """
+                INSERT INTO memory_card
+                    (learner_id, lexeme_id, knowledge_type, state, stability, difficulty, due,
+                     last_review)
+                VALUES (1, 7, 'recall', 'review', 12.5, 4.2, '2026-05-01 09:30+00',
+                        '2026-04-20 09:30+00')
+                """,
+            )
+        )
+        before = asyncio.run(_run(database_url, f"SELECT {history} FROM memory_card"))
+
+        command.upgrade(config, "head")
+        card = asyncio.run(
+            _run(database_url, "SELECT unit_kind, unit_key, lexeme_id FROM memory_card")
+        )
+        after = asyncio.run(_run(database_url, f"SELECT {history} FROM memory_card"))
+
+        assert card == [("word", "7", 7)]
+        assert after == before
+        assert after[0][3] == due
+
+        command.downgrade(config, "0001")
+        assert asyncio.run(_run(database_url, f"SELECT {history} FROM memory_card")) == before
+    finally:
+        command.downgrade(config, "base")
+        command.upgrade(config, "head")
