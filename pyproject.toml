@@ -18,6 +18,7 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.1.6",
     "sqlmodel>=0.0.48",
     "uvicorn[standard]>=0.54.0",
+    "verbecc>=2.0.3",
     "wordfreq>=3.1.1",
 ]
 
@@ -59,7 +60,7 @@ plugins = ["pydantic.mypy"]
 exclude = ["migrations/"]
 
 [[tool.mypy.overrides]]
-module = ["testcontainers.*"]
+module = ["testcontainers.*", "verbecc.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

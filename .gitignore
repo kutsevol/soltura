@@ -14,3 +14,6 @@ wheels/
 
 # Local environment
 .env
+
+# verbecc writes its log into the working directory
+verbecc.log*
