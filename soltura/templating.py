@@ -10,6 +10,7 @@ class NavItem:
     label: str
     icon: str
     purpose: str
+    tone: str = ""
 
 
 # The bottom tab bar, in order. A screen joins it in the change that adds the screen,
@@ -20,24 +21,28 @@ NAV: list[NavItem] = [
         href="/warmup",
         label="Розминка",
         icon="zap",
+        tone="warmup",
         purpose="Короткі вправи на слова, які ви зберегли",
     ),
     NavItem(
         href="/reading",
         label="Читання",
         icon="book",
+        tone="reading",
         purpose="Текст під ваш рівень; тапніть слово, щоб побачити переклад і зберегти",
     ),
     NavItem(
         href="/words",
         label="Слова",
         icon="list",
+        tone="words",
         purpose="Усі збережені слова: коли їх повторювати і з яких речень вони",
     ),
     NavItem(
         href="/help",
         label="Як це працює",
         icon="info",
+        tone="help",
         purpose="Від тапу на слово до розминки, на одному прикладі",
     ),
 ]

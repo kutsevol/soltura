@@ -12,7 +12,8 @@
       <a href="/help" role="button" class="outline">Як це працює</a>
     </article>
   {% endif %}
-  <article>
+  <article class="focus">
+    <p class="eyebrow">Наступний крок</p>
     {% if due %}
       <h2>Карток до повторення: {{ due }}</h2>
       <p class="note">Розминка на 2–3 хвилини, потім читання.</p>
@@ -26,7 +27,7 @@
   </article>
 
   {% for item in nav if item.href != "/" %}
-    <article>
+    <article class="module {{ item.tone }}">
       <h3><a href="{{ item.href }}">{{ item.label }}</a></h3>
       <p class="note">{{ item.purpose }}</p>
     </article>
