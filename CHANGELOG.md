@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.17.0 (2026-11-03)
+
+### Features
+
+- **ui**: Warm terracotta theme in light and dark
+  ([#25](https://github.com/kutsevol/soltura/pull/25),
+  [`8a4559c`](https://github.com/kutsevol/soltura/commit/8a4559c8ec44130904ecdb3a7881e1bf5d3a2dfc))
+
+
 ## v0.16.0 (2026-11-01)
 
 ### Features
