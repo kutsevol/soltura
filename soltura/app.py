@@ -1,7 +1,5 @@
 import logging
 import sys
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Request
@@ -12,8 +10,9 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.config import settings
-from soltura.db import get_engine, get_session
+from soltura.db import get_session
 from soltura.home.routes import router as home_router
+from soltura.lifespan import lifespan
 from soltura.llm.client import LLMNotConfiguredError, LLMUnavailableError
 from soltura.onboarding.routes import router as onboarding_router
 from soltura.pages.routes import router as pages_router
@@ -38,12 +37,6 @@ def configure_logging(level: str) -> None:
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(logging.Formatter("%(levelname)s [%(name)s] %(message)s"))
         app_logger.addHandler(handler)
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-    yield
-    await get_engine().dispose()
 
 
 async def llm_unavailable(request: Request, error: Exception) -> HTMLResponse:
