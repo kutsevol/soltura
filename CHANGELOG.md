@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.24.0 (2026-11-04)
+
+### Features
+
+- **onboarding**: Save the placement result and show it on a page
+  ([#36](https://github.com/kutsevol/soltura/pull/36),
+  [`675e547`](https://github.com/kutsevol/soltura/commit/675e547f51bc2de66d0d0905085c23239be1627a))
+
+
 ## v0.23.0 (2026-11-04)
 
 ### Features
