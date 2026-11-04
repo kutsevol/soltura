@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.29.0 (2026-11-04)
+
+### Features
+
+- **onboarding**: Ask eight words per band and stop after two weak bands
+  ([#42](https://github.com/kutsevol/soltura/pull/42),
+  [`bb2ae9b`](https://github.com/kutsevol/soltura/commit/bb2ae9bc4cc0c03ccdb578be2246d7f220a853a4))
+
+
 ## v0.28.1 (2026-11-04)
 
 ### Bug Fixes
