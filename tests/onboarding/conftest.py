@@ -32,7 +32,10 @@ class JudgeByAnswer(FakeLLM):
         if schema is TranslationVerdict:
             self.prompts.append(prompt)
             verdict = "correct" if prompt.endswith(f"Learner's answer: {CORRECT}") else "wrong"
-            return cast(SchemaT, TranslationVerdict(verdict=verdict, reason="", expected=""))
+            return cast(
+                SchemaT,
+                TranslationVerdict(verdict=verdict, reason="Пояснення", expected="значення"),
+            )
         return await super().__call__(schema, system, prompt, effort, max_tokens)
 
 

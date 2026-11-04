@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +12,7 @@ from soltura.learner.repository import (
     save_placement_run,
 )
 from soltura.llm.client import LLMClient
-from soltura.practice.checking import judge_translation
+from soltura.practice.checking import TranslationVerdict, judge_translation
 from soltura.practice.text import split_around
 
 logger = logging.getLogger(__name__)
@@ -71,9 +71,22 @@ class BandScore:
 
 
 @dataclass(frozen=True)
+class WordResult:
+    band: int
+    lemma: str
+    sentence: str
+    target_form: str
+    answer: str
+    verdict: str
+    reason: str
+    expected: str
+
+
+@dataclass(frozen=True)
 class PlacementResult:
     known_rank: int
     bands: list[BandScore]
+    words: list[WordResult] = field(default_factory=list)
 
 
 async def build_placement(session: AsyncSession, llm: LLMClient) -> list[PlacementItem]:
@@ -112,16 +125,28 @@ async def build_placement(session: AsyncSession, llm: LLMClient) -> list[Placeme
 async def score_placement(llm: LLMClient, answered: list[PlacementItem]) -> PlacementResult:
     limit = asyncio.Semaphore(JUDGE_CONCURRENCY)
 
-    async def is_correct(item: PlacementItem) -> bool:
+    async def judge(item: PlacementItem) -> TranslationVerdict:
         async with limit:
-            verdict = await judge_translation(llm, item.answer, item.target_form, item.sentence)
-        return verdict.verdict == "correct"
+            return await judge_translation(llm, item.answer, item.target_form, item.sentence)
 
-    results = await asyncio.gather(*(is_correct(item) for item in answered))
+    verdicts = await asyncio.gather(*(judge(item) for item in answered))
+    words = [
+        WordResult(
+            band=item.band,
+            lemma=item.lemma,
+            sentence=item.sentence,
+            target_form=item.target_form,
+            answer=item.answer,
+            verdict=verdict.verdict,
+            reason=verdict.reason,
+            expected=verdict.expected,
+        )
+        for item, verdict in zip(answered, verdicts, strict=True)
+    ]
 
     scores: list[BandScore] = []
     for band, (_, max_rank) in enumerate(BANDS):
-        marks = [ok for item, ok in zip(answered, results, strict=True) if item.band == band]
+        marks = [word.verdict == "correct" for word in words if word.band == band]
         scores.append(BandScore(band=band, max_rank=max_rank, correct=sum(marks), total=len(marks)))
 
     # Bands count only in an unbroken run from the most frequent one: knowing a few
@@ -131,13 +156,17 @@ async def score_placement(llm: LLMClient, answered: list[PlacementItem]) -> Plac
         if score.total == 0 or score.correct / score.total < PASS_SHARE:
             break
         known_rank = score.max_rank
-    return PlacementResult(known_rank=known_rank, bands=scores)
+    return PlacementResult(known_rank=known_rank, bands=scores, words=words)
 
 
 async def apply_placement(session: AsyncSession, learner_id: int, result: PlacementResult) -> None:
     # The run joins the transaction that marks the words, so a failure keeps neither.
     await save_placement_run(
-        session, learner_id, result.known_rank, [asdict(band) for band in result.bands]
+        session,
+        learner_id,
+        result.known_rank,
+        [asdict(band) for band in result.bands],
+        [asdict(word) for word in result.words],
     )
     if result.known_rank > 0:
         await mark_known_up_to_rank(session, learner_id, result.known_rank)
@@ -150,5 +179,7 @@ async def get_latest_placement(session: AsyncSession, learner_id: int) -> Placem
     if run is None:
         return None
     return PlacementResult(
-        known_rank=run.known_rank, bands=[BandScore(**band) for band in run.bands]
+        known_rank=run.known_rank,
+        bands=[BandScore(**band) for band in run.bands],
+        words=[WordResult(**word) for word in run.items or []],
     )

@@ -12,3 +12,23 @@
   </tbody>
 </table>
 <a href="/reading" role="button">Перейти до читання</a>
+{% if again %}
+  <a href="/onboarding" role="button" class="outline">Пройти знову</a>
+{% endif %}
+{% if result.words %}
+  <details>
+    <summary>Ваші відповіді ({{ result.words | length }})</summary>
+    <table>
+      <thead><tr><th>Слово</th><th>Ваша відповідь</th><th>Значення</th></tr></thead>
+      <tbody>
+        {% for word in result.words %}
+          <tr>
+            <td>{{ {"correct": "✓", "partly": "≈", "wrong": "✗"}[word.verdict] }} {{ word.target_form }}</td>
+            <td>{{ word.answer or "—" }}</td>
+            <td>{{ word.expected }}{% if word.verdict != "correct" and word.reason %}<br><small class="note">{{ word.reason }}</small>{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </details>
+{% endif %}
