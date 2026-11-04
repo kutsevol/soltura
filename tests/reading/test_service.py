@@ -1,3 +1,4 @@
+import random
 from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +14,7 @@ from soltura.learner.models import (
     ReviewLog,
     ReviewSource,
 )
-from soltura.learner.repository import save_placement_run
+from soltura.learner.repository import get_recent_titles, save_placement_run, save_reading_text
 from soltura.reading.service import (
     UNRANKED,
     GeneratedText,
@@ -23,6 +24,8 @@ from soltura.reading.service import (
     split_for_reading,
     tap_word,
 )
+from soltura.reading.topics import TOPICS
+from soltura.reading.variation import FORMS, NAMES
 from soltura.srs.service import save_word
 from tests.factories import LexemeFactory
 from tests.fakes import FakeLLM
@@ -135,6 +138,89 @@ async def test_a_learner_who_passed_no_band_is_measured_against_the_first_band(
 
     assert (prepared.coverage, prepared.below_target) == (0.0, True)
     assert "knows about the 250 most frequent Spanish words" in llm.prompts[0]
+
+
+async def test_a_preset_topic_gets_a_situation_a_form_and_a_name_from_the_lists(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, know: KnowFn
+) -> None:
+    await know(f"{EASY_TEXT.title}. {EASY_TEXT.text}")
+    llm.answer(EASY_TEXT)
+    topic = TOPICS[0]
+
+    await prepare_text(session, llm, learner, NOW, topic=topic.prompt, rng=random.Random(3))
+
+    prompt = llm.prompts[0]
+    assert sum(situation in prompt for situation in topic.situations) == 1
+    assert sum(form in prompt for form in FORMS) == 1
+    assert sum(f"call them {name}" in prompt for name in NAMES) == 1
+
+
+async def test_two_seeds_send_different_prompts_for_the_same_topic(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, know: KnowFn
+) -> None:
+    await know(f"{EASY_TEXT.title}. {EASY_TEXT.text}")
+    llm.answer(EASY_TEXT, EASY_TEXT)
+
+    for seed in (1, 2):
+        await prepare_text(
+            session, llm, learner, NOW, topic=TOPICS[2].prompt, rng=random.Random(seed)
+        )
+
+    assert llm.prompts[0] != llm.prompts[1]
+
+
+async def test_the_titles_of_the_last_five_texts_are_asked_not_to_repeat(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, know: KnowFn
+) -> None:
+    assert learner.id is not None
+    await know(f"{EASY_TEXT.title}. {EASY_TEXT.text}")
+    for number in range(1, 7):
+        await save_reading_text(session, learner.id, "la playa", f"Título {number}")
+    llm.answer(EASY_TEXT)
+
+    await prepare_text(session, llm, learner, NOW, topic="la playa")
+
+    assert (
+        "Do not repeat these recent texts: Título 6; Título 5; Título 4; Título 3; Título 2."
+        in (llm.prompts[0])
+    )
+    assert "Título 1" not in llm.prompts[0]
+
+
+async def test_a_prepared_text_saves_its_title(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, know: KnowFn
+) -> None:
+    assert learner.id is not None
+    await know(f"{EASY_TEXT.title}. {EASY_TEXT.text}")
+    llm.answer(EASY_TEXT)
+
+    await prepare_text(session, llm, learner, NOW, topic="la playa")
+
+    assert await get_recent_titles(session, learner.id, 5) == [EASY_TEXT.title]
+
+
+async def test_a_free_topic_is_varied_without_a_situation(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, know: KnowFn
+) -> None:
+    await know(f"{EASY_TEXT.title}. {EASY_TEXT.text}")
+    llm.answer(EASY_TEXT)
+
+    await prepare_text(session, llm, learner, NOW, topic="la playa")
+
+    assert "Write it as" in llm.prompts[0]
+    assert "Situation:" not in llm.prompts[0]
+
+
+async def test_adapting_a_pasted_text_is_not_varied(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, know: KnowFn
+) -> None:
+    await know(f"{EASY_TEXT.title}. {EASY_TEXT.text}")
+    llm.answer(EASY_TEXT)
+
+    await prepare_text(session, llm, learner, NOW, topic="", source_text="El Ayuntamiento informa.")
+
+    assert "Write it as" not in llm.prompts[0]
+    assert "Do not repeat" not in llm.prompts[0]
 
 
 async def test_adapting_a_pasted_text_sends_it_as_the_source(

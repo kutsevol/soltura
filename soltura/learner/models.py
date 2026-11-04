@@ -283,6 +283,28 @@ class PlacementRun(SQLModel, table=True):
     created_at: datetime = _created_at()
 
 
+class ReadingText(SQLModel, table=True):
+    __tablename__ = "reading_text"
+
+    id: int | None = Field(default=None, primary_key=True, description="Reading text id")
+    learner_id: int = Field(
+        sa_column=Column(
+            Integer, ForeignKey("learner.id", ondelete="CASCADE"), nullable=False, index=True
+        ),
+        description="Learner the text was prepared for",
+    )
+    topic: str | None = Field(
+        default=None,
+        sa_column=Column(String(200), nullable=True),
+        description="Topic the learner asked for; unset when they pasted a text",
+    )
+    title: str = Field(
+        sa_column=Column(Text, nullable=False),
+        description="Title of the prepared text",
+    )
+    created_at: datetime = _created_at()
+
+
 class ReviewLog(SQLModel, table=True):
     __tablename__ = "review_log"
 

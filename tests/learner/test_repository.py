@@ -10,8 +10,10 @@ from soltura.learner.repository import (
     get_latest_placement_run,
     get_lexemes_by_lemmas,
     get_or_create_learner,
+    get_recent_titles,
     get_vocabulary_bands,
     save_placement_run,
+    save_reading_text,
 )
 from tests.factories import MemoryCardFactory
 
@@ -169,3 +171,14 @@ async def test_a_learner_without_a_placement_run_has_none(
     assert learner.id is not None
 
     assert await get_latest_placement_run(session, learner.id) is None
+
+
+async def test_recent_titles_are_the_learners_newest_first_and_limited(
+    session: AsyncSession, learner: Learner, other_learner: Learner
+) -> None:
+    assert learner.id is not None and other_learner.id is not None
+    for title in ("uno", "dos", "tres"):
+        await save_reading_text(session, learner.id, None, title)
+    await save_reading_text(session, other_learner.id, None, "ajeno")
+
+    assert await get_recent_titles(session, learner.id, 2) == ["tres", "dos"]

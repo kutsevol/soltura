@@ -18,6 +18,7 @@ from soltura.learner.models import (
     LexemeStatus,
     MemoryCard,
     PlacementRun,
+    ReadingText,
     UnitKind,
     WordContext,
 )
@@ -149,6 +150,25 @@ async def get_latest_placement_run(session: AsyncSession, learner_id: int) -> Pl
         .limit(1)
     )
     return result.scalar_one_or_none()
+
+
+async def save_reading_text(
+    session: AsyncSession, learner_id: int, topic: str | None, title: str
+) -> ReadingText:
+    text = ReadingText(learner_id=learner_id, topic=topic, title=title)
+    session.add(text)
+    await session.flush()
+    return text
+
+
+async def get_recent_titles(session: AsyncSession, learner_id: int, limit: int) -> list[str]:
+    result = await session.execute(
+        select(ReadingText.title)
+        .where(col(ReadingText.learner_id) == learner_id)
+        .order_by(col(ReadingText.id).desc())
+        .limit(limit)
+    )
+    return list(result.scalars())
 
 
 async def count_learning_words(session: AsyncSession, learner_id: int) -> int:
