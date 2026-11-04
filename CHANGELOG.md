@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.23.0 (2026-11-04)
+
+### Features
+
+- **conjugation**: Add the conjugation screen ([#35](https://github.com/kutsevol/soltura/pull/35),
+  [`9d73ed9`](https://github.com/kutsevol/soltura/commit/9d73ed95ab71a02db4b599b60eaca2d1c69be835))
+
+
 ## v0.22.0 (2026-11-03)
 
 ### Features
