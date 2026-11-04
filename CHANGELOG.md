@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.26.0 (2026-11-04)
+
+### Features
+
+- **reading**: Describe the learner's vocabulary range instead of A2
+  ([#38](https://github.com/kutsevol/soltura/pull/38),
+  [`6fb2d0c`](https://github.com/kutsevol/soltura/commit/6fb2d0cf501a92215818e34e2141ba9eb957007e))
+
+
 ## v0.25.0 (2026-11-04)
 
 ### Features
