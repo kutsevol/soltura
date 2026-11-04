@@ -1,7 +1,7 @@
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +15,7 @@ from soltura.onboarding.service import (
     PlacementItem,
     apply_placement,
     build_placement,
+    get_latest_placement,
     score_placement,
 )
 from soltura.practice.text import split_around
@@ -63,6 +64,18 @@ async def onboarding_page(request: Request) -> HTMLResponse:
     )
 
 
+@router.get("/result", response_model=None)
+async def result_page(
+    request: Request, session: SessionDep, learner: LearnerDep
+) -> HTMLResponse | RedirectResponse:
+    if learner.id is None:
+        raise ValueError("current_learner returned an unsaved learner")
+    result = await get_latest_placement(session, learner.id)
+    if result is None:
+        return RedirectResponse("/onboarding", status_code=status.HTTP_303_SEE_OTHER)
+    return templates.TemplateResponse(request, "onboarding/result_page.html", {"result": result})
+
+
 @router.post("/start", response_class=HTMLResponse)
 async def start(request: Request, session: SessionDep, llm: LLMDep) -> HTMLResponse:
     items = await build_placement(session, llm)
@@ -100,5 +113,5 @@ async def answer(
     if learner.id is None:
         raise ValueError("current_learner returned an unsaved learner")
     result = await score_placement(llm, done)
-    await apply_placement(session, learner.id, result.known_rank)
+    await apply_placement(session, learner.id, result)
     return templates.TemplateResponse(request, "onboarding/result.html", {"result": result})

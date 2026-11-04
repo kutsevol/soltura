@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.learner.models import Learner, Lexeme
-from soltura.onboarding.service import BANDS, apply_placement
+from soltura.onboarding.service import BANDS, PlacementResult, apply_placement
 from soltura.words.vocabulary import EDGES, build_vocabulary_map
 
 
@@ -37,7 +37,7 @@ async def test_a_placement_result_fills_the_bands_up_to_its_rank(
     session: AsyncSession, learner: Learner, vocabulary_lexemes: dict[str, Lexeme]
 ) -> None:
     assert learner.id is not None
-    await apply_placement(session, learner.id, known_rank=500)
+    await apply_placement(session, learner.id, PlacementResult(known_rank=500, bands=[]))
 
     vocabulary = await build_vocabulary_map(session, learner.id)
 

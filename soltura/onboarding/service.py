@@ -1,11 +1,16 @@
 import asyncio
 import logging
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from soltura.learner.repository import mark_known_up_to_rank, sample_lexemes
+from soltura.learner.repository import (
+    get_latest_placement_run,
+    mark_known_up_to_rank,
+    sample_lexemes,
+    save_placement_run,
+)
 from soltura.llm.client import LLMClient
 from soltura.practice.checking import judge_translation
 from soltura.practice.text import split_around
@@ -129,6 +134,21 @@ async def score_placement(llm: LLMClient, answered: list[PlacementItem]) -> Plac
     return PlacementResult(known_rank=known_rank, bands=scores)
 
 
-async def apply_placement(session: AsyncSession, learner_id: int, known_rank: int) -> None:
-    if known_rank > 0:
-        await mark_known_up_to_rank(session, learner_id, known_rank)
+async def apply_placement(session: AsyncSession, learner_id: int, result: PlacementResult) -> None:
+    # The run joins the transaction that marks the words, so a failure keeps neither.
+    await save_placement_run(
+        session, learner_id, result.known_rank, [asdict(band) for band in result.bands]
+    )
+    if result.known_rank > 0:
+        await mark_known_up_to_rank(session, learner_id, result.known_rank)
+    else:
+        await session.commit()
+
+
+async def get_latest_placement(session: AsyncSession, learner_id: int) -> PlacementResult | None:
+    run = await get_latest_placement_run(session, learner_id)
+    if run is None:
+        return None
+    return PlacementResult(
+        known_rank=run.known_rank, bands=[BandScore(**band) for band in run.bands]
+    )

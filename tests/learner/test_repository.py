@@ -7,9 +7,11 @@ from soltura.learner.repository import (
     BandCounts,
     count_due_cards,
     get_due_cards,
+    get_latest_placement_run,
     get_lexemes_by_lemmas,
     get_or_create_learner,
     get_vocabulary_bands,
+    save_placement_run,
 )
 from tests.factories import MemoryCardFactory
 
@@ -144,3 +146,26 @@ async def test_due_cards_are_asked_for_by_unit_kind(
     assert await count_due_cards(session, learner.id, NOW, UnitKind.WORD) == 1
     assert await count_due_cards(session, learner.id, NOW, UnitKind.CONJUGATION) == 1
     assert await count_due_cards(session, learner.id, NOW, UnitKind.GRAMMAR) == 0
+
+
+async def test_the_latest_placement_run_is_the_learners_newest(
+    session: AsyncSession, learner: Learner, other_learner: Learner
+) -> None:
+    assert learner.id is not None and other_learner.id is not None
+    bands = [{"band": 0, "max_rank": 250, "correct": 5, "total": 5}]
+    await save_placement_run(session, learner.id, 0, bands)
+    newest = await save_placement_run(session, learner.id, 250, bands)
+    await save_placement_run(session, other_learner.id, 500, bands)
+
+    latest = await get_latest_placement_run(session, learner.id)
+
+    assert latest is not None
+    assert (latest.id, latest.known_rank, latest.bands) == (newest.id, 250, bands)
+
+
+async def test_a_learner_without_a_placement_run_has_none(
+    session: AsyncSession, learner: Learner
+) -> None:
+    assert learner.id is not None
+
+    assert await get_latest_placement_run(session, learner.id) is None

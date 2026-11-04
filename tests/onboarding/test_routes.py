@@ -66,9 +66,25 @@ async def test_a_full_placement_marks_the_passed_bands_known(
     ).scalar_one()
     assert known == sum(1 for lexeme in banded_lexemes if lexeme.frequency_rank <= 1000)
 
+    page = await onboarding_client.get("/onboarding/result")
+
+    assert page.status_code == 200
+    assert "Знайомими позначено 1000 найчастотніших слів" in page.text
+    assert "<td>до 250</td><td>5 з 5</td>" in page.text
+    assert '<a href="/onboarding" role="button" class="outline">Пройти знову</a>' in page.text
+
 
 async def test_an_empty_dictionary_asks_to_seed_it(onboarding_client: AsyncClient) -> None:
     response = await onboarding_client.post("/onboarding/start")
 
     assert response.status_code == 409
     assert "make seed-lexemes" in response.text
+
+
+async def test_the_result_page_without_a_run_sends_the_learner_to_the_test(
+    onboarding_client: AsyncClient,
+) -> None:
+    response = await onboarding_client.get("/onboarding/result")
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/onboarding"

@@ -3,6 +3,7 @@ from enum import StrEnum
 from typing import Any
 
 from sqlalchemy import (
+    JSON,
     TIMESTAMP,
     BigInteger,
     Column,
@@ -259,6 +260,27 @@ class MemoryCard(SQLModel, table=True):
     )
     created_at: datetime = _created_at()
     updated_at: datetime = _updated_at()
+
+
+class PlacementRun(SQLModel, table=True):
+    __tablename__ = "placement_run"
+
+    id: int | None = Field(default=None, primary_key=True, description="Placement run id")
+    learner_id: int = Field(
+        sa_column=Column(
+            Integer, ForeignKey("learner.id", ondelete="CASCADE"), nullable=False, index=True
+        ),
+        description="Learner who took the placement test",
+    )
+    known_rank: int = Field(
+        sa_column=Column(Integer, nullable=False),
+        description="Frequency rank up to which words were marked known; 0 when no band passed",
+    )
+    bands: list[dict[str, int]] = Field(
+        sa_column=Column(JSON, nullable=False),
+        description="Score per frequency band: band, max_rank, correct and total",
+    )
+    created_at: datetime = _created_at()
 
 
 class ReviewLog(SQLModel, table=True):
