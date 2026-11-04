@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.28.1 (2026-11-04)
+
+### Bug Fixes
+
+- **onboarding**: Show the meaning of words the learner skipped
+  ([#41](https://github.com/kutsevol/soltura/pull/41),
+  [`852933d`](https://github.com/kutsevol/soltura/commit/852933d0a4dcb8400b303ab058de32b2feef6f83))
+
+
 ## v0.28.0 (2026-11-04)
 
 ### Features
