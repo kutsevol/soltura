@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from soltura.language.coverage import measure_coverage, words_to_replace
 from soltura.language.nlp import analyze
 from soltura.learner.models import (
-    CefrLevel,
     KnowledgeType,
     Learner,
     LexemeStatus,
@@ -21,12 +20,14 @@ from soltura.learner.models import (
 from soltura.learner.models import Lexeme as LexemeRow
 from soltura.learner.repository import (
     get_due_card,
+    get_latest_placement_run,
     get_learner_lemmas,
     get_lexemes_by_ids,
     get_lexemes_by_lemmas,
     get_most_frequent_lemmas,
 )
 from soltura.llm.client import LLMClient
+from soltura.onboarding.service import BANDS
 from soltura.srs.service import due_queue, review, save_word
 
 TARGET_COVERAGE = 0.95
@@ -36,13 +37,15 @@ MAX_SIMPLIFICATIONS = 2
 # or "cansado" sit between 1,500 and 3,000; at 1,500 live texts on family or sport
 # came out at 83-88% and were stripped of exactly those words.
 BASELINE_KNOWN_RANK = 3000
+# A learner who passed no band of the placement test knows less than the first band.
+FIRST_BAND_RANK = BANDS[0][1]
 MAX_DUE_LEMMAS = 10
 UNRANKED = 1_000_000
 
 WRITER_SYSTEM = (
     "You write short Spanish reading texts for an adult Ukrainian speaker who lives in Spain "
-    "and is learning Spanish. Write natural, everyday Spanish from Spain at the requested CEFR "
-    "level: short sentences, frequent words, and the grammar a learner at that level has met. "
+    "and is learning Spanish. Write natural, everyday Spanish from Spain within the vocabulary "
+    "range you are told: short sentences, frequent words, and the grammar such a learner has met. "
     "Call things by their own word (nieto, bicicleta, traducir) rather than a roundabout "
     "phrase. Return only the title and the finished text: no translation, glossary, notes or "
     "corrections of yourself inside the text."
@@ -90,12 +93,21 @@ class Segment:
     is_word: bool
 
 
+async def vocabulary_range(session: AsyncSession, learner_id: int) -> int:
+    # The placement test is the only measure of the learner's vocabulary; without it the
+    # baseline stands in. A run that passed no band still means "less than the baseline".
+    run = await get_latest_placement_run(session, learner_id)
+    if run is None:
+        return BASELINE_KNOWN_RANK
+    return max(run.known_rank, FIRST_BAND_RANK)
+
+
 async def lemmas_counted_as_known(session: AsyncSession, learner_id: int) -> set[str]:
     # Words being learned count as known: texts include due words on purpose, and
     # treating them as unknown would make simplification strip them out again.
     known = await get_learner_lemmas(session, learner_id, [LexemeStatus.KNOWN])
     if not known:
-        known = await get_most_frequent_lemmas(session, BASELINE_KNOWN_RANK)
+        known = await get_most_frequent_lemmas(session, await vocabulary_range(session, learner_id))
     return known | await get_learner_lemmas(session, learner_id, [LexemeStatus.LEARNING])
 
 
@@ -110,11 +122,13 @@ async def due_lemmas(session: AsyncSession, learner_id: int, now: datetime) -> l
     return [by_id[lexeme_id] for lexeme_id in lexeme_ids if lexeme_id in by_id]
 
 
-def _level(learner: Learner) -> str:
-    return (learner.reading_level or CefrLevel.A2).value.upper()
+def _knows(vocabulary: int) -> str:
+    return f"The learner knows about the {vocabulary:,} most frequent Spanish words."
 
 
-def _first_draft_prompt(level: str, topic: str, due: list[str], source_text: str | None) -> str:
+def _first_draft_prompt(
+    vocabulary: int, topic: str, due: list[str], source_text: str | None
+) -> str:
     wanted = (
         f" Where it fits naturally, use these words the learner is reviewing: {', '.join(due)}."
         if due
@@ -122,16 +136,16 @@ def _first_draft_prompt(level: str, topic: str, due: list[str], source_text: str
     )
     if source_text is not None:
         return (
-            f"Rewrite the text below for CEFR level {level}, keeping its meaning and facts. "
-            f"About 120 to 200 words.{wanted}\n\n<source>\n{source_text}\n</source>"
+            f"Rewrite the text below for a learner. {_knows(vocabulary)} Keep its meaning and "
+            f"facts. About 120 to 200 words.{wanted}\n\n<source>\n{source_text}\n</source>"
         )
-    return f"CEFR level {level}. Topic: {topic}. About 120 to 180 words.{wanted}"
+    return f"{_knows(vocabulary)} Topic: {topic}. About 120 to 180 words.{wanted}"
 
 
-def _simplify_prompt(level: str, draft: GeneratedText, rare: list[str], due: list[str]) -> str:
+def _simplify_prompt(vocabulary: int, draft: GeneratedText, rare: list[str], due: list[str]) -> str:
     keep = f" Keep these words, the learner is reviewing them: {', '.join(due)}." if due else ""
     return (
-        f"A few words in this text are too rare for CEFR level {level}: {', '.join(rare)}. "
+        f"{_knows(vocabulary)} A few words in this text are too rare for them: {', '.join(rare)}. "
         "Replace each with a simpler word that means the same, or rewrite its sentence without "
         "it. Never describe a word with a roundabout phrase ('el hijo de mi hijo' for 'nieto'): "
         f"if no simple word fits, keep the original. Change nothing else.{keep}"
@@ -149,14 +163,14 @@ async def prepare_text(
 ) -> PreparedText:
     if learner.id is None:
         raise ValueError("The learner must be saved before a text is prepared")
-    level = _level(learner)
+    vocabulary = await vocabulary_range(session, learner.id)
     known = await lemmas_counted_as_known(session, learner.id)
     due = await due_lemmas(session, learner.id, now)
 
     draft = await llm(
         GeneratedText,
         system=WRITER_SYSTEM,
-        prompt=_first_draft_prompt(level, topic, due, source_text),
+        prompt=_first_draft_prompt(vocabulary, topic, due, source_text),
         effort="medium",
     )
     attempts = 1
@@ -170,7 +184,7 @@ async def prepare_text(
         draft = await llm(
             GeneratedText,
             system=WRITER_SYSTEM,
-            prompt=_simplify_prompt(level, draft, rare, due),
+            prompt=_simplify_prompt(vocabulary, draft, rare, due),
             effort="medium",
         )
         attempts += 1

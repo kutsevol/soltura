@@ -13,6 +13,7 @@ from soltura.learner.models import (
     ReviewLog,
     ReviewSource,
 )
+from soltura.learner.repository import save_placement_run
 from soltura.reading.service import (
     UNRANKED,
     GeneratedText,
@@ -25,7 +26,7 @@ from soltura.reading.service import (
 from soltura.srs.service import save_word
 from tests.factories import LexemeFactory
 from tests.fakes import FakeLLM
-from tests.reading.conftest import EASY_TEXT, HARD_TEXT, KnowFn
+from tests.reading.conftest import EASY_TEXT, HARD_TEXT, KnowFn, RankFn
 
 NOW = datetime(2026, 10, 31, 12, 0, tzinfo=UTC)
 
@@ -94,6 +95,46 @@ async def test_without_known_words_the_most_frequent_lemmas_count_as_known(
     prepared = await prepare_text(session, llm, learner, NOW, topic="la playa")
 
     assert prepared.coverage == 1.0
+
+
+async def test_the_prompt_names_the_vocabulary_range_from_the_placement_run(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, know: KnowFn
+) -> None:
+    assert learner.id is not None
+    await know(f"{EASY_TEXT.title}. {EASY_TEXT.text}")
+    await save_placement_run(session, learner.id, 1000, [])
+    llm.answer(EASY_TEXT)
+
+    await prepare_text(session, llm, learner, NOW, topic="la playa")
+
+    assert "knows about the 1,000 most frequent Spanish words" in llm.prompts[0]
+    assert "A2" not in llm.prompts[0]
+
+
+async def test_without_a_placement_run_the_prompt_names_the_baseline_range(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, know: KnowFn
+) -> None:
+    await know(f"{EASY_TEXT.title}. {EASY_TEXT.text}")
+    llm.answer(EASY_TEXT)
+
+    await prepare_text(session, llm, learner, NOW, topic="la playa")
+
+    assert "knows about the 3,000 most frequent Spanish words" in llm.prompts[0]
+
+
+async def test_a_learner_who_passed_no_band_is_measured_against_the_first_band(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, rank_text: RankFn
+) -> None:
+    assert learner.id is not None
+    # Ranked inside the baseline of 3,000 but outside the first band of 250.
+    await rank_text(f"{EASY_TEXT.title}. {EASY_TEXT.text}", 1000)
+    await save_placement_run(session, learner.id, 0, [])
+    llm.answer(EASY_TEXT, EASY_TEXT, EASY_TEXT)
+
+    prepared = await prepare_text(session, llm, learner, NOW, topic="la playa")
+
+    assert (prepared.coverage, prepared.below_target) == (0.0, True)
+    assert "knows about the 250 most frequent Spanish words" in llm.prompts[0]
 
 
 async def test_adapting_a_pasted_text_sends_it_as_the_source(

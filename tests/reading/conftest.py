@@ -24,6 +24,22 @@ HARD_TEXT = GeneratedText(
 
 
 KnowFn = Callable[[str], Awaitable[None]]
+RankFn = Callable[[str, int], Awaitable[None]]
+
+
+@pytest.fixture
+def rank_text(session: AsyncSession) -> RankFn:
+    # Creates a lexeme for every lemma of a text at consecutive frequency ranks from
+    # `first_rank`, without marking any of them known.
+    async def rank(text: str, first_rank: int) -> None:
+        lemmas = sorted({token.lemma for token in analyze(text)})
+        session.add_all(
+            LexemeFactory.build(lemma=lemma, frequency_rank=first_rank + i)
+            for i, lemma in enumerate(lemmas)
+        )
+        await session.flush()
+
+    return rank
 
 
 @pytest.fixture
