@@ -25,7 +25,7 @@
           <tr>
             <td>{{ {"correct": "✓", "partly": "≈", "wrong": "✗"}[word.verdict] }} {{ word.target_form }}</td>
             <td>{{ word.answer or "—" }}</td>
-            <td>{{ word.expected }}{% if word.verdict != "correct" and word.reason %}<br><small class="note">{{ word.reason }}</small>{% endif %}</td>
+            <td>{{ word.expected }}{% if word.verdict != "correct" and word.answer and word.reason %}<br><small class="note">{{ word.reason }}</small>{% endif %}</td>
           </tr>
         {% endfor %}
       </tbody>

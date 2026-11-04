@@ -40,7 +40,8 @@ SENTENCES_SYSTEM = (
     "You write short, natural Spanish sentences from everyday life in Spain for a vocabulary "
     "placement test. For each word, write one sentence of at most 12 words that uses it in "
     "its most common meaning, in any form that fits, with words simpler than the target "
-    "around it. Give the word exactly as it appears in your sentence."
+    "around it. Give the word exactly as it appears in your sentence, and its meaning in "
+    "that sentence in Ukrainian, in a few words."
 )
 
 
@@ -48,6 +49,7 @@ class PlacementSentence(BaseModel):
     lemma: str = Field(description="The word as it was given")
     sentence: str = Field(description="The Spanish sentence using it")
     target_form: str = Field(description="The word exactly as it appears in the sentence")
+    meaning: str = Field(description="The word's meaning in this sentence, in Ukrainian")
 
 
 class PlacementSentences(BaseModel):
@@ -59,6 +61,9 @@ class PlacementItem(BaseModel):
     lemma: str = Field(description="Dictionary form of the word")
     sentence: str = Field(description="Spanish sentence the word is shown in")
     target_form: str = Field(description="The word exactly as it appears in the sentence")
+    meaning: str = Field(
+        default="", description="The word's meaning in this sentence, in Ukrainian"
+    )
     answer: str = Field(default="", description="The learner's Ukrainian answer")
 
 
@@ -117,6 +122,7 @@ async def build_placement(session: AsyncSession, llm: LLMClient) -> list[Placeme
                 lemma=lemma,
                 sentence=sentence.sentence,
                 target_form=sentence.target_form,
+                meaning=sentence.meaning,
             )
         )
     return items
@@ -139,7 +145,8 @@ async def score_placement(llm: LLMClient, answered: list[PlacementItem]) -> Plac
             answer=item.answer,
             verdict=verdict.verdict,
             reason=verdict.reason,
-            expected=verdict.expected,
+            # A skipped word is never sent to the judge, so its meaning is the one written with the sentence.
+            expected=verdict.expected or item.meaning,
         )
         for item, verdict in zip(answered, verdicts, strict=True)
     ]

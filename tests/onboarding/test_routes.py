@@ -35,7 +35,12 @@ async def test_a_full_placement_marks_the_passed_bands_known(
     judge.answer(
         PlacementSentences(
             sentences=[
-                PlacementSentence(lemma=lemma, sentence=f"Hoy veo {lemma}.", target_form=lemma)
+                PlacementSentence(
+                    lemma=lemma,
+                    sentence=f"Hoy veo {lemma}.",
+                    target_form=lemma,
+                    meaning=f"значення {lemma}",
+                )
                 for lemma in nouns
             ]
         )
@@ -52,7 +57,8 @@ async def test_a_full_placement_marks_the_passed_bands_known(
             data={
                 "queue": _hidden(card.text, "queue"),
                 "answered": _hidden(card.text, "answered"),
-                "answer": CORRECT if band < 3 else "не знаю",
+                "answer": CORRECT if band < 3 else "",
+                "give_up": band >= 3,
             },
         )
 
@@ -76,7 +82,9 @@ async def test_a_full_placement_marks_the_passed_bands_known(
     assert "Ваші відповіді (40)" in page.text
     assert page.text.count("✓ word") == 15
     assert page.text.count("✗ word") == 25
-    assert "значення" in page.text
+    # A skipped word is not judged, yet its meaning is still shown.
+    assert page.text.count("значення word") == 25
+    assert "Відповіді немає" not in page.text
 
 
 async def test_an_empty_dictionary_asks_to_seed_it(onboarding_client: AsyncClient) -> None:

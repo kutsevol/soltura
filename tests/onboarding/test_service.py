@@ -26,7 +26,12 @@ from tests.onboarding.conftest import CORRECT, JudgeByAnswer
 def _sentences_for(lemmas: list[str]) -> PlacementSentences:
     return PlacementSentences(
         sentences=[
-            PlacementSentence(lemma=lemma, sentence=f"Hoy veo {lemma} en casa.", target_form=lemma)
+            PlacementSentence(
+                lemma=lemma,
+                sentence=f"Hoy veo {lemma} en casa.",
+                target_form=lemma,
+                meaning=f"значення {lemma}",
+            )
             for lemma in lemmas
         ]
     )
@@ -68,7 +73,9 @@ async def test_a_word_without_a_usable_sentence_is_left_out(
     nouns = [lexeme.lemma for lexeme in banded_lexemes if lexeme.pos == "NOUN"]
     sentences = _sentences_for(nouns[1:])
     sentences.sentences.append(
-        PlacementSentence(lemma=nouns[0], sentence="Una frase sin la palabra.", target_form="x")
+        PlacementSentence(
+            lemma=nouns[0], sentence="Una frase sin la palabra.", target_form="x", meaning="x"
+        )
     )
     judge.answer(sentences)
 
@@ -209,3 +216,28 @@ async def test_a_run_saved_before_answers_were_kept_has_no_words(
 
     assert result is not None
     assert (result.known_rank, result.words) == (250, [])
+
+
+async def test_a_skipped_word_keeps_the_meaning_written_with_its_sentence(
+    judge: JudgeByAnswer,
+) -> None:
+    skipped = PlacementItem(
+        band=0, lemma="casa", sentence="Mi casa es pequeña.", target_form="casa", meaning="дім"
+    )
+
+    result = await score_placement(judge, [skipped])
+
+    [word] = result.words
+    assert (word.verdict, word.answer, word.expected) == ("wrong", "", "дім")
+    assert judge.prompts == []
+
+
+async def test_the_meaning_of_each_placement_word_comes_from_its_sentence(
+    session: AsyncSession, banded_lexemes: list[Lexeme], judge: JudgeByAnswer
+) -> None:
+    nouns = [lexeme.lemma for lexeme in banded_lexemes if lexeme.pos == "NOUN"]
+    judge.answer(_sentences_for(nouns))
+
+    items = await build_placement(session, judge)
+
+    assert {item.meaning for item in items} == {f"значення {noun}" for noun in nouns}
