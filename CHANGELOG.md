@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.25.0 (2026-11-04)
+
+### Features
+
+- **home**: Fit the hub on one screen and show the placement result
+  ([#37](https://github.com/kutsevol/soltura/pull/37),
+  [`5aa218a`](https://github.com/kutsevol/soltura/commit/5aa218a8a67cc6186e3c76b1e8560e80c8bebf5b))
+
+
 ## v0.24.0 (2026-11-04)
 
 ### Features
