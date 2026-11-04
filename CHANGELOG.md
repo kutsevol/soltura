@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.27.0 (2026-11-04)
+
+### Features
+
+- **reading**: Vary the situation, form and names of generated texts
+  ([#39](https://github.com/kutsevol/soltura/pull/39),
+  [`33d2adb`](https://github.com/kutsevol/soltura/commit/33d2adb7b6efb43035c3cc76c389c5d0f46d6bc9))
+
+
 ## v0.26.0 (2026-11-04)
 
 ### Features
