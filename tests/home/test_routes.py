@@ -24,6 +24,15 @@ async def test_the_due_count_is_words_only(
     assert "Карток до повторення: 2" in response.text
 
 
+async def test_the_hub_lists_the_trainer_with_its_due_count(
+    learner_client: AsyncClient, due_conjugation_card: MemoryCard
+) -> None:
+    response = await learner_client.get("/")
+
+    assert '<h3><a href="/conjugation">Дієслова</a></h3>' in response.text
+    assert "Форм до повторення: 1" in response.text
+
+
 async def test_the_main_button_offers_reading_when_nothing_is_due(
     learner_client: AsyncClient,
 ) -> None:

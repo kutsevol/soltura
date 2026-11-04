@@ -25,6 +25,7 @@
   --tone-reading: #2f6fb0;
   --tone-words: #1a7f37;
   --tone-help: #6b4fc4;
+  --tone-conjugation: #0f7c86;
   --verdict-good: #1a7f37;
   --verdict-hard: #9a6700;
 }
@@ -52,6 +53,7 @@
     --tone-reading: #7eb6f6;
     --tone-words: #2dd86a;
     --tone-help: #b7a6ff;
+    --tone-conjugation: #5cd0d9;
     --verdict-good: #3fb950;
     --verdict-hard: #d29922;
   }
@@ -192,6 +194,10 @@ article.module p {
 
 .module.words {
   --tone: var(--tone-words);
+}
+
+.module.conjugation {
+  --tone: var(--tone-conjugation);
 }
 
 .module.help {

@@ -10,6 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.config import settings
+from soltura.conjugation.routes import router as conjugation_router
 from soltura.db import get_session
 from soltura.home.routes import router as home_router
 from soltura.lifespan import lifespan
@@ -60,6 +61,7 @@ def create_app() -> FastAPI:
     app.include_router(pages_router)
     app.include_router(reading_router)
     app.include_router(warmup_router)
+    app.include_router(conjugation_router)
     app.include_router(words_router)
     app.include_router(onboarding_router)
 
