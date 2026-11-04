@@ -9,11 +9,14 @@ from soltura.learner.models import (
     LexemeStatus,
 )
 from soltura.onboarding.service import (
+    BandScore,
     PlacementItem,
+    PlacementResult,
     PlacementSentence,
     PlacementSentences,
     apply_placement,
     build_placement,
+    get_latest_placement,
     score_placement,
 )
 from tests.onboarding.conftest import CORRECT, JudgeByAnswer
@@ -110,7 +113,7 @@ async def test_applying_a_placement_marks_frequent_words_known_but_keeps_learnin
     )
     await session.flush()
 
-    await apply_placement(session, learner.id, known_rank=500)
+    await apply_placement(session, learner.id, PlacementResult(known_rank=500, bands=[]))
 
     statuses = dict(
         (
@@ -130,6 +133,42 @@ async def test_a_placement_with_no_passed_band_marks_nothing(
 ) -> None:
     assert learner.id is not None
 
-    await apply_placement(session, learner.id, known_rank=0)
+    await apply_placement(session, learner.id, PlacementResult(known_rank=0, bands=[]))
 
     assert (await session.execute(select(LearnerLexeme))).scalars().all() == []
+
+
+async def test_a_placement_run_is_kept_even_when_no_band_passed(
+    session: AsyncSession, learner: Learner
+) -> None:
+    assert learner.id is not None
+    result = PlacementResult(
+        known_rank=0, bands=[BandScore(band=0, max_rank=250, correct=1, total=5)]
+    )
+
+    await apply_placement(session, learner.id, result)
+
+    assert await get_latest_placement(session, learner.id) == result
+
+
+async def test_the_latest_placement_is_the_newest_run(
+    session: AsyncSession, learner: Learner
+) -> None:
+    assert learner.id is not None
+    older = PlacementResult(known_rank=250, bands=[BandScore(0, 250, 4, 5)])
+    newer = PlacementResult(
+        known_rank=500, bands=[BandScore(0, 250, 5, 5), BandScore(1, 500, 4, 5)]
+    )
+
+    await apply_placement(session, learner.id, older)
+    await apply_placement(session, learner.id, newer)
+
+    assert await get_latest_placement(session, learner.id) == newer
+
+
+async def test_there_is_no_placement_before_the_first_run(
+    session: AsyncSession, learner: Learner
+) -> None:
+    assert learner.id is not None
+
+    assert await get_latest_placement(session, learner.id) is None

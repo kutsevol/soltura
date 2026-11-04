@@ -17,6 +17,7 @@ from soltura.learner.models import (
     LexemeOrigin,
     LexemeStatus,
     MemoryCard,
+    PlacementRun,
     UnitKind,
     WordContext,
 )
@@ -129,6 +130,25 @@ async def get_verb_lemmas(session: AsyncSession) -> list[str]:
         .order_by(col(Lexeme.frequency_rank), col(Lexeme.lemma))
     )
     return list(result.scalars())
+
+
+async def save_placement_run(
+    session: AsyncSession, learner_id: int, known_rank: int, bands: list[dict[str, int]]
+) -> PlacementRun:
+    run = PlacementRun(learner_id=learner_id, known_rank=known_rank, bands=bands)
+    session.add(run)
+    await session.flush()
+    return run
+
+
+async def get_latest_placement_run(session: AsyncSession, learner_id: int) -> PlacementRun | None:
+    result = await session.execute(
+        select(PlacementRun)
+        .where(col(PlacementRun.learner_id) == learner_id)
+        .order_by(col(PlacementRun.id).desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
 
 
 async def count_learning_words(session: AsyncSession, learner_id: int) -> int:
