@@ -9,5 +9,5 @@
     <button type="submit">Далі</button>
     <button type="submit" name="give_up" value="1" class="secondary outline">Не знаю</button>
   </div>
-  {% if position == total %}<span id="scoring" class="htmx-indicator" aria-busy="true">Перевіряю відповіді…</span>{% endif %}
+  {% if checking %}<span id="scoring" class="htmx-indicator" aria-busy="true">Перевіряю відповіді…</span>{% endif %}
 </form>

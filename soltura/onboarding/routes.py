@@ -14,9 +14,12 @@ from soltura.onboarding.service import (
     WORDS_PER_BAND,
     PlacementItem,
     apply_placement,
+    band_scores,
     build_placement,
     get_latest_placement,
+    judge_items,
     score_placement,
+    should_stop,
 )
 from soltura.practice.text import split_around
 from soltura.templating import templates
@@ -54,6 +57,8 @@ def _card_context(queue: list[PlacementItem], answered: list[PlacementItem]) -> 
         "answered_json": ITEMS.dump_json(answered).decode(),
         "position": len(answered) + 1,
         "total": len(answered) + len(queue),
+        # The last word of a band is followed by a wait while its answers are judged.
+        "checking": len(queue) == 1 or queue[1].band != current.band,
     }
 
 
@@ -105,6 +110,12 @@ async def answer(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nothing to answer")
     current, *rest = remaining
     done.append(current.model_copy(update={"answer": "" if give_up else answer.strip()}))
+    if not rest or rest[0].band != current.band:
+        # A band is finished: judge it now, so a learner who has run out of known words
+        # is not asked the rarer bands.
+        done = await judge_items(llm, done)
+        if rest and should_stop(band_scores(done)):
+            rest = []
     if rest:
         return templates.TemplateResponse(
             request, "onboarding/card.html", _card_context(rest, done)

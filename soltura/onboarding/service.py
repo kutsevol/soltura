@@ -12,7 +12,7 @@ from soltura.learner.repository import (
     save_placement_run,
 )
 from soltura.llm.client import LLMClient
-from soltura.practice.checking import TranslationVerdict, judge_translation
+from soltura.practice.checking import judge_translation
 from soltura.practice.text import split_around
 
 logger = logging.getLogger(__name__)
@@ -29,8 +29,13 @@ BANDS: tuple[tuple[int, int], ...] = (
     (3001, 4500),
     (4501, 6000),
 )
-WORDS_PER_BAND = 5
+WORDS_PER_BAND = 8
+# A few spare words per band take the place of names and of words without a usable sentence.
+SAMPLED_PER_BAND = WORDS_PER_BAND + 2
 PASS_SHARE = 0.8
+# Two bands in a row under this share end the test: the words only get rarer.
+WEAK_SHARE = 0.5
+WEAK_BANDS_IN_A_ROW = 2
 # Function words are known long before their rank says anything; content words are
 # what a vocabulary estimate rests on.
 CONTENT_POS = ("NOUN", "VERB", "ADJ", "ADV")
@@ -41,7 +46,8 @@ SENTENCES_SYSTEM = (
     "placement test. For each word, write one sentence of at most 12 words that uses it in "
     "its most common meaning, in any form that fits, with words simpler than the target "
     "around it. Give the word exactly as it appears in your sentence, and its meaning in "
-    "that sentence in Ukrainian, in a few words."
+    "that sentence in Ukrainian, in a few words. Mark a word that is the name of a person or "
+    "a place rather than a common word."
 )
 
 
@@ -50,6 +56,9 @@ class PlacementSentence(BaseModel):
     sentence: str = Field(description="The Spanish sentence using it")
     target_form: str = Field(description="The word exactly as it appears in the sentence")
     meaning: str = Field(description="The word's meaning in this sentence, in Ukrainian")
+    is_name: bool = Field(
+        default=False, description="True when the word is the name of a person or a place"
+    )
 
 
 class PlacementSentences(BaseModel):
@@ -65,6 +74,9 @@ class PlacementItem(BaseModel):
         default="", description="The word's meaning in this sentence, in Ukrainian"
     )
     answer: str = Field(default="", description="The learner's Ukrainian answer")
+    verdict: str = Field(default="", description="The judge's verdict; empty until judged")
+    reason: str = Field(default="", description="The judge's one-line reason in Ukrainian")
+    expected: str = Field(default="", description="The word's meaning in this sentence")
 
 
 @dataclass(frozen=True)
@@ -97,13 +109,13 @@ class PlacementResult:
 async def build_placement(session: AsyncSession, llm: LLMClient) -> list[PlacementItem]:
     sampled: list[tuple[int, str]] = []
     for band, (min_rank, max_rank) in enumerate(BANDS):
-        lexemes = await sample_lexemes(session, min_rank, max_rank, CONTENT_POS, WORDS_PER_BAND)
+        lexemes = await sample_lexemes(session, min_rank, max_rank, CONTENT_POS, SAMPLED_PER_BAND)
         sampled.extend((band, lexeme.lemma) for lexeme in lexemes)
     if not sampled:
         return []
 
-    # One call for all forty sentences: forty separate calls would cost more and keep
-    # the learner waiting for the slowest of them.
+    # One call for every sentence: separate calls would cost more and keep the learner
+    # waiting for the slowest of them.
     numbered = "\n".join(f"{i}. {lemma}" for i, (_, lemma) in enumerate(sampled, start=1))
     generated = await llm(
         PlacementSentences, system=SENTENCES_SYSTEM, prompt=f"Words:\n{numbered}", effort="low"
@@ -115,6 +127,11 @@ async def build_placement(session: AsyncSession, llm: LLMClient) -> list[Placeme
         sentence = by_lemma.get(lemma)
         if sentence is None or split_around(sentence.sentence, sentence.target_form) is None:
             logger.debug(f"No usable placement sentence for {lemma!r}")
+            continue
+        if sentence.is_name:
+            logger.debug(f"Placement word {lemma!r} is a name")
+            continue
+        if sum(item.band == band for item in items) == WORDS_PER_BAND:
             continue
         items.append(
             PlacementItem(
@@ -128,14 +145,47 @@ async def build_placement(session: AsyncSession, llm: LLMClient) -> list[Placeme
     return items
 
 
-async def score_placement(llm: LLMClient, answered: list[PlacementItem]) -> PlacementResult:
+async def judge_items(llm: LLMClient, items: list[PlacementItem]) -> list[PlacementItem]:
     limit = asyncio.Semaphore(JUDGE_CONCURRENCY)
 
-    async def judge(item: PlacementItem) -> TranslationVerdict:
+    async def judge(item: PlacementItem) -> PlacementItem:
+        if item.verdict:
+            return item
         async with limit:
-            return await judge_translation(llm, item.answer, item.target_form, item.sentence)
+            verdict = await judge_translation(llm, item.answer, item.target_form, item.sentence)
+        # A skipped word is never sent to the judge, so its meaning is the one written with
+        # the sentence.
+        return item.model_copy(
+            update={
+                "verdict": verdict.verdict,
+                "reason": verdict.reason,
+                "expected": verdict.expected or item.meaning,
+            }
+        )
 
-    verdicts = await asyncio.gather(*(judge(item) for item in answered))
+    return list(await asyncio.gather(*(judge(item) for item in items)))
+
+
+def band_scores(judged: list[PlacementItem]) -> list[BandScore]:
+    scores: list[BandScore] = []
+    for band, (_, max_rank) in enumerate(BANDS):
+        marks = [item.verdict == "correct" for item in judged if item.band == band]
+        if marks:
+            scores.append(
+                BandScore(band=band, max_rank=max_rank, correct=sum(marks), total=len(marks))
+            )
+    return scores
+
+
+def should_stop(scores: list[BandScore]) -> bool:
+    last = scores[-WEAK_BANDS_IN_A_ROW:]
+    return len(last) == WEAK_BANDS_IN_A_ROW and all(
+        score.correct / score.total < WEAK_SHARE for score in last
+    )
+
+
+async def score_placement(llm: LLMClient, answered: list[PlacementItem]) -> PlacementResult:
+    judged = await judge_items(llm, answered)
     words = [
         WordResult(
             band=item.band,
@@ -143,24 +193,19 @@ async def score_placement(llm: LLMClient, answered: list[PlacementItem]) -> Plac
             sentence=item.sentence,
             target_form=item.target_form,
             answer=item.answer,
-            verdict=verdict.verdict,
-            reason=verdict.reason,
-            # A skipped word is never sent to the judge, so its meaning is the one written with the sentence.
-            expected=verdict.expected or item.meaning,
+            verdict=item.verdict,
+            reason=item.reason,
+            expected=item.expected,
         )
-        for item, verdict in zip(answered, verdicts, strict=True)
+        for item in judged
     ]
-
-    scores: list[BandScore] = []
-    for band, (_, max_rank) in enumerate(BANDS):
-        marks = [word.verdict == "correct" for word in words if word.band == band]
-        scores.append(BandScore(band=band, max_rank=max_rank, correct=sum(marks), total=len(marks)))
+    scores = band_scores(judged)
 
     # Bands count only in an unbroken run from the most frequent one: knowing a few
     # rare words does not mean knowing every more frequent one in between.
     known_rank = 0
     for score in scores:
-        if score.total == 0 or score.correct / score.total < PASS_SHARE:
+        if score.correct / score.total < PASS_SHARE:
             break
         known_rank = score.max_rank
     return PlacementResult(known_rank=known_rank, bands=scores, words=words)

@@ -19,6 +19,7 @@ from soltura.onboarding.service import (
     build_placement,
     get_latest_placement,
     score_placement,
+    should_stop,
 )
 from tests.onboarding.conftest import CORRECT, JudgeByAnswer
 
@@ -51,7 +52,7 @@ def _answered(correct_per_band: list[int]) -> list[PlacementItem]:
     ]
 
 
-async def test_placement_asks_five_content_words_from_every_band(
+async def test_placement_asks_eight_content_words_from_every_band(
     session: AsyncSession, banded_lexemes: list[Lexeme], judge: JudgeByAnswer
 ) -> None:
     nouns = [lexeme.lemma for lexeme in banded_lexemes if lexeme.pos == "NOUN"]
@@ -59,9 +60,9 @@ async def test_placement_asks_five_content_words_from_every_band(
 
     items = await build_placement(session, judge)
 
-    assert len(items) == 40
+    assert len(items) == 64
     assert {item.band: sum(i.band == item.band for i in items) for item in items} == {
-        band: 5 for band in range(8)
+        band: 8 for band in range(8)
     }
     assert not any(item.lemma.startswith("prep") for item in items)
     assert len(judge.prompts) == 1
@@ -81,8 +82,22 @@ async def test_a_word_without_a_usable_sentence_is_left_out(
 
     items = await build_placement(session, judge)
 
-    assert len(items) == 39
+    assert len(items) == 64
     assert nouns[0] not in {item.lemma for item in items}
+
+
+async def test_a_name_is_left_out_and_a_spare_word_takes_its_place(
+    session: AsyncSession, banded_lexemes: list[Lexeme], judge: JudgeByAnswer
+) -> None:
+    nouns = [lexeme.lemma for lexeme in banded_lexemes if lexeme.pos == "NOUN"]
+    sentences = _sentences_for(nouns)
+    sentences.sentences[0].is_name = True
+    judge.answer(sentences)
+
+    items = await build_placement(session, judge)
+
+    assert nouns[0] not in {item.lemma for item in items}
+    assert sum(item.band == 0 for item in items) == 8
 
 
 async def test_all_right_answers_place_the_learner_at_the_last_band(judge: JudgeByAnswer) -> None:
@@ -240,4 +255,40 @@ async def test_the_meaning_of_each_placement_word_comes_from_its_sentence(
 
     items = await build_placement(session, judge)
 
-    assert {item.meaning for item in items} == {f"значення {noun}" for noun in nouns}
+    assert all(item.meaning == f"значення {item.lemma}" for item in items)
+
+
+def test_two_weak_bands_in_a_row_stop_the_test() -> None:
+    scores = [BandScore(0, 250, 8, 8), BandScore(1, 500, 3, 8), BandScore(2, 1000, 2, 8)]
+
+    assert should_stop(scores)
+
+
+def test_one_weak_band_or_a_weak_band_between_strong_ones_does_not_stop_the_test() -> None:
+    assert not should_stop([BandScore(0, 250, 8, 8), BandScore(1, 500, 3, 8)])
+    assert not should_stop(
+        [BandScore(0, 250, 3, 8), BandScore(1, 500, 7, 8), BandScore(2, 1000, 3, 8)]
+    )
+
+
+def test_a_band_at_exactly_half_is_not_weak() -> None:
+    assert not should_stop([BandScore(0, 250, 4, 8), BandScore(1, 500, 4, 8)])
+
+
+async def test_only_the_bands_that_were_asked_are_scored(judge: JudgeByAnswer) -> None:
+    result = await score_placement(judge, _answered([5, 5]))
+
+    assert [band.max_rank for band in result.bands] == [250, 500]
+
+
+async def test_an_answer_that_is_already_judged_is_not_judged_again(
+    judge: JudgeByAnswer,
+) -> None:
+    judged = _answered([5])[0].model_copy(
+        update={"verdict": "correct", "reason": "", "expected": "значення"}
+    )
+
+    result = await score_placement(judge, [judged])
+
+    assert judge.prompts == []
+    assert result.words[0].verdict == "correct"
