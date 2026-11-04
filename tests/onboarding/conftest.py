@@ -46,12 +46,13 @@ def judge() -> JudgeByAnswer:
 
 @pytest.fixture
 async def banded_lexemes(session: AsyncSession) -> list[Lexeme]:
-    # Five nouns at the top of every band, plus a preposition per band that the
+    # Ten nouns at the top of every band, two more than the test asks, plus a preposition
+    # per band that the
     # placement must never pick.
     lexemes = [
         LexemeFactory.build(lemma=f"word{band}x{i}", pos="NOUN", frequency_rank=max_rank - i)
         for band, (_, max_rank) in enumerate(BANDS)
-        for i in range(5)
+        for i in range(10)
     ] + [
         LexemeFactory.build(lemma=f"prep{band}", pos="ADP", frequency_rank=min_rank)
         for band, (min_rank, _) in enumerate(BANDS)

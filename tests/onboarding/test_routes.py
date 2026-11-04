@@ -20,11 +20,11 @@ async def test_the_intro_explains_the_test(onboarding_client: AsyncClient) -> No
     response = await onboarding_client.get("/onboarding")
 
     assert response.status_code == 200
-    assert "40" in response.text
+    assert "до 64" in response.text
     assert 'hx-post="/onboarding/start"' in response.text
 
 
-async def test_a_full_placement_marks_the_passed_bands_known(
+async def test_a_learner_who_fails_two_bands_in_a_row_is_not_asked_the_rest(
     onboarding_client: AsyncClient,
     session: AsyncSession,
     learner: Learner,
@@ -46,9 +46,9 @@ async def test_a_full_placement_marks_the_passed_bands_known(
         )
     )
     card = await onboarding_client.post("/onboarding/start")
-    assert "Слово 1 з 40" in card.text
+    assert "Слово 1 з 64" in card.text
 
-    for _ in range(40):
+    while "Знайомими" not in card.text:
         mark = re.search(r"<mark>(word(\d)x\d)</mark>", card.text)
         assert mark, card.text
         band = int(mark.group(2))
@@ -62,7 +62,10 @@ async def test_a_full_placement_marks_the_passed_bands_known(
             },
         )
 
+    # Bands 3 and 4 are both at 0%, so the test ends after five bands of eight words.
     assert "Знайомими позначено 1000 найчастотніших слів" in card.text
+    assert "до 2000" in card.text
+    assert "до 3000" not in card.text
     known = (
         await session.execute(
             select(func.count()).where(
@@ -77,13 +80,13 @@ async def test_a_full_placement_marks_the_passed_bands_known(
 
     assert page.status_code == 200
     assert "Знайомими позначено 1000 найчастотніших слів" in page.text
-    assert "<td>до 250</td><td>5 з 5</td>" in page.text
+    assert "<td>до 250</td><td>8 з 8</td>" in page.text
     assert '<a href="/onboarding" role="button" class="outline">Пройти знову</a>' in page.text
     assert "Ваші відповіді (40)" in page.text
-    assert page.text.count("✓ word") == 15
-    assert page.text.count("✗ word") == 25
+    assert page.text.count("✓ word") == 24
+    assert page.text.count("✗ word") == 16
     # A skipped word is not judged, yet its meaning is still shown.
-    assert page.text.count("значення word") == 25
+    assert page.text.count("значення word") == 16
     assert "Відповіді немає" not in page.text
 
 
