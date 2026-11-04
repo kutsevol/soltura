@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, func, select
 
 from soltura.learner.models import Learner, LearnerLexeme, Lexeme, LexemeStatus
+from soltura.learner.repository import save_placement_run
 from soltura.onboarding.service import PlacementSentence, PlacementSentences
 from tests.onboarding.conftest import CORRECT, JudgeByAnswer
 
@@ -72,6 +73,10 @@ async def test_a_full_placement_marks_the_passed_bands_known(
     assert "Знайомими позначено 1000 найчастотніших слів" in page.text
     assert "<td>до 250</td><td>5 з 5</td>" in page.text
     assert '<a href="/onboarding" role="button" class="outline">Пройти знову</a>' in page.text
+    assert "Ваші відповіді (40)" in page.text
+    assert page.text.count("✓ word") == 15
+    assert page.text.count("✗ word") == 25
+    assert "значення" in page.text
 
 
 async def test_an_empty_dictionary_asks_to_seed_it(onboarding_client: AsyncClient) -> None:
@@ -88,3 +93,17 @@ async def test_the_result_page_without_a_run_sends_the_learner_to_the_test(
 
     assert response.status_code == 303
     assert response.headers["location"] == "/onboarding"
+
+
+async def test_a_run_saved_without_answers_still_shows_its_table(
+    onboarding_client: AsyncClient, session: AsyncSession, learner: Learner
+) -> None:
+    assert learner.id is not None
+    bands = [{"band": 0, "max_rank": 250, "correct": 5, "total": 5}]
+    await save_placement_run(session, learner.id, 250, bands)
+
+    page = await onboarding_client.get("/onboarding/result")
+
+    assert page.status_code == 200
+    assert "<td>до 250</td><td>5 з 5</td>" in page.text
+    assert "Ваші відповіді" not in page.text

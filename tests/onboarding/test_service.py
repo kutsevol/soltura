@@ -8,6 +8,7 @@ from soltura.learner.models import (
     LexemeOrigin,
     LexemeStatus,
 )
+from soltura.learner.repository import save_placement_run
 from soltura.onboarding.service import (
     BandScore,
     PlacementItem,
@@ -172,3 +173,39 @@ async def test_there_is_no_placement_before_the_first_run(
     assert learner.id is not None
 
     assert await get_latest_placement(session, learner.id) is None
+
+
+async def test_every_answer_is_kept_with_its_verdict_and_expected_meaning(
+    judge: JudgeByAnswer,
+) -> None:
+    result = await score_placement(judge, _answered([3] + [0] * 7))
+
+    first_band = result.words[:5]
+    assert [word.verdict for word in first_band] == ["correct"] * 3 + ["wrong"] * 2
+    assert (first_band[0].lemma, first_band[0].answer) == ("word0x0", CORRECT)
+    assert (first_band[4].answer, first_band[4].expected) == ("ні", "значення")
+    assert len(result.words) == 40
+
+
+async def test_the_saved_answers_come_back_with_the_latest_placement(
+    session: AsyncSession, learner: Learner, judge: JudgeByAnswer
+) -> None:
+    assert learner.id is not None
+    result = await score_placement(judge, _answered([5, 2] + [0] * 6))
+
+    await apply_placement(session, learner.id, result)
+
+    assert await get_latest_placement(session, learner.id) == result
+
+
+async def test_a_run_saved_before_answers_were_kept_has_no_words(
+    session: AsyncSession, learner: Learner
+) -> None:
+    assert learner.id is not None
+    bands = [{"band": 0, "max_rank": 250, "correct": 5, "total": 5}]
+    await save_placement_run(session, learner.id, 250, bands)
+
+    result = await get_latest_placement(session, learner.id)
+
+    assert result is not None
+    assert (result.known_rank, result.words) == (250, [])

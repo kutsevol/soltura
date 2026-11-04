@@ -280,6 +280,11 @@ class PlacementRun(SQLModel, table=True):
         sa_column=Column(JSON, nullable=False),
         description="Score per frequency band: band, max_rank, correct and total",
     )
+    items: list[dict[str, Any]] | None = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+        description="Every word asked with the answer, verdict and expected meaning; unset for runs saved before answers were kept",
+    )
     created_at: datetime = _created_at()
 
 

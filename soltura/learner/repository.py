@@ -2,6 +2,7 @@ from collections import defaultdict
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import and_, case, func, literal, literal_column
 from sqlalchemy.dialects.postgresql import insert
@@ -134,9 +135,13 @@ async def get_verb_lemmas(session: AsyncSession) -> list[str]:
 
 
 async def save_placement_run(
-    session: AsyncSession, learner_id: int, known_rank: int, bands: list[dict[str, int]]
+    session: AsyncSession,
+    learner_id: int,
+    known_rank: int,
+    bands: list[dict[str, int]],
+    items: list[dict[str, Any]] | None = None,
 ) -> PlacementRun:
-    run = PlacementRun(learner_id=learner_id, known_rank=known_rank, bands=bands)
+    run = PlacementRun(learner_id=learner_id, known_rank=known_rank, bands=bands, items=items)
     session.add(run)
     await session.flush()
     return run
