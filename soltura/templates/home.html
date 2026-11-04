@@ -6,11 +6,7 @@
 {% block content %}
   {# Shown until the first word is saved, which is when the loop needs explaining. #}
   {% if not learning %}
-    <article class="intro">
-      <h2>Вперше тут?</h2>
-      <p class="note">Хвилина, щоб зрозуміти, як слово з тексту потрапляє в повторення.</p>
-      <a href="/help" role="button" class="outline">Як це працює</a>
-    </article>
+    <p class="note">Вперше тут? <a href="/help">Як це працює</a></p>
   {% endif %}
   <article class="focus">
     <p class="eyebrow">Наступний крок</p>
@@ -23,23 +19,25 @@
       <p class="note">Прочитайте текст і збережіть нові слова — вони з’являться в розминці.</p>
       <a href="/reading" role="button">Перейти до читання</a>
     {% endif %}
-    <p class="note">Слів у вивченні: {{ learning }}</p>
-    <p class="note"><a href="/words">{{ known_summary }}</a></p>
+    <p class="note">Слів у вивченні: {{ learning }} · <a href="/words">{{ known_summary }}</a></p>
   </article>
 
-  {% for item in nav if item.href != "/" %}
-    <article class="module {{ item.tone }}">
-      <h3><a href="{{ item.href }}">{{ item.label }}</a></h3>
-      <p class="note">{{ item.purpose }}</p>
+  {# The tab bar already links the five main screens; the hub adds the two it has no tab for. #}
+  <div class="tiles">
+    <article class="module {{ trainer.tone }}">
+      <h3><a href="{{ trainer.href }}">{{ trainer.label }}</a></h3>
+      <p class="note">Форм до повторення: {{ conjugation_due }}</p>
     </article>
-  {% endfor %}
-  <article class="module {{ trainer.tone }}">
-    <h3><a href="{{ trainer.href }}">{{ trainer.label }}</a></h3>
-    <p class="note">{{ trainer.purpose }}</p>
-    <p class="note">Форм до повторення: {{ conjugation_due }}</p>
-  </article>
-  <article>
-    <h3><a href="/onboarding">Визначення рівня</a></h3>
-    <p class="note">Короткий тест із перекладом: за ним тексти одразу підлаштуються під ваш словник.</p>
-  </article>
+    <article class="module">
+      {% if placement_rank is none %}
+        <h3><a href="/onboarding">Визначення рівня</a></h3>
+        <p class="note">Короткий тест: тексти підлаштуються під ваш словник.</p>
+      {% else %}
+        <h3><a href="/onboarding/result">Визначення рівня</a></h3>
+        <p class="note">
+          {% if placement_rank %}Знайомо {{ placement_rank }} найчастотніших слів{% else %}Жодну групу слів не пройдено{% endif %}
+        </p>
+      {% endif %}
+    </article>
+  </div>
 {% endblock %}

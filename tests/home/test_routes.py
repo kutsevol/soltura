@@ -1,6 +1,6 @@
 from httpx import AsyncClient
 
-from soltura.learner.models import MemoryCard
+from soltura.learner.models import MemoryCard, PlacementRun
 from soltura.templating import NAV
 
 
@@ -45,14 +45,37 @@ async def test_the_main_button_offers_reading_when_nothing_is_due(
     assert '<a href="/warmup" role="button">' not in response.text
 
 
-async def test_every_screen_is_listed_with_its_purpose(learner_client: AsyncClient) -> None:
+async def test_the_hub_does_not_repeat_the_tab_bar_as_cards(learner_client: AsyncClient) -> None:
     response = await learner_client.get("/")
 
     for item in NAV:
-        if item.href != "/":
-            assert f'<h3><a href="{item.href}">{item.label}</a></h3>' in response.text
-            assert item.purpose in response.text
-    assert '<a href="/onboarding">' in response.text
+        assert f'<h3><a href="{item.href}">' not in response.text
+
+
+async def test_the_placement_tile_invites_to_the_test_before_a_run(
+    learner_client: AsyncClient,
+) -> None:
+    response = await learner_client.get("/")
+
+    assert '<h3><a href="/onboarding">Визначення рівня</a></h3>' in response.text
+    assert "/onboarding/result" not in response.text
+
+
+async def test_the_placement_tile_shows_the_result_and_links_to_it(
+    learner_client: AsyncClient, placement_run: PlacementRun
+) -> None:
+    response = await learner_client.get("/")
+
+    assert '<h3><a href="/onboarding/result">Визначення рівня</a></h3>' in response.text
+    assert "Знайомо 500 найчастотніших слів" in response.text
+
+
+async def test_the_placement_tile_says_when_no_group_was_passed(
+    learner_client: AsyncClient, failed_placement_run: PlacementRun
+) -> None:
+    response = await learner_client.get("/")
+
+    assert "Жодну групу слів не пройдено" in response.text
 
 
 async def test_a_learner_without_saved_words_is_offered_the_help(
@@ -61,7 +84,7 @@ async def test_a_learner_without_saved_words_is_offered_the_help(
     response = await learner_client.get("/")
 
     assert "Вперше тут?" in response.text
-    assert '<a href="/help" role="button" class="outline">' in response.text
+    assert '<a href="/help">Як це працює</a>' in response.text
 
 
 async def test_the_help_offer_goes_away_after_the_first_saved_word(
