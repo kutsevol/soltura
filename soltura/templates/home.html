@@ -33,6 +33,11 @@
       <p class="note">{{ item.purpose }}</p>
     </article>
   {% endfor %}
+  <article class="module {{ trainer.tone }}">
+    <h3><a href="{{ trainer.href }}">{{ trainer.label }}</a></h3>
+    <p class="note">{{ trainer.purpose }}</p>
+    <p class="note">Форм до повторення: {{ conjugation_due }}</p>
+  </article>
   <article>
     <h3><a href="/onboarding">Визначення рівня</a></h3>
     <p class="note">Короткий тест із перекладом: за ним тексти одразу підлаштуються під ваш словник.</p>

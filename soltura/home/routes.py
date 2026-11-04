@@ -26,9 +26,17 @@ async def home_page(
         raise ValueError("current_learner returned an unsaved learner")
     due = await count_due_cards(session, learner.id, datetime.now(UTC), UnitKind.WORD)
     learning = await count_learning_words(session, learner.id)
+    conjugation_due = await count_due_cards(
+        session, learner.id, datetime.now(UTC), UnitKind.CONJUGATION
+    )
     vocabulary = await build_vocabulary_map(session, learner.id)
     return templates.TemplateResponse(
         request,
         "home.html",
-        {"due": due, "learning": learning, "known_summary": known_summary(vocabulary)},
+        {
+            "due": due,
+            "learning": learning,
+            "known_summary": known_summary(vocabulary),
+            "conjugation_due": conjugation_due,
+        },
     )

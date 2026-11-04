@@ -47,6 +47,15 @@ NAV: list[NavItem] = [
     ),
 ]
 
+# Reached from the hub only: the bar already holds five tabs.
+TRAINER = NavItem(
+    href="/conjugation",
+    label="Дієслова",
+    icon="zap",
+    tone="conjugation",
+    purpose="Форми дієслів: впишіть форму для особи й часу",
+)
+
 STATIC_DIR = Path(__file__).parent / "static"
 
 
@@ -58,4 +67,5 @@ def asset_version(path: str) -> int:
 
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 templates.env.globals["nav"] = NAV
+templates.env.globals["trainer"] = TRAINER
 templates.env.globals["asset_version"] = asset_version

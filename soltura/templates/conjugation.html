@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Дієслова · Soltura{% endblock %}
+{% block heading %}Дієслова{% endblock %}
+
+{% block content %}
+  <article id="card">
+    {% if empty %}
+      {% include "conjugation/done.html" %}
+    {% else %}
+      {% include "conjugation/card.html" %}
+    {% endif %}
+  </article>
+{% endblock %}

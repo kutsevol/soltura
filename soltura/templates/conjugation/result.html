@@ -1,0 +1,10 @@
+<p class="verdict verdict-{{ result.tone }}"><strong>{{ result.label }}</strong></p>
+{% if result.answer %}<p class="note">Ваша відповідь: {{ result.answer }}</p>{% endif %}
+<p>{{ result.explanation }}</p>
+{% if result.expected %}
+  <p>Очікувалось: <strong>{{ result.expected }}</strong></p>
+{% endif %}
+<form hx-post="/conjugation/next" hx-target="#card">
+  <input type="hidden" name="queue" value="{{ queue_json }}">
+  <button type="submit" autofocus>Далі</button>
+</form>

@@ -1,0 +1,14 @@
+<form hx-post="/conjugation/answer" hx-target="#card">
+  <p class="note">Впишіть форму дієслова</p>
+  <p class="sentence"><strong>{{ card.verb }}</strong> · {{ card.tense }}</p>
+  <p class="sentence">{{ card.pronoun }} …</p>
+  <input name="answer" aria-label="Форма дієслова" autocomplete="off" autocapitalize="off" spellcheck="false" autofocus>
+  <input type="hidden" name="card_id" value="{{ card.card_id }}">
+  <input type="hidden" name="queue" value="{{ queue_json }}">
+  <input type="hidden" name="started_at" value="{{ started_at }}">
+  <div class="grid">
+    <button type="submit">Перевірити</button>
+    <button type="submit" name="give_up" value="1" class="secondary outline">Не знаю</button>
+  </div>
+  <footer class="note">Ще карток: {{ card.remaining }}</footer>
+</form>
