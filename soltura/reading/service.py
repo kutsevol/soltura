@@ -1,3 +1,4 @@
+import random
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -25,9 +26,13 @@ from soltura.learner.repository import (
     get_lexemes_by_ids,
     get_lexemes_by_lemmas,
     get_most_frequent_lemmas,
+    get_recent_titles,
+    save_reading_text,
 )
 from soltura.llm.client import LLMClient
 from soltura.onboarding.service import BANDS
+from soltura.reading.topics import find_topic
+from soltura.reading.variation import pick_variation, variation_prompt
 from soltura.srs.service import due_queue, review, save_word
 
 TARGET_COVERAGE = 0.95
@@ -40,6 +45,7 @@ BASELINE_KNOWN_RANK = 3000
 # A learner who passed no band of the placement test knows less than the first band.
 FIRST_BAND_RANK = BANDS[0][1]
 MAX_DUE_LEMMAS = 10
+RECENT_TITLES = 5
 UNRANKED = 1_000_000
 
 WRITER_SYSTEM = (
@@ -127,7 +133,7 @@ def _knows(vocabulary: int) -> str:
 
 
 def _first_draft_prompt(
-    vocabulary: int, topic: str, due: list[str], source_text: str | None
+    vocabulary: int, topic: str, due: list[str], source_text: str | None, variation: str
 ) -> str:
     wanted = (
         f" Where it fits naturally, use these words the learner is reviewing: {', '.join(due)}."
@@ -139,7 +145,7 @@ def _first_draft_prompt(
             f"Rewrite the text below for a learner. {_knows(vocabulary)} Keep its meaning and "
             f"facts. About 120 to 200 words.{wanted}\n\n<source>\n{source_text}\n</source>"
         )
-    return f"{_knows(vocabulary)} Topic: {topic}. About 120 to 180 words.{wanted}"
+    return f"{_knows(vocabulary)} Topic: {topic}. About 120 to 180 words.{wanted}{variation}"
 
 
 def _simplify_prompt(vocabulary: int, draft: GeneratedText, rare: list[str], due: list[str]) -> str:
@@ -160,17 +166,25 @@ async def prepare_text(
     now: datetime,
     topic: str,
     source_text: str | None = None,
+    rng: random.Random | None = None,
 ) -> PreparedText:
     if learner.id is None:
         raise ValueError("The learner must be saved before a text is prepared")
     vocabulary = await vocabulary_range(session, learner.id)
     known = await lemmas_counted_as_known(session, learner.id)
     due = await due_lemmas(session, learner.id, now)
+    variation = ""
+    if source_text is None:
+        # A pasted text is adapted as it is; only a text written from a topic is varied.
+        preset = find_topic(topic)
+        picked = pick_variation(preset.situations if preset else (), rng or random.Random())
+        recent = await get_recent_titles(session, learner.id, RECENT_TITLES)
+        variation = variation_prompt(picked, recent)
 
     draft = await llm(
         GeneratedText,
         system=WRITER_SYSTEM,
-        prompt=_first_draft_prompt(vocabulary, topic, due, source_text),
+        prompt=_first_draft_prompt(vocabulary, topic, due, source_text, variation),
         effort="medium",
     )
     attempts = 1
@@ -190,6 +204,8 @@ async def prepare_text(
         attempts += 1
         coverage = measure_coverage(analyze(f"{draft.title}. {draft.text}"), known)
 
+    await save_reading_text(session, learner.id, topic or None, draft.title)
+    await session.commit()
     return PreparedText(
         title=draft.title,
         text=draft.text,
