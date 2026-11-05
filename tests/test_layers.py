@@ -7,13 +7,14 @@ import pytest
 
 SOLTURA = Path(__file__).resolve().parent.parent / "soltura"
 
-# Every feature's routes call only use cases.
-ROUTES = sorted(SOLTURA.glob("*/routes.py"))
+# The web layer: it may call use cases and name types, but call no service or repository.
+WEB_FILES = {"routes.py", "views.py", "dependencies.py"}
+WEB = sorted(path for path in SOLTURA.rglob("*.py") if path.name in WEB_FILES)
 
 # What a use case calls and a route must not: a feature's services and its helpers.
-LOWER_LAYER = re.compile(r"^soltura\.\w+\.(service|repository|vocabulary|screens)$")
-# Only these may import the use cases; everything else sits below them.
-MAY_IMPORT_USE_CASES = {"routes.py", "views.py"}
+LOWER_LAYER = re.compile(r"^soltura\.\w+\.(service|repository|vocabulary)$")
+# Only the web layer may import the use cases; everything else sits below them.
+MAY_IMPORT_USE_CASES = WEB_FILES
 
 
 def _imports(source: str) -> Iterator[tuple[str, list[str]]]:
@@ -78,8 +79,8 @@ def test_nothing_below_the_use_cases_imports_them() -> None:
     assert offenders == []
 
 
-@pytest.mark.parametrize("path", ROUTES, ids=lambda path: path.parent.name)
-def test_a_route_calls_only_use_cases(path: Path) -> None:
+@pytest.mark.parametrize("path", WEB, ids=lambda path: str(path.relative_to(SOLTURA)))
+def test_a_web_layer_file_calls_only_use_cases(path: Path) -> None:
     source = path.read_text()
 
     assert functions_imported_from_lower_layers(source) == []
