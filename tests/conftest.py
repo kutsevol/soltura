@@ -224,9 +224,6 @@ async def saved_word(session: AsyncSession, learner: Learner, lexemes: list[Lexe
     await save_word(session, learner.id, lexemes[2].id, "Aunque llueve, salimos.", HUB_SAVED_AT)
 
 
-PLACEMENT_BANDS = [{"band": 0, "max_rank": 250, "correct": 5, "total": 5}]
-
-
 @pytest.fixture
 async def placement_run(session: AsyncSession, learner: Learner) -> PlacementRun:
     assert learner.id is not None
