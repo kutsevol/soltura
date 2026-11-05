@@ -6,6 +6,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from soltura.language.frequency import BANDS
 from soltura.learner.models import LexemeStatus
 from soltura.learner.repository import (
     get_latest_placement_run,
@@ -21,18 +22,6 @@ from soltura.srs.service import save_word
 
 logger = logging.getLogger(__name__)
 
-# Frequency bands from the most frequent lemmas to about B1; a learner who passes all
-# of them gets everything up to 6,000 marked known.
-BANDS: tuple[tuple[int, int], ...] = (
-    (1, 250),
-    (251, 500),
-    (501, 1000),
-    (1001, 1500),
-    (1501, 2000),
-    (2001, 3000),
-    (3001, 4500),
-    (4501, 6000),
-)
 WORDS_PER_BAND = 8
 # A few spare words per band take the place of names and of words without a usable sentence.
 SAMPLED_PER_BAND = WORDS_PER_BAND + 2

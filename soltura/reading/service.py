@@ -4,6 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from soltura.language.frequency import BANDS
 from soltura.learner.models import (
     LexemeStatus,
     UnitKind,
@@ -14,7 +15,6 @@ from soltura.learner.repository import (
     get_lexemes_by_ids,
     get_most_frequent_lemmas,
 )
-from soltura.onboarding.service import BANDS
 from soltura.srs.service import due_queue
 
 TARGET_COVERAGE = 0.95
@@ -28,7 +28,6 @@ BASELINE_KNOWN_RANK = 3000
 FIRST_BAND_RANK = BANDS[0][1]
 MAX_DUE_LEMMAS = 10
 RECENT_TITLES = 5
-UNRANKED = 1_000_000
 
 WRITER_SYSTEM = (
     "You write short Spanish reading texts for an adult Ukrainian speaker who lives in Spain "

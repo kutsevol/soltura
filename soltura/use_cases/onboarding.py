@@ -4,10 +4,10 @@ from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from soltura.language.frequency import BANDS
 from soltura.learner.repository import sample_lexemes
 from soltura.llm.client import LLMClient
 from soltura.onboarding.service import (
-    BANDS,
     CONTENT_POS,
     SAMPLED_PER_BAND,
     SENTENCES_SYSTEM,

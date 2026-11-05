@@ -2,9 +2,8 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from soltura.language.frequency import BANDS, UNRANKED
 from soltura.learner.repository import get_vocabulary_bands
-from soltura.onboarding.service import BANDS
-from soltura.reading.service import UNRANKED
 
 # The last band stops short of UNRANKED, where words the frequency seed never saw are saved.
 OPEN_END = UNRANKED - 1
