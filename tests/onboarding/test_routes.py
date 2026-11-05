@@ -51,6 +51,8 @@ async def test_a_learner_who_fails_two_bands_in_a_row_is_not_asked_the_rest(
     assert "Знайомими позначено 1000 найчастотніших слів" in card.text
     assert "Додати слова, яких ви не знали: 15" in card.text
     assert "Усього незнайомих слів: 16" in card.text
+    assert "Як це порахували" in card.text
+    assert "Тест зупинився після групи до 2000" in card.text
     assert "до 2000" in card.text
     assert "до 3000" not in card.text
     known = (
@@ -118,6 +120,8 @@ async def test_a_run_saved_without_answers_still_shows_its_table(
     assert page.status_code == 200
     assert "<td>до 250</td><td>5 з 5</td>" in page.text
     assert "Ваші відповіді" not in page.text
+    assert "Питань: 5, правильних відповідей: 5." in page.text
+    assert "Тексти для читання пишуться для словника близько 250 слів." in page.text
 
 
 async def test_a_learner_who_passes_every_band_is_asked_all_of_them_and_offered_no_words(

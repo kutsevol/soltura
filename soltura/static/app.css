@@ -200,6 +200,20 @@ article.module p {
   --tone: var(--tone-conjugation);
 }
 
+/* The placement answers: one block per word, since a table of three columns is wider than a phone. */
+
+ul.answers {
+  list-style: none;
+  padding-left: 0;
+}
+
+ul.answers li {
+  list-style: none;
+  margin-bottom: 0.6rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
 /* The hub's second row: two half-width tiles that leave room for the next-step card. */
 
 .tiles {
