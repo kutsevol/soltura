@@ -1,0 +1,17 @@
+<p class="note">{{ lesson.level }}</p>
+<h2>{{ lesson.title }}</h2>
+<ul>
+  {% for point in lesson.points %}
+    <li>{{ point }}</li>
+  {% endfor %}
+</ul>
+<h3>Приклади</h3>
+<ul>
+  {% for example in lesson.examples %}
+    <li><em>{{ example.spanish }}</em><br><span class="note">{{ example.ukrainian }}</span></li>
+  {% endfor %}
+</ul>
+<form hx-post="/grammar/start" hx-target="#card">
+  <input type="hidden" name="unit_id" value="{{ lesson.unit_id }}">
+  <button type="submit" autofocus>Практикувати</button>
+</form>

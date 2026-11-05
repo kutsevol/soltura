@@ -56,6 +56,14 @@ TRAINER = NavItem(
     purpose="Форми дієслів: впишіть форму для особи й часу",
 )
 
+GRAMMAR = NavItem(
+    href="/grammar",
+    label="Граматика",
+    icon="book",
+    tone="grammar",
+    purpose="Правило з прикладами, потім вправи на нього",
+)
+
 STATIC_DIR = Path(__file__).parent / "static"
 
 
@@ -68,4 +76,5 @@ def asset_version(path: str) -> int:
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 templates.env.globals["nav"] = NAV
 templates.env.globals["trainer"] = TRAINER
+templates.env.globals["grammar_module"] = GRAMMAR
 templates.env.globals["asset_version"] = asset_version

@@ -1,7 +1,12 @@
-from httpx import AsyncClient
+from datetime import UTC, datetime
 
-from soltura.learner.models import MemoryCard, PlacementRun
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from soltura.grammar.units import all_units
+from soltura.learner.models import Learner, MemoryCard, PlacementRun
 from soltura.templating import NAV
+from soltura.use_cases.grammar import start_unit
 
 
 async def test_the_main_button_starts_the_warmup_and_counts_due_cards(
@@ -111,3 +116,23 @@ async def test_a_learner_without_words_sees_zero_known_words(
 
     assert response.status_code == 200
     assert '<a href="/words">Знаю слів: 0 з 0</a>' in response.text
+
+
+async def test_the_hub_lists_grammar_with_the_next_lesson_when_nothing_is_due(
+    learner_client: AsyncClient,
+) -> None:
+    response = await learner_client.get("/")
+
+    assert '<h3><a href="/grammar">Граматика</a></h3>' in response.text
+    assert f"Наступне правило: {all_units()[0].title}" in response.text
+
+
+async def test_the_grammar_tile_counts_the_exercises_due(
+    learner_client: AsyncClient, session: AsyncSession, learner: Learner
+) -> None:
+    assert learner.id is not None
+    await start_unit(session, learner.id, all_units()[0].id, datetime(2020, 1, 1, tzinfo=UTC))
+
+    response = await learner_client.get("/")
+
+    assert "Вправ до повторення: 6" in response.text

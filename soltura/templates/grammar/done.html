@@ -1,0 +1,8 @@
+<p>На зараз вправ для повторення немає.</p>
+{% if lesson %}
+  <p>Наступне правило: <strong>{{ lesson.title }}</strong></p>
+  <a href="/grammar" role="button">До правила</a>
+{% else %}
+  <p class="note">Усі правила вже пройдено.</p>
+  <a href="/" role="button">На головну</a>
+{% endif %}
