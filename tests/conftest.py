@@ -20,8 +20,10 @@ from soltura.learner.models import (
     LexemeOrigin,
     LexemeStatus,
     MemoryCard,
+    PlacementRun,
     UnitKind,
 )
+from soltura.learner.repository import save_placement_run
 from soltura.llm.client import get_llm
 from soltura.reading.service import UNRANKED
 from soltura.srs.service import save_word
@@ -205,3 +207,28 @@ async def saved_aunque(
         session, learner.id, lexemes[2].id, "Aunque llueve, salimos.", WARMUP_SAVED_AT
     )
     return {card.knowledge_type: card for card in cards}
+
+
+HUB_SAVED_AT = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
+PLACEMENT_BANDS = [{"band": 0, "max_rank": 250, "correct": 5, "total": 5}]
+
+
+@pytest.fixture
+async def saved_word(session: AsyncSession, learner: Learner, lexemes: list[Lexeme]) -> None:
+    assert learner.id is not None and lexemes[2].id is not None
+    await save_word(session, learner.id, lexemes[2].id, "Aunque llueve, salimos.", HUB_SAVED_AT)
+
+
+PLACEMENT_BANDS = [{"band": 0, "max_rank": 250, "correct": 5, "total": 5}]
+
+
+@pytest.fixture
+async def placement_run(session: AsyncSession, learner: Learner) -> PlacementRun:
+    assert learner.id is not None
+    return await save_placement_run(session, learner.id, 500, PLACEMENT_BANDS)
+
+
+@pytest.fixture
+async def failed_placement_run(session: AsyncSession, learner: Learner) -> PlacementRun:
+    assert learner.id is not None
+    return await save_placement_run(session, learner.id, 0, PLACEMENT_BANDS)
