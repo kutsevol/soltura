@@ -8,7 +8,7 @@ import pytest
 SOLTURA = Path(__file__).resolve().parent.parent / "soltura"
 
 # Features whose routes already call only use cases; each use_cases Task adds one.
-MIGRATED = ("conjugation", "warmup", "words")
+MIGRATED = ("conjugation", "warmup", "words", "home")
 
 # What a use case calls and a route must not: a feature's services and its helpers.
 LOWER_LAYER = re.compile(r"^soltura\.\w+\.(service|repository|vocabulary|screens)$")

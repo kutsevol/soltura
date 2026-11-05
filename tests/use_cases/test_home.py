@@ -2,8 +2,8 @@ from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from soltura.home.service import hub_summary
 from soltura.learner.models import Learner, MemoryCard, PlacementRun
+from soltura.use_cases.home import hub_summary
 
 NOW = datetime(2026, 10, 31, 12, 0, tzinfo=UTC)
 

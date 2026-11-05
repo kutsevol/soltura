@@ -1,5 +1,5 @@
-from soltura.home.service import HubSummary
 from soltura.home.views import hub_view
+from soltura.use_cases.home import HubSummary
 from soltura.words.vocabulary import BandProgress, VocabularyMap
 
 

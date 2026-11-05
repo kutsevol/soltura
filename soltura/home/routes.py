@@ -6,10 +6,10 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.db import get_session
-from soltura.home.service import hub_summary
 from soltura.home.views import hub_view
 from soltura.learner.dependencies import LearnerIdDep
 from soltura.templating import templates
+from soltura.use_cases.home import hub_summary
 
 router = APIRouter()
 

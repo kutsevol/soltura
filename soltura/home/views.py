@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from soltura.home.service import HubSummary
+from soltura.use_cases.home import HubSummary
 from soltura.words.views import known_summary
 
 
