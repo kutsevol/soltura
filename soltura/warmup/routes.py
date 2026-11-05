@@ -10,7 +10,8 @@ from soltura.db import get_session
 from soltura.learner.dependencies import LearnerIdDep
 from soltura.llm.client import LLMClient, get_llm
 from soltura.templating import templates
-from soltura.warmup.service import WarmupItem, answer_item, build_warmup
+from soltura.use_cases.warmup import answer_item, build_warmup
+from soltura.warmup.service import WarmupItem
 from soltura.warmup.views import card_view, result_view
 from soltura.web import answer_duration_ms, now_ms, parse_state
 

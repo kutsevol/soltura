@@ -4,6 +4,7 @@ from typing import cast
 from pydantic import BaseModel
 
 from soltura.llm.client import Effort, LLMClient, SchemaT
+from soltura.warmup.service import ContextSentence
 
 
 class FakeLLM(LLMClient):
@@ -57,3 +58,16 @@ class GatedLLM(FakeLLM):
             self._all_in.set()
         await asyncio.wait_for(self._all_in.wait(), timeout=2)
         return await super().__call__(schema, system, prompt, effort, max_tokens)
+
+
+# The model's sentences for the word "aunque", one per kind of card, shared by the warm-up tests.
+RECALL_CONTEXT = ContextSentence(
+    sentence="Aunque estoy cansado, voy al gimnasio.",
+    target_form="Aunque",
+    translation="Хоча я втомлений, я йду в спортзал.",
+)
+RECOGNIZE_CONTEXT = ContextSentence(
+    sentence="Salgo a pasear aunque hace frío.",
+    target_form="aunque",
+    translation="Я виходжу гуляти, хоча холодно.",
+)

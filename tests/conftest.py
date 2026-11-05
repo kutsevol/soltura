@@ -24,6 +24,7 @@ from soltura.learner.models import (
 )
 from soltura.llm.client import get_llm
 from soltura.reading.service import UNRANKED
+from soltura.srs.service import save_word
 from tests.factories import (
     LearnerFactory,
     LearnerLexemeFactory,
@@ -190,3 +191,17 @@ async def verb_lexemes(session: AsyncSession) -> list[Lexeme]:
     session.add_all(lexemes)
     await session.flush()
     return lexemes
+
+
+WARMUP_SAVED_AT = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
+
+
+@pytest.fixture
+async def saved_aunque(
+    session: AsyncSession, learner: Learner, lexemes: list[Lexeme]
+) -> dict[KnowledgeType, MemoryCard]:
+    assert learner.id is not None and lexemes[2].id is not None
+    cards = await save_word(
+        session, learner.id, lexemes[2].id, "Aunque llueve, salimos.", WARMUP_SAVED_AT
+    )
+    return {card.knowledge_type: card for card in cards}
