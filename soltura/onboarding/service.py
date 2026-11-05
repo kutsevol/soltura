@@ -12,7 +12,7 @@ from soltura.learner.repository import (
     save_placement_run,
 )
 from soltura.llm.client import LLMClient
-from soltura.practice.checking import judge_translation
+from soltura.practice.checking import KNOWN_WORD_JUDGE_SYSTEM, judge_translation
 from soltura.practice.text import split_around
 
 logger = logging.getLogger(__name__)
@@ -32,8 +32,8 @@ BANDS: tuple[tuple[int, int], ...] = (
 WORDS_PER_BAND = 8
 # A few spare words per band take the place of names and of words without a usable sentence.
 SAMPLED_PER_BAND = WORDS_PER_BAND + 2
-PASS_SHARE = 0.8
-# Two bands in a row under this share end the test: the words only get rarer.
+PASS_SHARE = 0.6
+# Two bands in a row at or under this share end the test: the words only get rarer.
 WEAK_SHARE = 0.5
 WEAK_BANDS_IN_A_ROW = 2
 # Function words are known long before their rank says anything; content words are
@@ -46,8 +46,9 @@ SENTENCES_SYSTEM = (
     "placement test. For each word, write one sentence of at most 12 words that uses it in "
     "its most common meaning, in any form that fits, with words simpler than the target "
     "around it. Give the word exactly as it appears in your sentence, and its meaning in "
-    "that sentence in Ukrainian, in a few words. Mark a word that is the name of a person or "
-    "a place rather than a common word."
+    "that sentence in Ukrainian, in a few words. Mark a word as unusable when it is not a "
+    "standard dictionary word: the name of a person or a place, a typo, a verb form with "
+    "a pronoun attached or anything else a dictionary would not list."
 )
 
 
@@ -56,8 +57,9 @@ class PlacementSentence(BaseModel):
     sentence: str = Field(description="The Spanish sentence using it")
     target_form: str = Field(description="The word exactly as it appears in the sentence")
     meaning: str = Field(description="The word's meaning in this sentence, in Ukrainian")
-    is_name: bool = Field(
-        default=False, description="True when the word is the name of a person or a place"
+    is_usable: bool = Field(
+        default=True,
+        description="False when the word is a name, a typo or otherwise not a dictionary word",
     )
 
 
@@ -128,8 +130,11 @@ async def build_placement(session: AsyncSession, llm: LLMClient) -> list[Placeme
         if sentence is None or split_around(sentence.sentence, sentence.target_form) is None:
             logger.debug(f"No usable placement sentence for {lemma!r}")
             continue
-        if sentence.is_name:
-            logger.debug(f"Placement word {lemma!r} is a name")
+        if not sentence.is_usable:
+            logger.debug(f"Placement word {lemma!r} is not a dictionary word")
+            continue
+        if sentence.target_form.lower() in {item.target_form.lower() for item in items}:
+            logger.debug(f"Placement word {sentence.target_form!r} is already asked")
             continue
         if sum(item.band == band for item in items) == WORDS_PER_BAND:
             continue
@@ -152,7 +157,9 @@ async def judge_items(llm: LLMClient, items: list[PlacementItem]) -> list[Placem
         if item.verdict:
             return item
         async with limit:
-            verdict = await judge_translation(llm, item.answer, item.target_form, item.sentence)
+            verdict = await judge_translation(
+                llm, item.answer, item.target_form, item.sentence, KNOWN_WORD_JUDGE_SYSTEM
+            )
         # A skipped word is never sent to the judge, so its meaning is the one written with
         # the sentence.
         return item.model_copy(
@@ -180,7 +187,7 @@ def band_scores(judged: list[PlacementItem]) -> list[BandScore]:
 def should_stop(scores: list[BandScore]) -> bool:
     last = scores[-WEAK_BANDS_IN_A_ROW:]
     return len(last) == WEAK_BANDS_IN_A_ROW and all(
-        score.correct / score.total < WEAK_SHARE for score in last
+        score.correct / score.total <= WEAK_SHARE for score in last
     )
 
 
