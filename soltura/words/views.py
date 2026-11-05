@@ -1,5 +1,10 @@
+from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
+from soltura.learner.models import LexemeStatus
+from soltura.learner.repository import SavedWord
+from soltura.words.service import MAX_WORDS, LineResult, LookupProblem, Problem
 from soltura.words.vocabulary import OPEN_END, BandProgress, VocabularyMap
 
 # One word in a band of hundreds is under a percent: it still gets a sliver the eye can
@@ -63,3 +68,50 @@ def vocabulary_view(vocabulary: VocabularyMap) -> VocabularyView:
         ),
         bands=[_band_view(band) for band in vocabulary.bands],
     )
+
+
+STATUS_LABEL = {LexemeStatus.LEARNING: "Вивчаю", LexemeStatus.KNOWN: "Знаю"}
+PROBLEM_LABEL = {
+    Problem.MULTIPLE_WORDS: "введіть одне слово в рядку.",
+    Problem.NOT_SPANISH: "не схоже на іспанське слово, перевірте написання.",
+    Problem.NO_EXAMPLE: "не вдалося підібрати приклад, спробуйте ще раз.",
+    Problem.UNAVAILABLE: "модель зараз недоступна, спробуйте ще раз.",
+}
+LOOKUP_MESSAGE = {
+    LookupProblem.EMPTY: "Введіть слово.",
+    LookupProblem.TOO_MANY: f"Не більше {MAX_WORDS} слів за раз.",
+}
+ADD_FORM_MESSAGE = "Не вдалося зберегти: перевірте слова й спробуйте ще раз."
+
+
+def due_label(due: datetime, now: datetime) -> str:
+    return "зараз" if due <= now else due.astimezone(UTC).strftime("%d.%m.%Y")
+
+
+@dataclass(frozen=True)
+class WordsView:
+    words: list[SavedWord]
+    search: str
+    now: datetime
+    due_label: Callable[[datetime, datetime], str]
+    status_label: dict[LexemeStatus, str]
+
+
+def words_view(words: list[SavedWord], search: str, now: datetime) -> WordsView:
+    return WordsView(
+        words=words,
+        search=search.strip(),
+        now=now,
+        due_label=due_label,
+        status_label=STATUS_LABEL,
+    )
+
+
+@dataclass(frozen=True)
+class PreviewView:
+    results: list[LineResult]
+    problem_label: dict[Problem, str]
+
+
+def preview_view(results: list[LineResult]) -> PreviewView:
+    return PreviewView(results=results, problem_label=PROBLEM_LABEL)

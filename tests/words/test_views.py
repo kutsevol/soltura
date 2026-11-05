@@ -1,5 +1,21 @@
-from soltura.words.views import BandView, vocabulary_view
+from datetime import UTC, datetime, timedelta
+
+from soltura.words.views import BandView, due_label, vocabulary_view, words_view
 from soltura.words.vocabulary import BandProgress, VocabularyMap
+
+NOW = datetime(2026, 10, 31, 12, 0, tzinfo=UTC)
+
+
+def test_a_card_due_now_or_earlier_reads_now_and_a_later_one_its_date() -> None:
+    assert due_label(NOW, NOW) == "зараз"
+    assert due_label(NOW - timedelta(days=1), NOW) == "зараз"
+    assert due_label(NOW + timedelta(days=3), NOW) == "03.11.2026"
+
+
+def test_the_words_view_trims_the_search_it_shows() -> None:
+    view = words_view([], "  nieto ", NOW)
+
+    assert (view.search, view.now) == ("nieto", NOW)
 
 
 def _view(known: int, learning: int, total: int) -> BandView:
