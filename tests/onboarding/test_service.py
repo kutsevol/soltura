@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, func, select
 
@@ -7,22 +9,30 @@ from soltura.learner.models import (
     Lexeme,
     LexemeOrigin,
     LexemeStatus,
+    MemoryCard,
+    WordContext,
 )
 from soltura.learner.repository import save_placement_run
 from soltura.onboarding.service import (
+    LEARN_BATCH,
     BandScore,
     PlacementItem,
     PlacementResult,
     PlacementSentence,
     PlacementSentences,
+    WordResult,
     apply_placement,
     build_placement,
     get_latest_placement,
+    learn_missed_words,
+    missed_words,
     score_placement,
     should_stop,
 )
 from tests.factories import LexemeFactory
 from tests.onboarding.conftest import CORRECT, JudgeByAnswer
+
+NOW = datetime(2026, 10, 31, 12, 0, tzinfo=UTC)
 
 
 def _sentences_for(lemmas: list[str]) -> PlacementSentences:
@@ -328,3 +338,84 @@ async def test_a_word_shown_in_two_bands_under_different_case_is_asked_once(
     items = await build_placement(session, judge)
 
     assert [(item.band, item.target_form) for item in items] == [(0, "Claro")]
+
+
+def _word(lemma: str, verdict: str) -> WordResult:
+    return WordResult(
+        band=0,
+        lemma=lemma,
+        sentence=f"Hoy veo {lemma}.",
+        target_form=lemma,
+        answer="",
+        verdict=verdict,
+        reason="",
+        expected="значення",
+    )
+
+
+async def test_a_word_answered_right_is_known_even_above_the_known_rank(
+    session: AsyncSession, learner: Learner, banded_lexemes: list[Lexeme]
+) -> None:
+    assert learner.id is not None
+    result = PlacementResult(known_rank=0, bands=[], words=[_word("word5x0", "correct")])
+
+    await apply_placement(session, learner.id, result)
+
+    known = (
+        await session.execute(
+            select(Lexeme.lemma)
+            .join(LearnerLexeme, col(LearnerLexeme.lexeme_id) == col(Lexeme.id))
+            .where(col(LearnerLexeme.learner_id) == learner.id)
+        )
+    ).scalars()
+    assert list(known) == ["word5x0"]
+
+
+async def test_missed_words_skip_right_answers_and_words_being_learned_most_frequent_first(
+    session: AsyncSession, learner: Learner, banded_lexemes: list[Lexeme]
+) -> None:
+    assert learner.id is not None
+    by_lemma = {lexeme.lemma: lexeme for lexeme in banded_lexemes}
+    being_learned = by_lemma["word2x0"]
+    assert being_learned.id is not None
+    session.add(
+        LearnerLexeme(
+            learner_id=learner.id,
+            lexeme_id=being_learned.id,
+            status=LexemeStatus.LEARNING,
+            origin=LexemeOrigin.READING,
+        )
+    )
+    words = [
+        _word("word5x0", "wrong"),
+        _word("word0x0", "wrong"),
+        _word("word1x0", "correct"),
+        _word("word3x0", "partly"),
+        _word("word2x0", "wrong"),
+    ]
+    await apply_placement(session, learner.id, PlacementResult(known_rank=0, bands=[], words=words))
+
+    missed = await missed_words(session, learner.id)
+
+    assert [word.lemma for word in missed] == ["word0x0", "word3x0", "word5x0"]
+
+
+async def test_one_press_adds_a_batch_with_cards_and_sentences_and_the_next_press_the_rest(
+    session: AsyncSession, learner: Learner, banded_lexemes: list[Lexeme]
+) -> None:
+    assert learner.id is not None
+    lemmas = [f"word{band}x{i}" for band in range(4) for i in range(5)]
+    words = [_word(lemma, "wrong") for lemma in lemmas]
+    await apply_placement(session, learner.id, PlacementResult(known_rank=0, bands=[], words=words))
+
+    first = await learn_missed_words(session, learner.id, NOW)
+    second = await learn_missed_words(session, learner.id, NOW)
+    third = await learn_missed_words(session, learner.id, NOW)
+
+    assert first == (LEARN_BATCH, 5)
+    assert second == (5, 0)
+    assert third == (0, 0)
+    cards = (await session.execute(select(func.count()).select_from(MemoryCard))).scalar_one()
+    contexts = (await session.execute(select(WordContext.sentence))).scalars().all()
+    assert cards == 40
+    assert sorted(contexts) == sorted(f"Hoy veo {lemma}." for lemma in lemmas)

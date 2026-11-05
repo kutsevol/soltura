@@ -10,7 +10,7 @@ from soltura.config import settings
 from soltura.db import get_session
 from soltura.learner.models import Learner, Lexeme
 from soltura.llm.client import Effort, SchemaT, get_llm
-from soltura.onboarding.service import BANDS
+from soltura.onboarding.service import BANDS, PlacementSentence, PlacementSentences
 from soltura.practice.checking import TranslationVerdict
 from tests.factories import LexemeFactory
 from tests.fakes import FakeLLM
@@ -72,3 +72,22 @@ async def onboarding_client(
     app.dependency_overrides[get_llm] = lambda: judge
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client
+
+
+@pytest.fixture
+def sentenced(banded_lexemes: list[Lexeme], judge: JudgeByAnswer) -> None:
+    # The model's answer to the sentence request: one sentence and meaning per noun.
+    nouns = [lexeme.lemma for lexeme in banded_lexemes if lexeme.pos == "NOUN"]
+    judge.answer(
+        PlacementSentences(
+            sentences=[
+                PlacementSentence(
+                    lemma=lemma,
+                    sentence=f"Hoy veo {lemma}.",
+                    target_form=lemma,
+                    meaning=f"значення {lemma}",
+                )
+                for lemma in nouns
+            ]
+        )
+    )
