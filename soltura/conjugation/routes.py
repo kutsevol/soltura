@@ -6,11 +6,12 @@ from fastapi.responses import HTMLResponse
 from pydantic import TypeAdapter
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from soltura.conjugation.service import ConjugationItem, answer_item, build_session
+from soltura.conjugation.service import ConjugationItem
 from soltura.conjugation.views import card_view, result_view
 from soltura.db import get_session
 from soltura.learner.dependencies import LearnerIdDep
 from soltura.templating import templates
+from soltura.use_cases.conjugation import answer_item, build_session
 from soltura.web import answer_duration_ms, now_ms, parse_state
 
 router = APIRouter(prefix="/conjugation")

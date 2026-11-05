@@ -5,7 +5,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
 from soltura.conjugation.forms import Person, Tense
-from soltura.conjugation.service import answer_item, build_session
 from soltura.learner.models import (
     KnowledgeType,
     Learner,
@@ -17,6 +16,7 @@ from soltura.learner.models import (
     UnitKind,
 )
 from soltura.srs.service import save_word, schedule_units
+from soltura.use_cases.conjugation import answer_item, build_session
 
 NOW = datetime(2026, 11, 3, 12, 0, tzinfo=UTC)
 

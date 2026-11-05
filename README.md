@@ -64,6 +64,7 @@ The single source of truth about the learner:
 - **Database:** Postgres (learner model, content, error log, FSRS state).
 - **Speech:** Whisper (STT), TTS with Spanish voices.
 - **Deterministic components:** conjugation, FSRS, text coverage calculation. No LLM involved.
+- **Layers:** a route parses the request, calls one use case from `soltura/use_cases/` and renders a view; a use case orchestrates the feature's services and repositories and returns plain data; services, repositories and views stay in the feature folder. A service never imports a use case, and `tests/test_layers.py` checks it.
 - **Client:** server-rendered pages (Jinja templates, htmx, Pico CSS) that open in a browser and, next, inside Telegram as a Mini App.
 
 ## Content and sources
