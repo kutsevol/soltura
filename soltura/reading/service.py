@@ -1,39 +1,21 @@
-import random
-import re
 from dataclasses import dataclass
 from datetime import datetime
 
 from pydantic import BaseModel, Field
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from soltura.language.coverage import measure_coverage, words_to_replace
-from soltura.language.nlp import analyze
 from soltura.learner.models import (
-    KnowledgeType,
-    Learner,
     LexemeStatus,
-    MemoryCard,
-    Rating,
-    ReviewSource,
     UnitKind,
 )
-from soltura.learner.models import Lexeme as LexemeRow
 from soltura.learner.repository import (
-    get_due_card,
     get_latest_placement_run,
     get_learner_lemmas,
     get_lexemes_by_ids,
-    get_lexemes_by_lemmas,
     get_most_frequent_lemmas,
-    get_recent_titles,
-    save_reading_text,
 )
-from soltura.llm.client import LLMClient
 from soltura.onboarding.service import BANDS
-from soltura.reading.topics import find_topic
-from soltura.reading.variation import pick_variation, variation_prompt
-from soltura.srs.service import due_queue, review, save_word
+from soltura.srs.service import due_queue
 
 TARGET_COVERAGE = 0.95
 MAX_SIMPLIFICATIONS = 2
@@ -93,12 +75,6 @@ class TapResult:
     reviewed: bool
 
 
-@dataclass(frozen=True)
-class Segment:
-    text: str
-    is_word: bool
-
-
 async def vocabulary_range(session: AsyncSession, learner_id: int) -> int:
     # The placement test is the only measure of the learner's vocabulary; without it the
     # baseline stands in. A run that passed no band still means "less than the baseline".
@@ -132,7 +108,7 @@ def _knows(vocabulary: int) -> str:
     return f"The learner knows about the {vocabulary:,} most frequent Spanish words."
 
 
-def _first_draft_prompt(
+def first_draft_prompt(
     vocabulary: int, topic: str, due: list[str], source_text: str | None, variation: str
 ) -> str:
     wanted = (
@@ -148,7 +124,7 @@ def _first_draft_prompt(
     return f"{_knows(vocabulary)} Topic: {topic}. About 120 to 180 words.{wanted}{variation}"
 
 
-def _simplify_prompt(vocabulary: int, draft: GeneratedText, rare: list[str], due: list[str]) -> str:
+def simplify_prompt(vocabulary: int, draft: GeneratedText, rare: list[str], due: list[str]) -> str:
     keep = f" Keep these words, the learner is reviewing them: {', '.join(due)}." if due else ""
     return (
         f"{_knows(vocabulary)} A few words in this text are too rare for them: {', '.join(rare)}. "
@@ -157,127 +133,3 @@ def _simplify_prompt(vocabulary: int, draft: GeneratedText, rare: list[str], due
         f"if no simple word fits, keep the original. Change nothing else.{keep}"
         f"\n\n<title>{draft.title}</title>\n<text>\n{draft.text}\n</text>"
     )
-
-
-async def prepare_text(
-    session: AsyncSession,
-    llm: LLMClient,
-    learner: Learner,
-    now: datetime,
-    topic: str,
-    source_text: str | None = None,
-    rng: random.Random | None = None,
-) -> PreparedText:
-    if learner.id is None:
-        raise ValueError("The learner must be saved before a text is prepared")
-    vocabulary = await vocabulary_range(session, learner.id)
-    known = await lemmas_counted_as_known(session, learner.id)
-    due = await due_lemmas(session, learner.id, now)
-    variation = ""
-    if source_text is None:
-        # A pasted text is adapted as it is; only a text written from a topic is varied.
-        preset = find_topic(topic)
-        picked = pick_variation(preset.situations if preset else (), rng or random.Random())
-        recent = await get_recent_titles(session, learner.id, RECENT_TITLES)
-        variation = variation_prompt(picked, recent)
-
-    draft = await llm(
-        GeneratedText,
-        system=WRITER_SYSTEM,
-        prompt=_first_draft_prompt(vocabulary, topic, due, source_text, variation),
-        effort="medium",
-    )
-    attempts = 1
-    coverage = measure_coverage(analyze(f"{draft.title}. {draft.text}"), known)
-    while coverage.ratio < TARGET_COVERAGE and attempts <= MAX_SIMPLIFICATIONS:
-        ranks = {
-            lexeme.lemma: lexeme.frequency_rank
-            for lexeme in await get_lexemes_by_lemmas(session, coverage.unknown_lemmas)
-        }
-        rare = words_to_replace(coverage, ranks, TARGET_COVERAGE)
-        draft = await llm(
-            GeneratedText,
-            system=WRITER_SYSTEM,
-            prompt=_simplify_prompt(vocabulary, draft, rare, due),
-            effort="medium",
-        )
-        attempts += 1
-        coverage = measure_coverage(analyze(f"{draft.title}. {draft.text}"), known)
-
-    await save_reading_text(session, learner.id, topic or None, draft.title)
-    await session.commit()
-    return PreparedText(
-        title=draft.title,
-        text=draft.text,
-        coverage=coverage.ratio,
-        attempts=attempts,
-        below_target=coverage.ratio < TARGET_COVERAGE,
-        unknown_lemmas=coverage.unknown_lemmas,
-    )
-
-
-async def tap_word(
-    session: AsyncSession,
-    llm: LLMClient,
-    learner_id: int,
-    word: str,
-    sentence: str,
-    now: datetime,
-) -> TapResult:
-    gloss = await llm(
-        Gloss,
-        system=GLOSS_SYSTEM,
-        prompt=f"Word: {word}\nSentence: {sentence}",
-        effort="low",
-        max_tokens=4_000,
-    )
-    lemma = gloss.lemma.strip().lower()
-    reviewed = False
-    lexemes = await get_lexemes_by_lemmas(session, [lemma])
-    if lexemes and lexemes[0].id is not None:
-        # Looking a due word up is a failed recognition, the only signal reading gives.
-        card = await get_due_card(session, learner_id, lexemes[0].id, KnowledgeType.RECOGNIZE, now)
-        if card is not None:
-            await review(session, card, Rating.AGAIN, ReviewSource.READING_TAP, now)
-            reviewed = True
-    return TapResult(word=word, lemma=lemma, translation=gloss.translation, reviewed=reviewed)
-
-
-async def save_tapped_word(
-    session: AsyncSession,
-    learner_id: int,
-    lemma: str,
-    sentence: str,
-    now: datetime,
-    topic: str | None = None,
-) -> list[MemoryCard]:
-    lemma = lemma.strip().lower()
-    # The LLM's lemma can be one the frequency seed never ranked; it still gets a
-    # lexeme, at the bottom of the frequency order, so the word can be learned.
-    await session.execute(
-        insert(LexemeRow)
-        .values(lemma=lemma, pos="X", frequency_rank=UNRANKED)
-        .on_conflict_do_nothing(index_elements=["lemma"])
-    )
-    [lexeme] = await get_lexemes_by_lemmas(session, [lemma])
-    if lexeme.id is None:
-        raise ValueError(f"Lexeme for {lemma!r} has no id")
-    return await save_word(session, learner_id, lexeme.id, sentence, now, topic)
-
-
-_SENTENCE = re.compile(r"[^.!?…]+(?:[.!?…]+|$)\s*")
-_WORD = re.compile(r"[^\W\d_]+|[\W\d_]+")
-
-
-def split_for_reading(text: str) -> list[list[list[Segment]]]:
-    # paragraphs -> sentences -> segments, so the page can send a tapped word
-    # together with the sentence it appears in.
-    return [
-        [
-            [Segment(text=part, is_word=part[0].isalpha()) for part in _WORD.findall(sentence)]
-            for sentence in _SENTENCE.findall(paragraph.strip())
-            if sentence.strip()
-        ]
-        for paragraph in re.split(r"\n\s*\n", text)
-        if paragraph.strip()
-    ]
