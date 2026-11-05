@@ -2,6 +2,69 @@
 
 <!-- version list -->
 
+## v0.31.0 (2026-11-05)
+
+### Features
+
+- **grammar**: Add grammar lessons and exercises with three pilot units
+  ([#60](https://github.com/kutsevol/soltura/pull/60),
+  [`b44159b`](https://github.com/kutsevol/soltura/commit/b44159b4e5120cdb58e53f323896bd5e2296cb68))
+
+### Refactoring
+
+- **home**: Compute the hub's counts in a use case
+  ([#51](https://github.com/kutsevol/soltura/pull/51),
+  [`3552eb8`](https://github.com/kutsevol/soltura/commit/3552eb8b114e5f813e4c757fe1d11865898f2f0a))
+
+- **language**: Give the frequency constants a neutral home
+  ([#59](https://github.com/kutsevol/soltura/pull/59),
+  [`0324c02`](https://github.com/kutsevol/soltura/commit/0324c02699b7655e61870df00d021ff33e7d304f))
+
+- **onboarding**: Move the placement orchestration into use cases
+  ([#48](https://github.com/kutsevol/soltura/pull/48),
+  [`78217dd`](https://github.com/kutsevol/soltura/commit/78217dddf51257cd0506fe5b2cfdf243c94982d7))
+
+- **use_cases**: Bring views and the learner dependency under the layer rule
+  ([#58](https://github.com/kutsevol/soltura/pull/58),
+  [`a53d93d`](https://github.com/kutsevol/soltura/commit/a53d93d2943d4c8d911be624e102df4a3dced8dc))
+
+- **use_cases**: Create the use_cases folder with the conjugation use cases
+  ([#52](https://github.com/kutsevol/soltura/pull/52),
+  [`f561f56`](https://github.com/kutsevol/soltura/commit/f561f569f9b4b38aa93ae79896ac4668e6e6c148))
+
+- **use_cases**: Move the hub use case into use_cases
+  ([#55](https://github.com/kutsevol/soltura/pull/55),
+  [`a62af83`](https://github.com/kutsevol/soltura/commit/a62af83db644f6983388fcd7838a95ffdf620b73))
+
+- **use_cases**: Move the placement use cases into use_cases and remove screens.py
+  ([#57](https://github.com/kutsevol/soltura/pull/57),
+  [`a592bb1`](https://github.com/kutsevol/soltura/commit/a592bb10a75fe5b6bac28da00ceb6e8078779fdf))
+
+- **use_cases**: Move the reading use cases into use_cases
+  ([#56](https://github.com/kutsevol/soltura/pull/56),
+  [`3746b91`](https://github.com/kutsevol/soltura/commit/3746b91e3df1060b0878dd7269da7c4a8f09a612))
+
+- **use_cases**: Move the warm-up use cases into use_cases
+  ([#53](https://github.com/kutsevol/soltura/pull/53),
+  [`2f795ab`](https://github.com/kutsevol/soltura/commit/2f795ab881fddf724fed27f85ca56fb40c89e7c2))
+
+- **use_cases**: Move the words use cases into use_cases
+  ([#54](https://github.com/kutsevol/soltura/pull/54),
+  [`a9791b7`](https://github.com/kutsevol/soltura/commit/a9791b7232abf9bbd864e8f123b5f0ff10a5d274))
+
+- **warmup**: Build the card and result in a view
+  ([#49](https://github.com/kutsevol/soltura/pull/49),
+  [`9616d55`](https://github.com/kutsevol/soltura/commit/9616d55896dd34a45139e72e77c5316668a0674d))
+
+- **web**: Share the learner id, state parser and answer timer across routes
+  ([#47](https://github.com/kutsevol/soltura/pull/47),
+  [`ce4dd66`](https://github.com/kutsevol/soltura/commit/ce4dd666c3a341045bb5143f26b11e5c0e6ce579))
+
+- **words**: Validate the forms in use cases and keep the labels in the view
+  ([#50](https://github.com/kutsevol/soltura/pull/50),
+  [`b45a097`](https://github.com/kutsevol/soltura/commit/b45a09792ad84ee876ac064f4f876d3b2567bd11))
+
+
 ## v0.30.0 (2026-11-05)
 
 ### Features
