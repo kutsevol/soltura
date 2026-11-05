@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
@@ -9,29 +10,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from soltura.db import get_session
 from soltura.learner.dependencies import LearnerIdDep
 from soltura.llm.client import LLMClient, get_llm
+from soltura.onboarding.screens import latest_result_screen, result_screen
 from soltura.onboarding.service import (
     BANDS,
-    LEARN_BATCH,
     WORDS_PER_BAND,
+    Finished,
+    NothingToAnswer,
     PlacementItem,
-    PlacementResult,
-    apply_placement,
-    band_scores,
+    answer_word,
     build_placement,
-    get_latest_placement,
-    judge_items,
-    learn_missed_words,
-    missed_words,
-    score_placement,
-    should_stop,
+    learn_from_result,
 )
-from soltura.onboarding.views import explanation
-from soltura.practice.text import split_around
-from soltura.reading.service import vocabulary_range
+from soltura.onboarding.views import card_view, learn_view, result_view
 from soltura.templating import templates
 from soltura.web import parse_state
-from soltura.words.views import known_summary
-from soltura.words.vocabulary import build_vocabulary_map
 
 router = APIRouter(prefix="/onboarding")
 
@@ -43,40 +35,10 @@ STATE_ERROR = "Bad onboarding state"
 
 
 def _card_context(queue: list[PlacementItem], answered: list[PlacementItem]) -> dict[str, Any]:
-    current = queue[0]
-    before, target, after = split_around(current.sentence, current.target_form) or (
-        current.sentence,
-        "",
-        "",
-    )
     return {
-        "before": before,
-        "target": target,
-        "after": after,
+        **asdict(card_view(queue, answered)),
         "queue_json": ITEMS.dump_json(queue).decode(),
         "answered_json": ITEMS.dump_json(answered).decode(),
-        "position": len(answered) + 1,
-        "total": len(answered) + len(queue),
-        # The last word of a band is followed by a wait while its answers are judged.
-        "checking": len(queue) == 1 or queue[1].band != current.band,
-    }
-
-
-async def _learn_context(session: AsyncSession, learner_id: int) -> dict[str, int]:
-    missed = await missed_words(session, learner_id)
-    return {"missed_total": len(missed), "missed_batch": min(len(missed), LEARN_BATCH)}
-
-
-async def _result_context(
-    session: AsyncSession, learner_id: int, result: PlacementResult
-) -> dict[str, Any]:
-    vocabulary = await build_vocabulary_map(session, learner_id)
-    return {
-        "result": result,
-        "explanation": explanation(result),
-        "reading_range": await vocabulary_range(session, learner_id),
-        "known_summary": known_summary(vocabulary),
-        **await _learn_context(session, learner_id),
     }
 
 
@@ -91,18 +53,18 @@ async def onboarding_page(request: Request) -> HTMLResponse:
 async def result_page(
     request: Request, session: SessionDep, learner_id: LearnerIdDep
 ) -> HTMLResponse | RedirectResponse:
-    result = await get_latest_placement(session, learner_id)
-    if result is None:
+    screen = await latest_result_screen(session, learner_id)
+    if screen is None:
         return RedirectResponse("/onboarding", status_code=status.HTTP_303_SEE_OTHER)
-    context = await _result_context(session, learner_id, result)
-    return templates.TemplateResponse(request, "onboarding/result_page.html", context)
+    return templates.TemplateResponse(
+        request, "onboarding/result_page.html", vars(result_view(screen))
+    )
 
 
 @router.post("/learn", response_class=HTMLResponse)
 async def learn(request: Request, session: SessionDep, learner_id: LearnerIdDep) -> HTMLResponse:
-    added, _ = await learn_missed_words(session, learner_id, datetime.now(UTC))
-    context = {"added": added, **await _learn_context(session, learner_id)}
-    return templates.TemplateResponse(request, "onboarding/learn.html", context)
+    outcome = await learn_from_result(session, learner_id, datetime.now(UTC))
+    return templates.TemplateResponse(request, "onboarding/learn.html", vars(learn_view(outcome)))
 
 
 @router.post("/start", response_class=HTMLResponse)
@@ -131,22 +93,17 @@ async def answer(
 ) -> HTMLResponse:
     remaining = parse_state(ITEMS, queue, STATE_ERROR)
     done = parse_state(ITEMS, answered, STATE_ERROR)
-    if not remaining:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nothing to answer")
-    current, *rest = remaining
-    done.append(current.model_copy(update={"answer": "" if give_up else answer.strip()}))
-    if not rest or rest[0].band != current.band:
-        # A band is finished: judge it now, so a learner who has run out of known words
-        # is not asked the rarer bands.
-        done = await judge_items(llm, done)
-        if rest and should_stop(band_scores(done)):
-            rest = []
-    if rest:
+    try:
+        step = await answer_word(session, llm, learner_id, remaining, done, answer, give_up)
+    except NothingToAnswer as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Nothing to answer"
+        ) from error
+    if isinstance(step, Finished):
+        screen = await result_screen(session, learner_id, step.result)
         return templates.TemplateResponse(
-            request, "onboarding/card.html", _card_context(rest, done)
+            request, "onboarding/result.html", vars(result_view(screen))
         )
-
-    result = await score_placement(llm, done)
-    await apply_placement(session, learner_id, result)
-    context = await _result_context(session, learner_id, result)
-    return templates.TemplateResponse(request, "onboarding/result.html", context)
+    return templates.TemplateResponse(
+        request, "onboarding/card.html", _card_context(step.queue, step.answered)
+    )

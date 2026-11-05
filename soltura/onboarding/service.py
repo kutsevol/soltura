@@ -288,3 +288,66 @@ async def learn_missed_words(
             raise ValueError(f"Lexeme for {word.lemma!r} has no id")
         await save_word(session, learner_id, lexeme_id, word.sentence, now)
     return len(batch), len(missed) - len(batch)
+
+
+class NothingToAnswer(Exception):
+    pass
+
+
+@dataclass(frozen=True)
+class NextWord:
+    queue: list[PlacementItem]
+    answered: list[PlacementItem]
+
+
+@dataclass(frozen=True)
+class Finished:
+    result: PlacementResult
+
+
+async def answer_word(
+    session: AsyncSession,
+    llm: LLMClient,
+    learner_id: int,
+    queue: list[PlacementItem],
+    answered: list[PlacementItem],
+    answer: str,
+    give_up: bool,
+) -> NextWord | Finished:
+    if not queue:
+        raise NothingToAnswer
+    current, *rest = queue
+    done = [*answered, current.model_copy(update={"answer": "" if give_up else answer.strip()})]
+    if not rest or rest[0].band != current.band:
+        # A band is finished: judge it now, so a learner who has run out of known words
+        # is not asked the rarer bands.
+        done = await judge_items(llm, done)
+        if rest and should_stop(band_scores(done)):
+            rest = []
+    if rest:
+        return NextWord(queue=rest, answered=done)
+    result = await score_placement(llm, done)
+    await apply_placement(session, learner_id, result)
+    return Finished(result)
+
+
+@dataclass(frozen=True)
+class MissedSummary:
+    total: int
+    batch: int
+
+
+@dataclass(frozen=True)
+class LearnOutcome:
+    added: int
+    missed: MissedSummary
+
+
+async def missed_summary(session: AsyncSession, learner_id: int) -> MissedSummary:
+    missed = await missed_words(session, learner_id)
+    return MissedSummary(total=len(missed), batch=min(len(missed), LEARN_BATCH))
+
+
+async def learn_from_result(session: AsyncSession, learner_id: int, now: datetime) -> LearnOutcome:
+    added, _ = await learn_missed_words(session, learner_id, now)
+    return LearnOutcome(added=added, missed=await missed_summary(session, learner_id))
