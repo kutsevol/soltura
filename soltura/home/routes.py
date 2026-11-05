@@ -6,8 +6,8 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.db import get_session
-from soltura.learner.dependencies import current_learner
-from soltura.learner.models import Learner, UnitKind
+from soltura.learner.dependencies import LearnerIdDep
+from soltura.learner.models import UnitKind
 from soltura.learner.repository import (
     count_due_cards,
     count_learning_words,
@@ -24,17 +24,15 @@ router = APIRouter()
 async def home_page(
     request: Request,
     session: Annotated[AsyncSession, Depends(get_session)],
-    learner: Annotated[Learner, Depends(current_learner)],
+    learner_id: LearnerIdDep,
 ) -> HTMLResponse:
-    if learner.id is None:
-        raise ValueError("current_learner returned an unsaved learner")
-    due = await count_due_cards(session, learner.id, datetime.now(UTC), UnitKind.WORD)
-    learning = await count_learning_words(session, learner.id)
+    due = await count_due_cards(session, learner_id, datetime.now(UTC), UnitKind.WORD)
+    learning = await count_learning_words(session, learner_id)
     conjugation_due = await count_due_cards(
-        session, learner.id, datetime.now(UTC), UnitKind.CONJUGATION
+        session, learner_id, datetime.now(UTC), UnitKind.CONJUGATION
     )
-    placement = await get_latest_placement_run(session, learner.id)
-    vocabulary = await build_vocabulary_map(session, learner.id)
+    placement = await get_latest_placement_run(session, learner_id)
+    vocabulary = await build_vocabulary_map(session, learner_id)
     return templates.TemplateResponse(
         request,
         "home.html",

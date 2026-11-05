@@ -1,60 +1,39 @@
-import time
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
-from pydantic import TypeAdapter, ValidationError
+from pydantic import TypeAdapter
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.conjugation.service import ConjugationItem, answer_item, build_session
 from soltura.conjugation.views import card_view, result_view
 from soltura.db import get_session
-from soltura.learner.dependencies import current_learner
-from soltura.learner.models import Learner
+from soltura.learner.dependencies import LearnerIdDep
 from soltura.templating import templates
+from soltura.web import answer_duration_ms, now_ms, parse_state
 
 router = APIRouter(prefix="/conjugation")
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
-LearnerDep = Annotated[Learner, Depends(current_learner)]
 
 QUEUE = TypeAdapter(list[ConjugationItem])
-MAX_DURATION_MS = 10 * 60 * 1000
-
-
-def _now_ms() -> int:
-    return time.time_ns() // 1_000_000
+STATE_ERROR = "Bad conjugation state"
 
 
 def _card_context(item: ConjugationItem, queue: list[ConjugationItem]) -> dict[str, Any]:
     return {
         "card": card_view(item, len(queue)),
         "queue_json": QUEUE.dump_json(queue).decode(),
-        "started_at": _now_ms(),
+        "started_at": now_ms(),
     }
-
-
-def _parse_queue(raw: str) -> list[ConjugationItem]:
-    try:
-        return QUEUE.validate_json(raw)
-    except ValidationError as error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Bad conjugation state"
-        ) from error
-
-
-def _learner_id(learner: Learner) -> int:
-    if learner.id is None:
-        raise ValueError("current_learner returned an unsaved learner")
-    return learner.id
 
 
 @router.get("", response_class=HTMLResponse)
 async def conjugation_page(
-    request: Request, session: SessionDep, learner: LearnerDep
+    request: Request, session: SessionDep, learner_id: LearnerIdDep
 ) -> HTMLResponse:
-    items = await build_session(session, _learner_id(learner), datetime.now(UTC))
+    items = await build_session(session, learner_id, datetime.now(UTC))
     if not items:
         return templates.TemplateResponse(request, "conjugation.html", {"empty": True})
     first, *queue = items
@@ -67,7 +46,7 @@ async def conjugation_page(
 async def answer(
     request: Request,
     session: SessionDep,
-    learner: LearnerDep,
+    learner_id: LearnerIdDep,
     card_id: Annotated[int, Form()],
     queue: Annotated[str, Form()],
     started_at: Annotated[int, Form()],
@@ -76,11 +55,11 @@ async def answer(
 ) -> HTMLResponse:
     if give_up:
         answer = ""
-    _parse_queue(queue)
-    duration_ms = min(max(_now_ms() - started_at, 0), MAX_DURATION_MS)
+    parse_state(QUEUE, queue, STATE_ERROR)
+    duration_ms = answer_duration_ms(started_at, now_ms())
     try:
         result = await answer_item(
-            session, _learner_id(learner), card_id, answer, duration_ms, datetime.now(UTC)
+            session, learner_id, card_id, answer, duration_ms, datetime.now(UTC)
         )
     except PermissionError as error:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN) from error
@@ -93,7 +72,7 @@ async def answer(
 
 @router.post("/next", response_class=HTMLResponse)
 async def next_card(request: Request, queue: Annotated[str, Form()]) -> HTMLResponse:
-    items = _parse_queue(queue)
+    items = parse_state(QUEUE, queue, STATE_ERROR)
     if not items:
         return templates.TemplateResponse(request, "conjugation/done.html")
     first, *rest = items
