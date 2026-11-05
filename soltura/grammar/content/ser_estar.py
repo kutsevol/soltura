@@ -7,9 +7,9 @@ UNIT = GrammarUnit(
     title="ser чи estar",
     lesson=Lesson(
         points=(
-            "Ser каже, що це або хто це: професія, національність, походження, матеріал, час і дата.",
+            "Ser каже, що це або хто це і який він: професія, національність, походження, характеристика (es alto, es simpático), матеріал, час і дата.",
             "Estar каже, де це і який стан зараз: місцезнаходження, настрій, самопочуття.",
-            "Місце події (свята, зустрічі) — ser: La fiesta es en mi casa.",
+            "Час події — ser: la reunión es a las cinco. Місце, де відбувається свято чи зустріч, зазвичай теж ser (la fiesta es en mi casa), а де щось знаходиться — estar.",
             "Деякі прикметники міняють значення: es aburrido (він нудний) — está aburrido (йому нудно); es listo (він розумний) — está listo (він готовий).",
         ),
         examples=(
@@ -50,19 +50,19 @@ UNIT = GrammarUnit(
         ),
         Exercise(
             id="e4",
-            sentence="La fiesta ___ en mi casa.",
-            translation="Свято в мене вдома.",
+            sentence="La clase ___ a las nueve.",
+            translation="Урок о дев’ятій.",
             options=("es", "está"),
             answer="es",
-            note="Місце, де відбувається подія, — це ser.",
+            note="Час події — це ser.",
         ),
         Exercise(
             id="e5",
-            sentence="Mi hermano ___ médico.",
-            translation="Мій брат лікар.",
+            sentence="Mi hermano ___ muy alto.",
+            translation="Мій брат дуже високий.",
             options=(),
             answer="es",
-            note="Професія — це ser.",
+            note="Характеристика людини — це ser.",
         ),
         Exercise(
             id="e6",

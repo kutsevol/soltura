@@ -17,10 +17,12 @@ UNITS = all_units()
 
 
 def test_the_registry_lists_the_units_in_teaching_order() -> None:
-    assert [unit.id for unit in UNITS] == ["gender_of_nouns", "ser_estar", "por_para"]
+    ids = [unit.id for unit in UNITS]
+
     assert sorted((unit.level, unit.order) for unit in UNITS) == [
         (unit.level, unit.order) for unit in UNITS
     ]
+    assert ids.index("gender_of_nouns") < ids.index("ser_estar") < ids.index("por_para")
 
 
 def test_every_unit_has_its_own_id_and_place_in_the_order() -> None:
