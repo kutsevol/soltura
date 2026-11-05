@@ -9,6 +9,7 @@ from soltura.learner.repository import (
     count_learning_words,
     get_latest_placement_run,
 )
+from soltura.use_cases.grammar import next_lesson
 from soltura.words.vocabulary import VocabularyMap, build_vocabulary_map
 
 
@@ -17,16 +18,21 @@ class HubSummary:
     due: int
     learning: int
     conjugation_due: int
+    grammar_due: int
+    grammar_next: str | None
     placement_rank: int | None
     vocabulary: VocabularyMap
 
 
 async def hub_summary(session: AsyncSession, learner_id: int, now: datetime) -> HubSummary:
     placement = await get_latest_placement_run(session, learner_id)
+    lesson = await next_lesson(session, learner_id)
     return HubSummary(
         due=await count_due_cards(session, learner_id, now, UnitKind.WORD),
         learning=await count_learning_words(session, learner_id),
         conjugation_due=await count_due_cards(session, learner_id, now, UnitKind.CONJUGATION),
+        grammar_due=await count_due_cards(session, learner_id, now, UnitKind.GRAMMAR),
+        grammar_next=lesson.title if lesson else None,
         placement_rank=placement.known_rank if placement else None,
         vocabulary=await build_vocabulary_map(session, learner_id),
     )

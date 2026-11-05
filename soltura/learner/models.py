@@ -68,6 +68,7 @@ class ReviewSource(StrEnum):
     WARMUP = "warmup"
     READING_TAP = "reading_tap"
     CONJUGATION = "conjugation"
+    GRAMMAR = "grammar"
 
 
 def _enum_column(enum: type[StrEnum], name: str, **kwargs: Any) -> Column[Any]:

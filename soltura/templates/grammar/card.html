@@ -1,0 +1,23 @@
+<form hx-post="/grammar/answer" hx-target="#card">
+  <p class="note">{{ card.title }}</p>
+  <p class="sentence">{{ card.before }}<span class="gap">_____</span>{{ card.after }}</p>
+  <p class="note">{{ card.translation }}</p>
+  <input type="hidden" name="card_id" value="{{ card.card_id }}">
+  <input type="hidden" name="queue" value="{{ queue_json }}">
+  <input type="hidden" name="started_at" value="{{ started_at }}">
+  {% if card.options %}
+    <div class="grid">
+      {% for option in card.options %}
+        <button type="submit" name="answer" value="{{ option }}" class="secondary outline">{{ option }}</button>
+      {% endfor %}
+      <button type="submit" name="give_up" value="1" class="secondary outline">Не знаю</button>
+    </div>
+  {% else %}
+    <input name="answer" aria-label="Пропущене слово" autocomplete="off" autocapitalize="off" spellcheck="false" autofocus>
+    <div class="grid">
+      <button type="submit">Перевірити</button>
+      <button type="submit" name="give_up" value="1" class="secondary outline">Не знаю</button>
+    </div>
+  {% endif %}
+  <footer class="note">Ще вправ: {{ card.remaining }}</footer>
+</form>

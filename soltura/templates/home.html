@@ -28,6 +28,10 @@
       <h3><a href="{{ trainer.href }}">{{ trainer.label }}</a></h3>
       <p class="note">Форм до повторення: {{ conjugation_due }}</p>
     </article>
+    <article class="module {{ grammar_module.tone }}">
+      <h3><a href="{{ grammar_module.href }}">{{ grammar_module.label }}</a></h3>
+      <p class="note">{{ grammar_status }}</p>
+    </article>
     <article class="module">
       {% if placement_rank is none %}
         <h3><a href="/onboarding">Визначення рівня</a></h3>

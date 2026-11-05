@@ -26,6 +26,7 @@
   --tone-words: #1a7f37;
   --tone-help: #6b4fc4;
   --tone-conjugation: #0f7c86;
+  --tone-grammar: #a8570f;
   --verdict-good: #1a7f37;
   --verdict-hard: #9a6700;
 }
@@ -54,6 +55,7 @@
     --tone-words: #2dd86a;
     --tone-help: #b7a6ff;
     --tone-conjugation: #5cd0d9;
+    --tone-grammar: #f0a86a;
     --verdict-good: #3fb950;
     --verdict-hard: #d29922;
   }
@@ -198,6 +200,10 @@ article.module p {
 
 .module.conjugation {
   --tone: var(--tone-conjugation);
+}
+
+.module.grammar {
+  --tone: var(--tone-grammar);
 }
 
 /* The placement answers: one block per word, since a table of three columns is wider than a phone. */
