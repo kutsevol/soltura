@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.29.1 (2026-11-05)
+
+### Bug Fixes
+
+- **onboarding**: Say the words become too difficult, not too big
+  ([#43](https://github.com/kutsevol/soltura/pull/43),
+  [`3fc5f0b`](https://github.com/kutsevol/soltura/commit/3fc5f0b0bd0504b40cc2279e7077882366fef994))
+
+
 ## v0.29.0 (2026-11-04)
 
 ### Features
