@@ -10,19 +10,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from soltura.db import get_session
 from soltura.learner.dependencies import LearnerIdDep
 from soltura.llm.client import LLMClient, get_llm
-from soltura.onboarding.screens import latest_result_screen, result_screen
 from soltura.onboarding.service import (
     BANDS,
     WORDS_PER_BAND,
     Finished,
     NothingToAnswer,
     PlacementItem,
-    answer_word,
-    build_placement,
-    learn_from_result,
 )
 from soltura.onboarding.views import card_view, learn_view, result_view
 from soltura.templating import templates
+from soltura.use_cases.onboarding import (
+    answer_word,
+    build_placement,
+    latest_result_screen,
+    learn_from_result,
+    result_screen,
+)
 from soltura.web import parse_state
 
 router = APIRouter(prefix="/onboarding")

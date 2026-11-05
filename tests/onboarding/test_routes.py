@@ -6,7 +6,7 @@ from sqlmodel import col, func, select
 
 from soltura.learner.models import Learner, LearnerLexeme, Lexeme, LexemeStatus, MemoryCard
 from soltura.learner.repository import save_placement_run
-from tests.onboarding.conftest import CORRECT
+from tests.conftest import CORRECT
 
 
 def _hidden(html: str, name: str) -> str:

@@ -7,8 +7,8 @@ import pytest
 
 SOLTURA = Path(__file__).resolve().parent.parent / "soltura"
 
-# Features whose routes already call only use cases; each use_cases Task adds one.
-MIGRATED = ("conjugation", "warmup", "words", "home", "reading")
+# Every feature's routes call only use cases.
+ROUTES = sorted(SOLTURA.glob("*/routes.py"))
 
 # What a use case calls and a route must not: a feature's services and its helpers.
 LOWER_LAYER = re.compile(r"^soltura\.\w+\.(service|repository|vocabulary|screens)$")
@@ -78,8 +78,8 @@ def test_nothing_below_the_use_cases_imports_them() -> None:
     assert offenders == []
 
 
-@pytest.mark.parametrize("feature", MIGRATED)
-def test_a_migrated_route_calls_only_use_cases(feature: str) -> None:
-    source = (SOLTURA / feature / "routes.py").read_text()
+@pytest.mark.parametrize("path", ROUTES, ids=lambda path: path.parent.name)
+def test_a_route_calls_only_use_cases(path: Path) -> None:
+    source = path.read_text()
 
     assert functions_imported_from_lower_layers(source) == []
