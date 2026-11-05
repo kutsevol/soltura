@@ -18,6 +18,19 @@ JUDGE_SYSTEM = (
 )
 
 
+# A placement test asks whether the learner knows the word, so any correct meaning counts,
+# even one other than the sentence's: the warm-up, which teaches one sense, stays strict.
+KNOWN_WORD_JUDGE_SYSTEM = (
+    "You check whether a Ukrainian-speaking learner knows one Spanish word. You get the word, "
+    "a sentence it is used in, and the learner's answer in Ukrainian. 'correct' when the answer "
+    "is a valid translation of the word in any of its common senses, not only the sense used "
+    "in the sentence, and whatever its part of speech or form (a noun for a verb of the same "
+    "root is fine); 'partly' when it names only a related word or a more general meaning; "
+    "'wrong' otherwise. Give a one-line reason in Ukrainian and the word's meaning in this "
+    "sentence as the expected meaning."
+)
+
+
 class SpanishCheck(StrEnum):
     EXACT = "exact"
     ACCENT_SLIP = "accent_slip"
@@ -97,13 +110,13 @@ def check_spanish(answer: str, expected_form: str, lemma: str) -> SpanishCheck:
 
 
 async def judge_translation(
-    llm: LLMClient, answer: str, word: str, sentence: str
+    llm: LLMClient, answer: str, word: str, sentence: str, system: str = JUDGE_SYSTEM
 ) -> TranslationVerdict:
     if not normalize(answer):
         return TranslationVerdict(verdict="wrong", reason="Відповіді немає.", expected="")
     return await llm(
         TranslationVerdict,
-        system=JUDGE_SYSTEM,
+        system=system,
         prompt=f"Word: {word}\nSentence: {sentence}\nLearner's answer: {answer.strip()}",
         effort="low",
         max_tokens=4_000,

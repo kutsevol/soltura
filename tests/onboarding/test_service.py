@@ -21,6 +21,7 @@ from soltura.onboarding.service import (
     score_placement,
     should_stop,
 )
+from tests.factories import LexemeFactory
 from tests.onboarding.conftest import CORRECT, JudgeByAnswer
 
 
@@ -86,12 +87,12 @@ async def test_a_word_without_a_usable_sentence_is_left_out(
     assert nouns[0] not in {item.lemma for item in items}
 
 
-async def test_a_name_is_left_out_and_a_spare_word_takes_its_place(
+async def test_an_unusable_word_is_left_out_and_a_spare_word_takes_its_place(
     session: AsyncSession, banded_lexemes: list[Lexeme], judge: JudgeByAnswer
 ) -> None:
     nouns = [lexeme.lemma for lexeme in banded_lexemes if lexeme.pos == "NOUN"]
     sentences = _sentences_for(nouns)
-    sentences.sentences[0].is_name = True
+    sentences.sentences[0].is_usable = False
     judge.answer(sentences)
 
     items = await build_placement(session, judge)
@@ -113,11 +114,11 @@ async def test_all_wrong_answers_place_the_learner_nowhere(judge: JudgeByAnswer)
 
 
 async def test_only_an_unbroken_run_of_passed_bands_counts(judge: JudgeByAnswer) -> None:
-    # 5/5, 4/5 pass; 3/5 fails, so the later 5/5 bands do not count.
-    result = await score_placement(judge, _answered([5, 4, 3, 5, 5, 5, 5, 5]))
+    # 5/5, 3/5 pass at 60%; 2/5 fails, so the later 5/5 bands do not count.
+    result = await score_placement(judge, _answered([5, 3, 2, 5, 5, 5, 5, 5]))
 
     assert result.known_rank == 500
-    assert [(band.correct, band.total) for band in result.bands[:3]] == [(5, 5), (4, 5), (3, 5)]
+    assert [(band.correct, band.total) for band in result.bands[:3]] == [(5, 5), (3, 5), (2, 5)]
 
 
 async def test_applying_a_placement_marks_frequent_words_known_but_keeps_learning_ones(
@@ -271,8 +272,12 @@ def test_one_weak_band_or_a_weak_band_between_strong_ones_does_not_stop_the_test
     )
 
 
-def test_a_band_at_exactly_half_is_not_weak() -> None:
-    assert not should_stop([BandScore(0, 250, 4, 8), BandScore(1, 500, 4, 8)])
+def test_a_band_at_exactly_half_is_weak() -> None:
+    assert should_stop([BandScore(0, 250, 4, 8), BandScore(1, 500, 4, 8)])
+
+
+def test_a_band_just_over_half_is_not_weak() -> None:
+    assert not should_stop([BandScore(0, 250, 5, 8), BandScore(1, 500, 5, 8)])
 
 
 async def test_only_the_bands_that_were_asked_are_scored(judge: JudgeByAnswer) -> None:
@@ -292,3 +297,34 @@ async def test_an_answer_that_is_already_judged_is_not_judged_again(
 
     assert judge.prompts == []
     assert result.words[0].verdict == "correct"
+
+
+async def test_a_word_shown_in_two_bands_under_different_case_is_asked_once(
+    session: AsyncSession, judge: JudgeByAnswer
+) -> None:
+    session.add_all(
+        [
+            LexemeFactory.build(lemma="claro", pos="ADJ", frequency_rank=10),
+            LexemeFactory.build(lemma="claridad", pos="NOUN", frequency_rank=5000),
+        ]
+    )
+    await session.flush()
+    judge.answer(
+        PlacementSentences(
+            sentences=[
+                PlacementSentence(
+                    lemma="claro", sentence="Claro que sí.", target_form="Claro", meaning="звісно"
+                ),
+                PlacementSentence(
+                    lemma="claridad",
+                    sentence="Hay un claro en el cielo.",
+                    target_form="claro",
+                    meaning="просвіт",
+                ),
+            ]
+        )
+    )
+
+    items = await build_placement(session, judge)
+
+    assert [(item.band, item.target_form) for item in items] == [(0, "Claro")]
