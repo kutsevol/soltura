@@ -8,11 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.db import get_session
 from soltura.learner.dependencies import LearnerIdDep
-from soltura.learner.models import Rating
 from soltura.llm.client import LLMClient, get_llm
-from soltura.practice.text import split_around
 from soltura.templating import templates
 from soltura.warmup.service import WarmupItem, answer_item, build_warmup
+from soltura.warmup.views import card_view, result_view
 from soltura.web import answer_duration_ms, now_ms, parse_state
 
 router = APIRouter(prefix="/warmup")
@@ -24,28 +23,12 @@ ITEM = TypeAdapter(WarmupItem)
 QUEUE = TypeAdapter(list[WarmupItem])
 STATE_ERROR = "Bad warm-up state"
 
-RATING_LABEL = {
-    Rating.GOOD: "Правильно",
-    Rating.EASY: "Легко",
-    Rating.HARD: "Майже",
-    Rating.AGAIN: "Ще раз",
-}
-
 
 def _card_context(item: WarmupItem, queue: list[WarmupItem]) -> dict[str, Any]:
-    before, target, after = split_around(item.sentence, item.target_form) or (
-        item.sentence,
-        "",
-        "",
-    )
     return {
-        "item": item,
+        **vars(card_view(item, len(queue))),
         "item_json": ITEM.dump_json(item).decode(),
         "queue_json": QUEUE.dump_json(queue).decode(),
-        "remaining": len(queue),
-        "before": before,
-        "target": target,
-        "after": after,
         "started_at": now_ms(),
     }
 
@@ -89,13 +72,7 @@ async def answer(
     return templates.TemplateResponse(
         request,
         "warmup/result.html",
-        {
-            "result": result,
-            "label": RATING_LABEL[result.rating],
-            "answer": answer.strip(),
-            "item": current,
-            "queue_json": queue,
-        },
+        {**vars(result_view(result, current, answer)), "queue_json": queue},
     )
 
 
