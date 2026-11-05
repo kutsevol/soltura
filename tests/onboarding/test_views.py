@@ -1,5 +1,5 @@
+from soltura.language.frequency import BANDS
 from soltura.onboarding.service import (
-    BANDS,
     BandScore,
     LearnOutcome,
     MissedSummary,

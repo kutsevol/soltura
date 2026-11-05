@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
+from soltura.language.frequency import BANDS
 from soltura.onboarding.service import (
-    BANDS,
     PASS_SHARE,
     WEAK_BANDS_IN_A_ROW,
     WEAK_SHARE,

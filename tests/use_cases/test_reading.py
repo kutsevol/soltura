@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
+from soltura.language.frequency import UNRANKED
 from soltura.language.nlp import analyze
 from soltura.learner.models import (
     KnowledgeType,
@@ -15,7 +16,7 @@ from soltura.learner.models import (
     ReviewSource,
 )
 from soltura.learner.repository import get_recent_titles, save_placement_run, save_reading_text
-from soltura.reading.service import UNRANKED, GeneratedText, Gloss
+from soltura.reading.service import GeneratedText, Gloss
 from soltura.reading.topics import TOPICS
 from soltura.reading.variation import FORMS, NAMES
 from soltura.srs.service import save_word

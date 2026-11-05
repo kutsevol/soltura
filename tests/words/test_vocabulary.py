@@ -1,7 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from soltura.language.frequency import BANDS
 from soltura.learner.models import Learner, Lexeme
-from soltura.onboarding.service import BANDS, PlacementResult, apply_placement
+from soltura.onboarding.service import PlacementResult, apply_placement
 from soltura.words.vocabulary import EDGES, build_vocabulary_map
 
 

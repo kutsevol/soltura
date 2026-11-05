@@ -5,6 +5,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.language.coverage import measure_coverage, words_to_replace
+from soltura.language.frequency import UNRANKED
 from soltura.language.nlp import analyze
 from soltura.learner.models import KnowledgeType, Learner, MemoryCard, Rating, ReviewSource
 from soltura.learner.models import Lexeme as LexemeRow
@@ -20,7 +21,6 @@ from soltura.reading.service import (
     MAX_SIMPLIFICATIONS,
     RECENT_TITLES,
     TARGET_COVERAGE,
-    UNRANKED,
     WRITER_SYSTEM,
     GeneratedText,
     Gloss,

@@ -8,10 +8,10 @@ from pydantic import TypeAdapter
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.db import get_session
+from soltura.language.frequency import BANDS
 from soltura.learner.dependencies import LearnerIdDep
 from soltura.llm.client import LLMClient, get_llm
 from soltura.onboarding.service import (
-    BANDS,
     WORDS_PER_BAND,
     Finished,
     NothingToAnswer,

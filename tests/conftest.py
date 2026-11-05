@@ -14,6 +14,7 @@ from testcontainers.community.postgres import PostgresContainer
 from soltura.app import create_app
 from soltura.config import settings
 from soltura.db import get_session
+from soltura.language.frequency import BANDS, UNRANKED
 from soltura.language.nlp import analyze
 from soltura.learner.models import (
     KnowledgeType,
@@ -28,9 +29,9 @@ from soltura.learner.models import (
 )
 from soltura.learner.repository import save_placement_run
 from soltura.llm.client import Effort, SchemaT, get_llm
-from soltura.onboarding.service import BANDS, PlacementSentence, PlacementSentences
+from soltura.onboarding.service import PlacementSentence, PlacementSentences
 from soltura.practice.checking import TranslationVerdict
-from soltura.reading.service import UNRANKED, GeneratedText
+from soltura.reading.service import GeneratedText
 from soltura.srs.service import save_word
 from tests.factories import (
     LearnerFactory,
