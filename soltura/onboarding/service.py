@@ -1,19 +1,25 @@
 import asyncio
 import logging
 from dataclasses import asdict, dataclass, field
+from datetime import datetime
 
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from soltura.learner.models import LexemeStatus
 from soltura.learner.repository import (
     get_latest_placement_run,
+    get_learner_lemmas,
+    get_lexemes_by_lemmas,
     mark_known_up_to_rank,
+    mark_lemmas_known,
     sample_lexemes,
     save_placement_run,
 )
 from soltura.llm.client import LLMClient
 from soltura.practice.checking import KNOWN_WORD_JUDGE_SYSTEM, judge_translation
 from soltura.practice.text import split_around
+from soltura.srs.service import save_word
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +46,8 @@ WEAK_BANDS_IN_A_ROW = 2
 # what a vocabulary estimate rests on.
 CONTENT_POS = ("NOUN", "VERB", "ADJ", "ADV")
 JUDGE_CONCURRENCY = 8
+# Words the learner did not know that one press adds to learning; more would flood the warm-up.
+LEARN_BATCH = 15
 
 SENTENCES_SYSTEM = (
     "You write short, natural Spanish sentences from everyday life in Spain for a vocabulary "
@@ -227,6 +235,10 @@ async def apply_placement(session: AsyncSession, learner_id: int, result: Placem
         [asdict(band) for band in result.bands],
         [asdict(word) for word in result.words],
     )
+    # A word answered right is known wherever its band is: it was shown and translated.
+    await mark_lemmas_known(
+        session, learner_id, [word.lemma for word in result.words if word.verdict == "correct"]
+    )
     if result.known_rank > 0:
         await mark_known_up_to_rank(session, learner_id, result.known_rank)
     else:
@@ -242,3 +254,37 @@ async def get_latest_placement(session: AsyncSession, learner_id: int) -> Placem
         bands=[BandScore(**band) for band in run.bands],
         words=[WordResult(**word) for word in run.items or []],
     )
+
+
+async def missed_words(session: AsyncSession, learner_id: int) -> list[WordResult]:
+    # The words of the latest run that were not answered right and are not being learned
+    # yet, most frequent first.
+    result = await get_latest_placement(session, learner_id)
+    if result is None:
+        return []
+    learning = await get_learner_lemmas(session, learner_id, [LexemeStatus.LEARNING])
+    missed = [
+        word for word in result.words if word.verdict != "correct" and word.lemma not in learning
+    ]
+    ranks = {
+        lexeme.lemma: lexeme.frequency_rank
+        for lexeme in await get_lexemes_by_lemmas(session, [word.lemma for word in missed])
+    }
+    return sorted((word for word in missed if word.lemma in ranks), key=lambda w: ranks[w.lemma])
+
+
+async def learn_missed_words(
+    session: AsyncSession, learner_id: int, now: datetime
+) -> tuple[int, int]:
+    missed = await missed_words(session, learner_id)
+    batch = missed[:LEARN_BATCH]
+    lexemes = {
+        lexeme.lemma: lexeme
+        for lexeme in await get_lexemes_by_lemmas(session, [word.lemma for word in batch])
+    }
+    for word in batch:
+        lexeme_id = lexemes[word.lemma].id
+        if lexeme_id is None:
+            raise ValueError(f"Lexeme for {word.lemma!r} has no id")
+        await save_word(session, learner_id, lexeme_id, word.sentence, now)
+    return len(batch), len(missed) - len(batch)

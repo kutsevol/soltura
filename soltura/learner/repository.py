@@ -263,6 +263,22 @@ async def mark_known_up_to_rank(session: AsyncSession, learner_id: int, max_rank
     await session.commit()
 
 
+async def mark_lemmas_known(session: AsyncSession, learner_id: int, lemmas: Iterable[str]) -> None:
+    # Like marking by rank, it leaves words already in the learner model as they are, and
+    # it does not commit: the caller's transaction decides.
+    rows = select(
+        literal(learner_id),
+        col(Lexeme.id),
+        literal(LexemeStatus.KNOWN, type_=_LEARNER_LEXEME.c.status.type),
+        literal(LexemeOrigin.ONBOARDING, type_=_LEARNER_LEXEME.c.origin.type),
+    ).where(col(Lexeme.lemma).in_(set(lemmas)))
+    await session.execute(
+        insert(LearnerLexeme)
+        .from_select(["learner_id", "lexeme_id", "status", "origin"], rows)
+        .on_conflict_do_nothing(index_elements=["learner_id", "lexeme_id"])
+    )
+
+
 @dataclass(frozen=True)
 class BandCounts:
     total: int

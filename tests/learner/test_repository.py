@@ -1,8 +1,17 @@
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col, select
 
-from soltura.learner.models import KnowledgeType, Learner, Lexeme, UnitKind
+from soltura.learner.models import (
+    KnowledgeType,
+    Learner,
+    LearnerLexeme,
+    Lexeme,
+    LexemeOrigin,
+    LexemeStatus,
+    UnitKind,
+)
 from soltura.learner.repository import (
     BandCounts,
     count_due_cards,
@@ -12,6 +21,7 @@ from soltura.learner.repository import (
     get_or_create_learner,
     get_recent_titles,
     get_vocabulary_bands,
+    mark_lemmas_known,
     save_placement_run,
     save_reading_text,
 )
@@ -182,3 +192,32 @@ async def test_recent_titles_are_the_learners_newest_first_and_limited(
     await save_reading_text(session, other_learner.id, None, "ajeno")
 
     assert await get_recent_titles(session, learner.id, 2) == ["tres", "dos"]
+
+
+async def test_marking_lemmas_known_leaves_words_already_in_the_model_alone(
+    session: AsyncSession, learner: Learner, lexemes: list[Lexeme]
+) -> None:
+    assert learner.id is not None
+    ser, estar, _ = lexemes
+    assert estar.id is not None
+    session.add(
+        LearnerLexeme(
+            learner_id=learner.id,
+            lexeme_id=estar.id,
+            status=LexemeStatus.LEARNING,
+            origin=LexemeOrigin.READING,
+        )
+    )
+    await session.flush()
+
+    await mark_lemmas_known(session, learner.id, ["ser", "estar", "zzz"])
+    await mark_lemmas_known(session, learner.id, ["ser"])
+
+    rows = (
+        await session.execute(
+            select(Lexeme.lemma, LearnerLexeme.status)
+            .join(LearnerLexeme, col(LearnerLexeme.lexeme_id) == col(Lexeme.id))
+            .where(col(LearnerLexeme.learner_id) == learner.id)
+        )
+    ).all()
+    assert dict(rows) == {"ser": LexemeStatus.KNOWN, "estar": LexemeStatus.LEARNING}

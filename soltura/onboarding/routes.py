@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
@@ -11,6 +12,7 @@ from soltura.learner.models import Learner
 from soltura.llm.client import LLMClient, get_llm
 from soltura.onboarding.service import (
     BANDS,
+    LEARN_BATCH,
     WORDS_PER_BAND,
     PlacementItem,
     apply_placement,
@@ -18,6 +20,8 @@ from soltura.onboarding.service import (
     build_placement,
     get_latest_placement,
     judge_items,
+    learn_missed_words,
+    missed_words,
     score_placement,
     should_stop,
 )
@@ -62,6 +66,11 @@ def _card_context(queue: list[PlacementItem], answered: list[PlacementItem]) -> 
     }
 
 
+async def _learn_context(session: AsyncSession, learner_id: int) -> dict[str, int]:
+    missed = await missed_words(session, learner_id)
+    return {"missed_total": len(missed), "missed_batch": min(len(missed), LEARN_BATCH)}
+
+
 @router.get("", response_class=HTMLResponse)
 async def onboarding_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
@@ -78,7 +87,17 @@ async def result_page(
     result = await get_latest_placement(session, learner.id)
     if result is None:
         return RedirectResponse("/onboarding", status_code=status.HTTP_303_SEE_OTHER)
-    return templates.TemplateResponse(request, "onboarding/result_page.html", {"result": result})
+    context = {"result": result, **await _learn_context(session, learner.id)}
+    return templates.TemplateResponse(request, "onboarding/result_page.html", context)
+
+
+@router.post("/learn", response_class=HTMLResponse)
+async def learn(request: Request, session: SessionDep, learner: LearnerDep) -> HTMLResponse:
+    if learner.id is None:
+        raise ValueError("current_learner returned an unsaved learner")
+    added, _ = await learn_missed_words(session, learner.id, datetime.now(UTC))
+    context = {"added": added, **await _learn_context(session, learner.id)}
+    return templates.TemplateResponse(request, "onboarding/learn.html", context)
 
 
 @router.post("/start", response_class=HTMLResponse)
@@ -125,4 +144,5 @@ async def answer(
         raise ValueError("current_learner returned an unsaved learner")
     result = await score_placement(llm, done)
     await apply_placement(session, learner.id, result)
-    return templates.TemplateResponse(request, "onboarding/result.html", {"result": result})
+    context = {"result": result, **await _learn_context(session, learner.id)}
+    return templates.TemplateResponse(request, "onboarding/result.html", context)

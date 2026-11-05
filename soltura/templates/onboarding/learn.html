@@ -1,0 +1,9 @@
+{% if added %}
+  <p><strong>Додано слів: {{ added }}.</strong> Вони з’являться в розминці.</p>
+{% endif %}
+{% if missed_total %}
+  <button type="button" hx-post="/onboarding/learn" hx-target="#learn">Додати слова, яких ви не знали: {{ missed_batch }}</button>
+  {% if missed_total > missed_batch %}
+    <p class="note">Усього незнайомих слів: {{ missed_total }}. Решту можна додати наступним натисканням.</p>
+  {% endif %}
+{% endif %}

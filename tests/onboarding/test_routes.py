@@ -4,10 +4,9 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, func, select
 
-from soltura.learner.models import Learner, LearnerLexeme, Lexeme, LexemeStatus
+from soltura.learner.models import Learner, LearnerLexeme, Lexeme, LexemeStatus, MemoryCard
 from soltura.learner.repository import save_placement_run
-from soltura.onboarding.service import PlacementSentence, PlacementSentences
-from tests.onboarding.conftest import CORRECT, JudgeByAnswer
+from tests.onboarding.conftest import CORRECT
 
 
 def _hidden(html: str, name: str) -> str:
@@ -29,22 +28,8 @@ async def test_a_learner_who_fails_two_bands_in_a_row_is_not_asked_the_rest(
     session: AsyncSession,
     learner: Learner,
     banded_lexemes: list[Lexeme],
-    judge: JudgeByAnswer,
+    sentenced: None,
 ) -> None:
-    nouns = [lexeme.lemma for lexeme in banded_lexemes if lexeme.pos == "NOUN"]
-    judge.answer(
-        PlacementSentences(
-            sentences=[
-                PlacementSentence(
-                    lemma=lemma,
-                    sentence=f"Hoy veo {lemma}.",
-                    target_form=lemma,
-                    meaning=f"значення {lemma}",
-                )
-                for lemma in nouns
-            ]
-        )
-    )
     card = await onboarding_client.post("/onboarding/start")
     assert "Слово 1 з 64" in card.text
 
@@ -64,6 +49,8 @@ async def test_a_learner_who_fails_two_bands_in_a_row_is_not_asked_the_rest(
 
     # Bands 3 and 4 are both at 0%, so the test ends after five bands of eight words.
     assert "Знайомими позначено 1000 найчастотніших слів" in card.text
+    assert "Додати слова, яких ви не знали: 15" in card.text
+    assert "Усього незнайомих слів: 16" in card.text
     assert "до 2000" in card.text
     assert "до 3000" not in card.text
     known = (
@@ -88,6 +75,19 @@ async def test_a_learner_who_fails_two_bands_in_a_row_is_not_asked_the_rest(
     # A skipped word is not judged, yet its meaning is still shown.
     assert page.text.count("значення word") == 16
     assert "Відповіді немає" not in page.text
+    assert "Додати слова, яких ви не знали: 15" in page.text
+
+    first = await onboarding_client.post("/onboarding/learn")
+    second = await onboarding_client.post("/onboarding/learn")
+    third = await onboarding_client.post("/onboarding/learn")
+
+    assert "Додано слів: 15" in first.text
+    assert "Додати слова, яких ви не знали: 1" in first.text
+    assert "Додано слів: 1" in second.text
+    assert "Додати слова, яких ви не знали" not in second.text
+    assert "Додано слів" not in third.text
+    cards = (await session.execute(select(func.count()).select_from(MemoryCard))).scalar_one()
+    assert cards == 32
 
 
 async def test_an_empty_dictionary_asks_to_seed_it(onboarding_client: AsyncClient) -> None:
@@ -118,3 +118,25 @@ async def test_a_run_saved_without_answers_still_shows_its_table(
     assert page.status_code == 200
     assert "<td>до 250</td><td>5 з 5</td>" in page.text
     assert "Ваші відповіді" not in page.text
+
+
+async def test_a_learner_who_passes_every_band_is_asked_all_of_them_and_offered_no_words(
+    onboarding_client: AsyncClient, sentenced: None
+) -> None:
+    card = await onboarding_client.post("/onboarding/start")
+
+    while "Знайомими" not in card.text:
+        card = await onboarding_client.post(
+            "/onboarding/answer",
+            data={
+                "queue": _hidden(card.text, "queue"),
+                "answered": _hidden(card.text, "answered"),
+                "answer": CORRECT,
+            },
+        )
+
+    assert "Знайомими позначено 6000 найчастотніших слів" in card.text
+    assert "до 6000" in card.text
+    assert "Додати слова, яких ви не знали" not in card.text
+    page = await onboarding_client.get("/onboarding/result")
+    assert "Ваші відповіді (64)" in page.text
