@@ -1,7 +1,6 @@
 import asyncio
 import logging
 from dataclasses import dataclass
-from datetime import datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, Field
@@ -9,10 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.language.nlp import analyze
 from soltura.learner.models import LexemeStatus
-from soltura.learner.repository import SavedWord, get_learner_lemmas, get_saved_words
+from soltura.learner.repository import get_learner_lemmas
 from soltura.llm.client import LLMClient, LLMNotConfiguredError, LLMUnavailableError
 from soltura.practice.text import split_around
-from soltura.reading.service import save_tapped_word
 
 logger = logging.getLogger(__name__)
 
@@ -163,40 +161,5 @@ class InvalidLookup(Exception):
         self.problem = problem
 
 
-async def look_up_text(
-    session: AsyncSession, llm: LLMClient, learner_id: int, text: str
-) -> list[LineResult]:
-    lines = parse_words(text)
-    if not lines:
-        raise InvalidLookup(LookupProblem.EMPTY)
-    if len(lines) > MAX_WORDS:
-        raise InvalidLookup(LookupProblem.TOO_MANY)
-    return await look_up_words(session, llm, learner_id, lines)
-
-
 class InvalidAddForm(Exception):
     pass
-
-
-async def add_words(
-    session: AsyncSession,
-    learner_id: int,
-    lemmas: list[str],
-    sentences: list[str],
-    now: datetime,
-) -> list[str]:
-    pairs = list(zip(lemmas, sentences, strict=False))
-    if (
-        not 0 < len(lemmas) <= MAX_WORDS
-        or len(lemmas) != len(sentences)
-        or any(not 0 < len(lemma.strip()) <= MAX_LEMMA_LENGTH for lemma, _ in pairs)
-        or any(not 0 < len(sentence.strip()) <= MAX_SENTENCE_LENGTH for _, sentence in pairs)
-    ):
-        raise InvalidAddForm
-    for lemma, sentence in pairs:
-        await save_tapped_word(session, learner_id, lemma, sentence, now)
-    return [lemma.strip().lower() for lemma in lemmas]
-
-
-async def find_saved_words(session: AsyncSession, learner_id: int, search: str) -> list[SavedWord]:
-    return await get_saved_words(session, learner_id, search.strip())
