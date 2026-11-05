@@ -144,3 +144,14 @@ async def test_a_learner_who_passes_every_band_is_asked_all_of_them_and_offered_
     assert "Додати слова, яких ви не знали" not in card.text
     page = await onboarding_client.get("/onboarding/result")
     assert "Ваші відповіді (64)" in page.text
+
+
+async def test_a_corrupted_state_in_the_form_is_a_bad_request(
+    onboarding_client: AsyncClient,
+) -> None:
+    response = await onboarding_client.post(
+        "/onboarding/answer", data={"queue": "not json", "answered": "[]"}
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Bad onboarding state"}

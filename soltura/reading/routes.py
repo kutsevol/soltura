@@ -6,8 +6,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.db import get_session
-from soltura.learner.dependencies import current_learner
-from soltura.learner.models import Learner
+from soltura.learner.dependencies import LearnerDep, LearnerIdDep
 from soltura.llm.client import LLMClient, get_llm
 from soltura.reading.service import prepare_text, save_tapped_word, split_for_reading, tap_word
 from soltura.reading.topics import TOPICS
@@ -16,14 +15,7 @@ from soltura.templating import templates
 router = APIRouter(prefix="/reading")
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
-LearnerDep = Annotated[Learner, Depends(current_learner)]
 LLMDep = Annotated[LLMClient, Depends(get_llm)]
-
-
-def _learner_id(learner: Learner) -> int:
-    if learner.id is None:
-        raise ValueError("current_learner returned an unsaved learner")
-    return learner.id
 
 
 @router.get("", response_class=HTMLResponse)
@@ -66,13 +58,13 @@ async def new_text(
 async def tap(
     request: Request,
     session: SessionDep,
-    learner: LearnerDep,
+    learner_id: LearnerIdDep,
     llm: LLMDep,
     word: Annotated[str, Form()],
     sentence: Annotated[str, Form()],
     topic: Annotated[str, Form()] = "",
 ) -> HTMLResponse:
-    result = await tap_word(session, llm, _learner_id(learner), word, sentence, datetime.now(UTC))
+    result = await tap_word(session, llm, learner_id, word, sentence, datetime.now(UTC))
     return templates.TemplateResponse(
         request, "reading/gloss.html", {"result": result, "sentence": sentence, "topic": topic}
     )
@@ -82,12 +74,10 @@ async def tap(
 async def save(
     request: Request,
     session: SessionDep,
-    learner: LearnerDep,
+    learner_id: LearnerIdDep,
     lemma: Annotated[str, Form()],
     sentence: Annotated[str, Form()],
     topic: Annotated[str, Form()] = "",
 ) -> HTMLResponse:
-    await save_tapped_word(
-        session, _learner_id(learner), lemma, sentence, datetime.now(UTC), topic or None
-    )
+    await save_tapped_word(session, learner_id, lemma, sentence, datetime.now(UTC), topic or None)
     return templates.TemplateResponse(request, "reading/saved.html", {"lemma": lemma})

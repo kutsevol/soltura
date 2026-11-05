@@ -14,3 +14,13 @@ async def current_learner(session: Annotated[AsyncSession, Depends(get_session)]
     if telegram_user_id is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not logged in")
     return await get_or_create_learner(session, telegram_user_id)
+
+
+async def current_learner_id(learner: Annotated[Learner, Depends(current_learner)]) -> int:
+    if learner.id is None:
+        raise ValueError("current_learner returned an unsaved learner")
+    return learner.id
+
+
+LearnerDep = Annotated[Learner, Depends(current_learner)]
+LearnerIdDep = Annotated[int, Depends(current_learner_id)]

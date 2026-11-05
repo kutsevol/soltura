@@ -6,8 +6,8 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.db import get_session
-from soltura.learner.dependencies import current_learner
-from soltura.learner.models import Learner, LexemeStatus
+from soltura.learner.dependencies import LearnerIdDep
+from soltura.learner.models import LexemeStatus
 from soltura.learner.repository import get_saved_words
 from soltura.llm.client import LLMClient, get_llm
 from soltura.reading.service import save_tapped_word
@@ -19,7 +19,6 @@ from soltura.words.vocabulary import build_vocabulary_map
 router = APIRouter(prefix="/words")
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
-LearnerDep = Annotated[Learner, Depends(current_learner)]
 LLMDep = Annotated[LLMClient, Depends(get_llm)]
 
 STATUS_LABEL = {LexemeStatus.LEARNING: "Вивчаю", LexemeStatus.KNOWN: "Знаю"}
@@ -37,12 +36,6 @@ def due_label(due: datetime, now: datetime) -> str:
     return "зараз" if due <= now else due.astimezone(UTC).strftime("%d.%m.%Y")
 
 
-def _learner_id(learner: Learner) -> int:
-    if learner.id is None:
-        raise ValueError("current_learner returned an unsaved learner")
-    return learner.id
-
-
 def _message(request: Request, text: str) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
@@ -52,9 +45,9 @@ def _message(request: Request, text: str) -> HTMLResponse:
     )
 
 
-async def _words_context(session: AsyncSession, learner: Learner, search: str) -> dict[str, object]:
+async def _words_context(session: AsyncSession, learner_id: int, search: str) -> dict[str, object]:
     return {
-        "words": await get_saved_words(session, _learner_id(learner), search.strip()),
+        "words": await get_saved_words(session, learner_id, search.strip()),
         "search": search.strip(),
         "now": datetime.now(UTC),
         "due_label": due_label,
@@ -62,36 +55,36 @@ async def _words_context(session: AsyncSession, learner: Learner, search: str) -
     }
 
 
-async def _vocabulary(session: AsyncSession, learner: Learner) -> VocabularyView:
-    return vocabulary_view(await build_vocabulary_map(session, _learner_id(learner)))
+async def _vocabulary(session: AsyncSession, learner_id: int) -> VocabularyView:
+    return vocabulary_view(await build_vocabulary_map(session, learner_id))
 
 
 @router.get("", response_class=HTMLResponse)
 async def words_page(
-    request: Request, session: SessionDep, learner: LearnerDep, q: str = ""
+    request: Request, session: SessionDep, learner_id: LearnerIdDep, q: str = ""
 ) -> HTMLResponse:
     context = {
-        **await _words_context(session, learner, q),
-        "vocabulary": await _vocabulary(session, learner),
+        **await _words_context(session, learner_id, q),
+        "vocabulary": await _vocabulary(session, learner_id),
     }
     return templates.TemplateResponse(request, "words.html", context)
 
 
 @router.get("/map", response_class=HTMLResponse)
 async def vocabulary_map(
-    request: Request, session: SessionDep, learner: LearnerDep
+    request: Request, session: SessionDep, learner_id: LearnerIdDep
 ) -> HTMLResponse:
     return templates.TemplateResponse(
-        request, "words/map.html", {"vocabulary": await _vocabulary(session, learner)}
+        request, "words/map.html", {"vocabulary": await _vocabulary(session, learner_id)}
     )
 
 
 @router.get("/search", response_class=HTMLResponse)
 async def search_words(
-    request: Request, session: SessionDep, learner: LearnerDep, q: str = ""
+    request: Request, session: SessionDep, learner_id: LearnerIdDep, q: str = ""
 ) -> HTMLResponse:
     return templates.TemplateResponse(
-        request, "words/list.html", await _words_context(session, learner, q)
+        request, "words/list.html", await _words_context(session, learner_id, q)
     )
 
 
@@ -99,7 +92,7 @@ async def search_words(
 async def lookup_words(
     request: Request,
     session: SessionDep,
-    learner: LearnerDep,
+    learner_id: LearnerIdDep,
     llm: LLMDep,
     words: Annotated[str, Form()] = "",
 ) -> HTMLResponse:
@@ -108,7 +101,7 @@ async def lookup_words(
         return _message(request, "Введіть слово.")
     if len(lines) > MAX_WORDS:
         return _message(request, f"Не більше {MAX_WORDS} слів за раз.")
-    results = await look_up_words(session, llm, _learner_id(learner), lines)
+    results = await look_up_words(session, llm, learner_id, lines)
     return templates.TemplateResponse(
         request, "words/preview.html", {"results": results, "problem_label": PROBLEM_LABEL}
     )
@@ -118,7 +111,7 @@ async def lookup_words(
 async def add_words(
     request: Request,
     session: SessionDep,
-    learner: LearnerDep,
+    learner_id: LearnerIdDep,
     lemma: Annotated[list[str] | None, Form()] = None,
     sentence: Annotated[list[str] | None, Form()] = None,
 ) -> HTMLResponse:
@@ -133,7 +126,7 @@ async def add_words(
         return _message(request, "Не вдалося зберегти: перевірте слова й спробуйте ще раз.")
     now = datetime.now(UTC)
     for item, text in pairs:
-        await save_tapped_word(session, _learner_id(learner), item, text, now)
+        await save_tapped_word(session, learner_id, item, text, now)
     response = templates.TemplateResponse(
         request, "words/added.html", {"lemmas": [item.strip().lower() for item in lemmas]}
     )
