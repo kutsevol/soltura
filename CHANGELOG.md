@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.30.0 (2026-11-05)
+
+### Features
+
+- **onboarding**: Mark right answers known and offer the missed words for learning
+  ([#45](https://github.com/kutsevol/soltura/pull/45),
+  [`1b26acc`](https://github.com/kutsevol/soltura/commit/1b26acc17119473e50a47b79269db9fba5b331fa))
+
+
 ## v0.29.2 (2026-11-05)
 
 ### Bug Fixes
