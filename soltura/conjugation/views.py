@@ -4,6 +4,7 @@ from soltura.conjugation.forms import Person, Tense
 from soltura.conjugation.service import ConjugationItem, ConjugationResult
 from soltura.learner.models import Rating
 from soltura.practice.checking import SpanishCheck
+from soltura.practice.views import RATING_LABEL
 
 TENSE_LABEL = {
     Tense.PRESENT: "теперішній час · presente",
@@ -19,13 +20,6 @@ PRONOUN_LABEL = {
     Person.NOSOTROS: "nosotros",
     Person.VOSOTROS: "vosotros",
     Person.ELLOS: "ellos / ellas / ustedes",
-}
-
-RATING_LABEL = {
-    Rating.GOOD: "Правильно",
-    Rating.EASY: "Легко",
-    Rating.HARD: "Майже",
-    Rating.AGAIN: "Ще раз",
 }
 
 
