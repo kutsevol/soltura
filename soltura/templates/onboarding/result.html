@@ -16,20 +16,27 @@
 {% if again %}
   <a href="/onboarding" role="button" class="outline">Пройти знову</a>
 {% endif %}
+<details open>
+  <summary>Як це порахували</summary>
+  <ul>
+    {% for line in explanation %}
+      <li>{{ line }}</li>
+    {% endfor %}
+    <li>Тексти для читання пишуться для словника близько {{ reading_range }} слів.</li>
+    <li>{{ known_summary }}.</li>
+  </ul>
+</details>
 {% if result.words %}
-  <details>
+  <details open>
     <summary>Ваші відповіді ({{ result.words | length }})</summary>
-    <table>
-      <thead><tr><th>Слово</th><th>Ваша відповідь</th><th>Значення</th></tr></thead>
-      <tbody>
-        {% for word in result.words %}
-          <tr>
-            <td>{{ {"correct": "✓", "partly": "≈", "wrong": "✗"}[word.verdict] }} {{ word.target_form }}</td>
-            <td>{{ word.answer or "—" }}</td>
-            <td>{{ word.expected }}{% if word.verdict != "correct" and word.answer and word.reason %}<br><small class="note">{{ word.reason }}</small>{% endif %}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <ul class="answers">
+      {% for word in result.words %}
+        <li>
+          <strong>{{ {"correct": "✓", "partly": "≈", "wrong": "✗"}[word.verdict] }} {{ word.target_form }}</strong>
+          — {{ word.answer or "—" }}
+          <br><small class="note">Значення: {{ word.expected }}{% if word.verdict != "correct" and word.answer and word.reason %} · {{ word.reason }}{% endif %}</small>
+        </li>
+      {% endfor %}
+    </ul>
   </details>
 {% endif %}

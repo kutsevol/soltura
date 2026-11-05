@@ -15,6 +15,7 @@ from soltura.onboarding.service import (
     LEARN_BATCH,
     WORDS_PER_BAND,
     PlacementItem,
+    PlacementResult,
     apply_placement,
     band_scores,
     build_placement,
@@ -25,8 +26,12 @@ from soltura.onboarding.service import (
     score_placement,
     should_stop,
 )
+from soltura.onboarding.views import explanation
 from soltura.practice.text import split_around
+from soltura.reading.service import vocabulary_range
 from soltura.templating import templates
+from soltura.words.views import known_summary
+from soltura.words.vocabulary import build_vocabulary_map
 
 router = APIRouter(prefix="/onboarding")
 
@@ -71,6 +76,19 @@ async def _learn_context(session: AsyncSession, learner_id: int) -> dict[str, in
     return {"missed_total": len(missed), "missed_batch": min(len(missed), LEARN_BATCH)}
 
 
+async def _result_context(
+    session: AsyncSession, learner_id: int, result: PlacementResult
+) -> dict[str, Any]:
+    vocabulary = await build_vocabulary_map(session, learner_id)
+    return {
+        "result": result,
+        "explanation": explanation(result),
+        "reading_range": await vocabulary_range(session, learner_id),
+        "known_summary": known_summary(vocabulary),
+        **await _learn_context(session, learner_id),
+    }
+
+
 @router.get("", response_class=HTMLResponse)
 async def onboarding_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
@@ -87,7 +105,7 @@ async def result_page(
     result = await get_latest_placement(session, learner.id)
     if result is None:
         return RedirectResponse("/onboarding", status_code=status.HTTP_303_SEE_OTHER)
-    context = {"result": result, **await _learn_context(session, learner.id)}
+    context = await _result_context(session, learner.id, result)
     return templates.TemplateResponse(request, "onboarding/result_page.html", context)
 
 
@@ -144,5 +162,5 @@ async def answer(
         raise ValueError("current_learner returned an unsaved learner")
     result = await score_placement(llm, done)
     await apply_placement(session, learner.id, result)
-    context = {"result": result, **await _learn_context(session, learner.id)}
+    context = await _result_context(session, learner.id, result)
     return templates.TemplateResponse(request, "onboarding/result.html", context)
