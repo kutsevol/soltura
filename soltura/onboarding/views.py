@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-from soltura.onboarding.screens import ResultScreen
 from soltura.onboarding.service import (
     BANDS,
     PASS_SHARE,
@@ -11,6 +10,7 @@ from soltura.onboarding.service import (
     PlacementResult,
 )
 from soltura.practice.text import split_around
+from soltura.use_cases.onboarding import ResultScreen
 from soltura.words.views import known_summary
 
 

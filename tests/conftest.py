@@ -1,6 +1,7 @@
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
 import pytest
 from alembic import command
@@ -26,7 +27,9 @@ from soltura.learner.models import (
     UnitKind,
 )
 from soltura.learner.repository import save_placement_run
-from soltura.llm.client import get_llm
+from soltura.llm.client import Effort, SchemaT, get_llm
+from soltura.onboarding.service import BANDS, PlacementSentence, PlacementSentences
+from soltura.practice.checking import TranslationVerdict
 from soltura.reading.service import UNRANKED, GeneratedText
 from soltura.srs.service import save_word
 from tests.factories import (
@@ -289,3 +292,69 @@ def know(session: AsyncSession, learner: Learner) -> KnowFn:
         await session.flush()
 
     return mark
+
+
+CORRECT = "так"
+
+
+class JudgeByAnswer(FakeLLM):
+    # Judges a translation as correct when the learner typed CORRECT, so concurrent
+    # judging needs no particular call order.
+    async def __call__(
+        self,
+        schema: type[SchemaT],
+        system: str,
+        prompt: str,
+        effort: Effort,
+        max_tokens: int = 16_000,
+    ) -> SchemaT:
+        if schema is TranslationVerdict:
+            self.prompts.append(prompt)
+            verdict = "correct" if prompt.endswith(f"Learner's answer: {CORRECT}") else "wrong"
+            return cast(
+                SchemaT,
+                TranslationVerdict(verdict=verdict, reason="Пояснення", expected="значення"),
+            )
+        return await super().__call__(schema, system, prompt, effort, max_tokens)
+
+
+@pytest.fixture
+def judge() -> JudgeByAnswer:
+    return JudgeByAnswer()
+
+
+@pytest.fixture
+async def banded_lexemes(session: AsyncSession) -> list[Lexeme]:
+    # Ten nouns at the top of every band, two more than the test asks, plus a preposition
+    # per band that the
+    # placement must never pick.
+    lexemes = [
+        LexemeFactory.build(lemma=f"word{band}x{i}", pos="NOUN", frequency_rank=max_rank - i)
+        for band, (_, max_rank) in enumerate(BANDS)
+        for i in range(10)
+    ] + [
+        LexemeFactory.build(lemma=f"prep{band}", pos="ADP", frequency_rank=min_rank)
+        for band, (min_rank, _) in enumerate(BANDS)
+    ]
+    session.add_all(lexemes)
+    await session.flush()
+    return lexemes
+
+
+@pytest.fixture
+def sentenced(banded_lexemes: list[Lexeme], judge: JudgeByAnswer) -> None:
+    # The model's answer to the sentence request: one sentence and meaning per noun.
+    nouns = [lexeme.lemma for lexeme in banded_lexemes if lexeme.pos == "NOUN"]
+    judge.answer(
+        PlacementSentences(
+            sentences=[
+                PlacementSentence(
+                    lemma=lemma,
+                    sentence=f"Hoy veo {lemma}.",
+                    target_form=lemma,
+                    meaning=f"значення {lemma}",
+                )
+                for lemma in nouns
+            ]
+        )
+    )

@@ -4,6 +4,7 @@ from typing import cast
 from pydantic import BaseModel
 
 from soltura.llm.client import Effort, LLMClient, SchemaT
+from soltura.onboarding.service import WordResult
 from soltura.warmup.service import ContextSentence
 
 
@@ -71,3 +72,16 @@ RECOGNIZE_CONTEXT = ContextSentence(
     target_form="aunque",
     translation="Я виходжу гуляти, хоча холодно.",
 )
+
+
+def placement_word(lemma: str, verdict: str) -> WordResult:
+    return WordResult(
+        band=0,
+        lemma=lemma,
+        sentence=f"Hoy veo {lemma}.",
+        target_form=lemma,
+        answer="",
+        verdict=verdict,
+        reason="",
+        expected="значення",
+    )

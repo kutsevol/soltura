@@ -13,12 +13,10 @@ from soltura.learner.repository import (
     get_lexemes_by_lemmas,
     mark_known_up_to_rank,
     mark_lemmas_known,
-    sample_lexemes,
     save_placement_run,
 )
 from soltura.llm.client import LLMClient
 from soltura.practice.checking import KNOWN_WORD_JUDGE_SYSTEM, judge_translation
-from soltura.practice.text import split_around
 from soltura.srs.service import save_word
 
 logger = logging.getLogger(__name__)
@@ -114,48 +112,6 @@ class PlacementResult:
     known_rank: int
     bands: list[BandScore]
     words: list[WordResult] = field(default_factory=list)
-
-
-async def build_placement(session: AsyncSession, llm: LLMClient) -> list[PlacementItem]:
-    sampled: list[tuple[int, str]] = []
-    for band, (min_rank, max_rank) in enumerate(BANDS):
-        lexemes = await sample_lexemes(session, min_rank, max_rank, CONTENT_POS, SAMPLED_PER_BAND)
-        sampled.extend((band, lexeme.lemma) for lexeme in lexemes)
-    if not sampled:
-        return []
-
-    # One call for every sentence: separate calls would cost more and keep the learner
-    # waiting for the slowest of them.
-    numbered = "\n".join(f"{i}. {lemma}" for i, (_, lemma) in enumerate(sampled, start=1))
-    generated = await llm(
-        PlacementSentences, system=SENTENCES_SYSTEM, prompt=f"Words:\n{numbered}", effort="low"
-    )
-    by_lemma = {sentence.lemma.strip().lower(): sentence for sentence in generated.sentences}
-
-    items: list[PlacementItem] = []
-    for band, lemma in sampled:
-        sentence = by_lemma.get(lemma)
-        if sentence is None or split_around(sentence.sentence, sentence.target_form) is None:
-            logger.debug(f"No usable placement sentence for {lemma!r}")
-            continue
-        if not sentence.is_usable:
-            logger.debug(f"Placement word {lemma!r} is not a dictionary word")
-            continue
-        if sentence.target_form.lower() in {item.target_form.lower() for item in items}:
-            logger.debug(f"Placement word {sentence.target_form!r} is already asked")
-            continue
-        if sum(item.band == band for item in items) == WORDS_PER_BAND:
-            continue
-        items.append(
-            PlacementItem(
-                band=band,
-                lemma=lemma,
-                sentence=sentence.sentence,
-                target_form=sentence.target_form,
-                meaning=sentence.meaning,
-            )
-        )
-    return items
 
 
 async def judge_items(llm: LLMClient, items: list[PlacementItem]) -> list[PlacementItem]:
@@ -305,32 +261,6 @@ class Finished:
     result: PlacementResult
 
 
-async def answer_word(
-    session: AsyncSession,
-    llm: LLMClient,
-    learner_id: int,
-    queue: list[PlacementItem],
-    answered: list[PlacementItem],
-    answer: str,
-    give_up: bool,
-) -> NextWord | Finished:
-    if not queue:
-        raise NothingToAnswer
-    current, *rest = queue
-    done = [*answered, current.model_copy(update={"answer": "" if give_up else answer.strip()})]
-    if not rest or rest[0].band != current.band:
-        # A band is finished: judge it now, so a learner who has run out of known words
-        # is not asked the rarer bands.
-        done = await judge_items(llm, done)
-        if rest and should_stop(band_scores(done)):
-            rest = []
-    if rest:
-        return NextWord(queue=rest, answered=done)
-    result = await score_placement(llm, done)
-    await apply_placement(session, learner_id, result)
-    return Finished(result)
-
-
 @dataclass(frozen=True)
 class MissedSummary:
     total: int
@@ -346,8 +276,3 @@ class LearnOutcome:
 async def missed_summary(session: AsyncSession, learner_id: int) -> MissedSummary:
     missed = await missed_words(session, learner_id)
     return MissedSummary(total=len(missed), batch=min(len(missed), LEARN_BATCH))
-
-
-async def learn_from_result(session: AsyncSession, learner_id: int, now: datetime) -> LearnOutcome:
-    added, _ = await learn_missed_words(session, learner_id, now)
-    return LearnOutcome(added=added, missed=await missed_summary(session, learner_id))

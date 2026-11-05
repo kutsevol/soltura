@@ -1,4 +1,3 @@
-from soltura.onboarding.screens import ResultScreen
 from soltura.onboarding.service import (
     BANDS,
     BandScore,
@@ -9,6 +8,7 @@ from soltura.onboarding.service import (
     WordResult,
 )
 from soltura.onboarding.views import card_view, explanation, learn_view, result_view
+from soltura.use_cases.onboarding import ResultScreen
 from soltura.words.vocabulary import BandProgress, VocabularyMap
 
 
