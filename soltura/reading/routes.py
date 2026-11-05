@@ -8,9 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from soltura.db import get_session
 from soltura.learner.dependencies import LearnerDep, LearnerIdDep
 from soltura.llm.client import LLMClient, get_llm
-from soltura.reading.service import prepare_text, save_tapped_word, split_for_reading, tap_word
 from soltura.reading.topics import TOPICS
+from soltura.reading.views import split_for_reading
 from soltura.templating import templates
+from soltura.use_cases.reading import prepare_text, save_tapped_word, tap_word
 
 router = APIRouter(prefix="/reading")
 

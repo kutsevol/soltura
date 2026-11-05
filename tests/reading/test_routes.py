@@ -12,8 +12,8 @@ from soltura.learner.models import Learner, Lexeme
 from soltura.llm.client import LLMClient, get_llm
 from soltura.reading.service import Gloss
 from soltura.reading.topics import TOPICS
+from tests.conftest import EASY_TEXT, KnowFn
 from tests.fakes import FakeLLM
-from tests.reading.conftest import EASY_TEXT, KnowFn
 
 
 async def test_the_reading_page_renders(reading_client: AsyncClient) -> None:

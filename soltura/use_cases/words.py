@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.learner.repository import SavedWord, get_saved_words
 from soltura.llm.client import LLMClient
-from soltura.reading.service import save_tapped_word
+from soltura.use_cases.reading import save_tapped_word
 from soltura.words.service import (
     MAX_LEMMA_LENGTH,
     MAX_SENTENCE_LENGTH,

@@ -15,21 +15,14 @@ from soltura.learner.models import (
     ReviewSource,
 )
 from soltura.learner.repository import get_recent_titles, save_placement_run, save_reading_text
-from soltura.reading.service import (
-    UNRANKED,
-    GeneratedText,
-    Gloss,
-    prepare_text,
-    save_tapped_word,
-    split_for_reading,
-    tap_word,
-)
+from soltura.reading.service import UNRANKED, GeneratedText, Gloss
 from soltura.reading.topics import TOPICS
 from soltura.reading.variation import FORMS, NAMES
 from soltura.srs.service import save_word
+from soltura.use_cases.reading import prepare_text, save_tapped_word, tap_word
+from tests.conftest import EASY_TEXT, HARD_TEXT, KnowFn, RankFn
 from tests.factories import LexemeFactory
 from tests.fakes import FakeLLM
-from tests.reading.conftest import EASY_TEXT, HARD_TEXT, KnowFn, RankFn
 
 NOW = datetime(2026, 10, 31, 12, 0, tzinfo=UTC)
 
@@ -289,15 +282,6 @@ async def test_saving_a_lemma_the_seed_never_ranked_adds_it_unranked(
     ).scalar_one()
     assert lexeme.frequency_rank == UNRANKED
     assert {card.lexeme_id for card in cards} == {lexeme.id}
-
-
-def test_split_for_reading_keeps_each_word_with_its_sentence() -> None:
-    paragraphs = split_for_reading("Ayer fue al médico. ¿Qué te dijo?\n\nNada, todo bien.")
-
-    sentences = [["".join(s.text for s in sentence).strip() for sentence in p] for p in paragraphs]
-    assert sentences == [["Ayer fue al médico.", "¿Qué te dijo?"], ["Nada, todo bien."]]
-    words = [s.text for s in paragraphs[0][1] if s.is_word]
-    assert words == ["Qué", "te", "dijo"]
 
 
 async def test_simplification_names_only_the_rarest_words_over_the_budget(
