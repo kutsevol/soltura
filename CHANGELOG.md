@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.29.2 (2026-11-05)
+
+### Bug Fixes
+
+- **onboarding**: Judge known words by any sense, pass a band at 60%
+  ([#44](https://github.com/kutsevol/soltura/pull/44),
+  [`34665f3`](https://github.com/kutsevol/soltura/commit/34665f3da1242b8f8f9638f1d209996c8a0063a5))
+
+
 ## v0.29.1 (2026-11-05)
 
 ### Bug Fixes
