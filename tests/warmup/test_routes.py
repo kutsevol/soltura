@@ -6,8 +6,7 @@ from sqlmodel import select
 
 from soltura.learner.models import KnowledgeType, MemoryCard, ReviewLog, ReviewSource
 from soltura.practice.checking import TranslationVerdict
-from tests.fakes import FakeLLM
-from tests.warmup.test_service import RECALL_CONTEXT, RECOGNIZE_CONTEXT
+from tests.fakes import RECALL_CONTEXT, RECOGNIZE_CONTEXT, FakeLLM
 
 
 def _hidden(html: str, name: str) -> str:
