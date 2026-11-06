@@ -247,7 +247,9 @@ async def test_card_progress_counts_the_answers_of_each_card_of_one_kind(
             (other_learner.id, "ser_estar|e1", 30.0),
         )
     )
-    word = MemoryCardFactory.build(learner_id=learner.id, unit_kind=UnitKind.WORD)
+    word = MemoryCardFactory.build(
+        learner_id=learner.id, unit_kind=UnitKind.WORD, unit_key="7", lexeme_id=None
+    )
     session.add_all([answered, untouched, theirs, word])
     await session.flush()
     assert answered.id is not None and theirs.id is not None
