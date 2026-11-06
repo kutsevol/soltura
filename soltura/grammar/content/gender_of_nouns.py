@@ -7,7 +7,7 @@ UNIT = GrammarUnit(
     title="Рід іменників: el чи la",
     lesson=Lesson(
         points=(
-            "В іспанській два роди: чоловічий (el, un) і жіночий (la, una). Середнього роду немає.",
+            "В іспанській два роди: чоловічий (el, un) і жіночий (la, una). Середнього роду в іменників немає.",
             "Іменники на -o здебільшого чоловічого роду (el libro), на -a жіночого (la casa).",
             "Закінчення -ción, -sión, -dad, -tad, -tud майже завжди жіночого роду: la estación, la ciudad.",
             "Винятки, які треба запам’ятати: el día, el mapa, el problema, el idioma, el tema (чоловічий рід) і la mano, la foto, la moto (жіночий).",
@@ -59,7 +59,7 @@ UNIT = GrammarUnit(
             id="e5",
             sentence="___ leche está en la nevera.",
             translation="Молоко в холодильнику.",
-            options=(),
+            options=("el", "la"),
             answer="la",
             note="В українській «молоко» середнього роду, а leche жіночого: la leche.",
         ),
