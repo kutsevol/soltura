@@ -139,3 +139,30 @@ async def test_a_broken_queue_is_a_bad_request(learner_client: AsyncClient) -> N
     response = await learner_client.post("/grammar/next", data={"queue": "not json"})
 
     assert response.status_code == 400
+
+
+async def test_the_progress_page_is_empty_for_a_new_learner(learner_client: AsyncClient) -> None:
+    page = await learner_client.get("/grammar/progress")
+
+    assert page.status_code == 200
+    assert "Ще немає розпочатих правил" in page.text
+
+
+async def test_the_progress_page_shows_a_started_unit_after_an_answer(
+    learner_client: AsyncClient,
+) -> None:
+    card = await _start(learner_client, FIRST.id)
+    await _answer(learner_client, card, "", give_up=True)
+
+    page = await learner_client.get("/grammar/progress")
+
+    assert f'<a href="/grammar/units/{FIRST.id}">{FIRST.title}</a>' in page.text
+    assert "Відповідей: 1, правильних: 0%" in page.text
+    assert f"У пам’яті: 0 з {len(FIRST.exercises)}" in page.text
+    assert f"Ще не розпочато правил: {len(all_units()) - 1}" in page.text
+
+
+async def test_the_grammar_page_links_to_the_progress(learner_client: AsyncClient) -> None:
+    page = await learner_client.get("/grammar")
+
+    assert '<a href="/grammar/progress">' in page.text

@@ -8,6 +8,8 @@ from soltura.grammar.service import (
     SESSION_SIZE,
     ExerciseResult,
     GrammarItem,
+    GrammarProgress,
+    build_progress,
     check_exercise,
 )
 from soltura.grammar.units import (
@@ -19,7 +21,7 @@ from soltura.grammar.units import (
     unit_keys,
 )
 from soltura.learner.models import KnowledgeType, MemoryCard, ReviewSource, UnitKind
-from soltura.learner.repository import get_unit_keys
+from soltura.learner.repository import get_card_progress, get_unit_keys
 from soltura.srs.service import due_queue, review, schedule_units
 
 
@@ -92,3 +94,7 @@ async def answer_exercise(
     return ExerciseResult(
         rating=rating, check=check, expected=exercise.answer, note=exercise.note, unit_id=unit.id
     )
+
+
+async def grammar_progress(session: AsyncSession, learner_id: int) -> GrammarProgress:
+    return build_progress(await get_card_progress(session, learner_id, UnitKind.GRAMMAR))

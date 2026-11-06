@@ -17,6 +17,7 @@ from soltura.learner.models import (
 from soltura.srs.service import schedule_units
 from soltura.use_cases.grammar import (
     answer_exercise,
+    grammar_progress,
     grammar_state,
     next_lesson,
     start_unit,
@@ -193,3 +194,35 @@ async def test_a_card_of_someone_else_or_of_another_kind_cannot_be_answered(
         await answer_exercise(session, learner.id, conjugation.id, "es", 1000, NOW)
     with pytest.raises(PermissionError):
         await answer_exercise(session, learner.id, 999_999, "es", 1000, NOW)
+
+
+async def test_a_new_learner_has_no_progress_and_every_unit_not_started(
+    session: AsyncSession, learner: Learner
+) -> None:
+    assert learner.id is not None
+
+    progress = await grammar_progress(session, learner.id)
+
+    assert progress.units == []
+    assert progress.not_started == len(all_units())
+
+
+async def test_progress_lists_the_started_units_with_their_answers_and_solid_cards(
+    session: AsyncSession, learner: Learner
+) -> None:
+    assert learner.id is not None
+    await start_unit(session, learner.id, FIRST.id, NOW)
+    cards = {card.unit_key: card for card in await _grammar_cards(session)}
+    first, second = (cards[key] for key in unit_keys(FIRST)[:2])
+    assert first.id is not None and second.id is not None
+    await answer_exercise(session, learner.id, first.id, FIRST.exercises[0].answer, 1000, NOW)
+    await answer_exercise(session, learner.id, first.id, "x", 1000, NOW)
+    await answer_exercise(session, learner.id, second.id, "x", 1000, NOW)
+
+    progress = await grammar_progress(session, learner.id)
+
+    assert progress.not_started == len(all_units()) - 1
+    [unit] = progress.units
+    assert unit.unit == FIRST
+    assert (unit.answers, unit.right, unit.solid) == (3, 1, 0)
+    assert unit.next_due == min(card.due for card in await _grammar_cards(session))
