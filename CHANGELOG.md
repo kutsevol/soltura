@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.32.0 (2026-11-06)
+
+### Features
+
+- **grammar**: Add the A2 nouns and pronouns units
+  ([#61](https://github.com/kutsevol/soltura/pull/61),
+  [`6b66c48`](https://github.com/kutsevol/soltura/commit/6b66c48ec37af39be0ce7da4e400cbb11284a9d9))
+
+
 ## v0.31.0 (2026-11-05)
 
 ### Features
