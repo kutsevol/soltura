@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.33.0 (2026-11-06)
+
+### Features
+
+- **grammar**: Show progress per grammar unit ([#62](https://github.com/kutsevol/soltura/pull/62),
+  [`d50a8e9`](https://github.com/kutsevol/soltura/commit/d50a8e9d3470cfe7134f1ef6bd5542f27f1f52b6))
+
+
 ## v0.32.0 (2026-11-06)
 
 ### Features
