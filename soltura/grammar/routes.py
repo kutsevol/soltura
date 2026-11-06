@@ -9,12 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from soltura.db import get_session
 from soltura.grammar.service import GrammarItem
 from soltura.grammar.units import get_unit
-from soltura.grammar.views import card_view, lesson_view, result_view
+from soltura.grammar.views import card_view, lesson_view, progress_view, result_view
 from soltura.learner.dependencies import LearnerIdDep
 from soltura.templating import templates
 from soltura.use_cases.grammar import (
     GrammarState,
     answer_exercise,
+    grammar_progress,
     grammar_state,
     next_lesson,
     start_unit,
@@ -56,6 +57,18 @@ async def grammar_page(
     request: Request, session: SessionDep, learner_id: LearnerIdDep
 ) -> HTMLResponse:
     return _page(request, await grammar_state(session, learner_id, datetime.now(UTC)))
+
+
+@router.get("/progress", response_class=HTMLResponse)
+async def progress_page(
+    request: Request, session: SessionDep, learner_id: LearnerIdDep
+) -> HTMLResponse:
+    progress = await grammar_progress(session, learner_id)
+    return templates.TemplateResponse(
+        request,
+        "grammar/progress.html",
+        {"progress": progress_view(progress, datetime.now(UTC))},
+    )
 
 
 @router.get("/units/{unit_id}", response_class=HTMLResponse)

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Прогрес у граматиці · Soltura{% endblock %}
+{% block heading %}Прогрес у граматиці{% endblock %}
+
+{% block content %}
+  {% for row in progress.rows %}
+    <article>
+      <h3><a href="/grammar/units/{{ row.unit_id }}">{{ row.title }}</a></h3>
+      <p class="note">{{ row.level }}</p>
+      <p>{{ row.answers_text }}</p>
+      <p>{{ row.memory_text }} · {{ row.due_text }}</p>
+    </article>
+  {% else %}
+    <article>
+      <p>Ще немає розпочатих правил.</p>
+      <a href="/grammar" role="button">До першого правила</a>
+    </article>
+  {% endfor %}
+  {% if progress.rows and progress.not_started %}
+    <p class="note">Ще не розпочато правил: {{ progress.not_started }}.</p>
+  {% endif %}
+  <p><a href="/grammar">До вправ</a></p>
+{% endblock %}

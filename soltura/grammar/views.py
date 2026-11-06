@@ -1,7 +1,8 @@
 import random
 from dataclasses import dataclass
+from datetime import datetime
 
-from soltura.grammar.service import ExerciseResult, GrammarItem
+from soltura.grammar.service import ExerciseResult, GrammarItem, GrammarProgress, UnitProgress
 from soltura.grammar.units import GAP, Example, GrammarUnit, get_unit
 from soltura.practice.checking import SpanishCheck
 from soltura.practice.views import RATING_LABEL
@@ -85,4 +86,51 @@ def result_view(result: ExerciseResult, answer: str) -> ResultView:
         expected=result.expected,
         note=result.note,
         lesson_href=f"/grammar/units/{result.unit_id}",
+    )
+
+
+@dataclass(frozen=True)
+class ProgressRow:
+    unit_id: str
+    title: str
+    level: str
+    answers_text: str
+    memory_text: str
+    due_text: str
+
+
+@dataclass(frozen=True)
+class ProgressView:
+    rows: list[ProgressRow]
+    not_started: int
+
+
+def _progress_row(progress: UnitProgress, now: datetime) -> ProgressRow:
+    unit = progress.unit
+    if progress.answers:
+        answers_text = (
+            f"Відповідей: {progress.answers}, правильних: "
+            f"{round(100 * progress.right / progress.answers)}%"
+        )
+    else:
+        answers_text = "Ще без відповідей"
+    due_text = (
+        "Є що повторити"
+        if progress.next_due <= now
+        else f"Наступне повторення: {progress.next_due:%d.%m}"
+    )
+    return ProgressRow(
+        unit_id=unit.id,
+        title=unit.title,
+        level=LEVEL_LABEL[unit.level],
+        answers_text=answers_text,
+        memory_text=f"У пам’яті: {progress.solid} з {len(unit.exercises)}",
+        due_text=due_text,
+    )
+
+
+def progress_view(progress: GrammarProgress, now: datetime) -> ProgressView:
+    return ProgressView(
+        rows=[_progress_row(unit, now) for unit in progress.units],
+        not_started=progress.not_started,
     )

@@ -19,7 +19,9 @@ from soltura.learner.models import (
     LexemeStatus,
     MemoryCard,
     PlacementRun,
+    Rating,
     ReadingText,
+    ReviewLog,
     UnitKind,
     WordContext,
 )
@@ -110,6 +112,50 @@ async def get_unit_keys(session: AsyncSession, learner_id: int, unit_kind: UnitK
         )
     )
     return set(result.scalars())
+
+
+@dataclass(frozen=True)
+class CardProgress:
+    unit_key: str
+    stability: float | None
+    due: datetime
+    answers: int
+    right: int
+
+
+async def get_card_progress(
+    session: AsyncSession, learner_id: int, unit_kind: UnitKind
+) -> list[CardProgress]:
+    stats = (
+        select(
+            col(ReviewLog.card_id).label("card_id"),
+            func.count().label("answers"),
+            func.count()
+            .filter(col(ReviewLog.rating).in_((Rating.GOOD, Rating.EASY)))
+            .label("right"),
+        )
+        .group_by(col(ReviewLog.card_id))
+        .subquery()
+    )
+    result = await session.execute(
+        select(
+            MemoryCard,
+            func.coalesce(stats.c.answers, 0),
+            func.coalesce(stats.c.right, 0),
+        )
+        .outerjoin(stats, stats.c.card_id == col(MemoryCard.id))
+        .where(
+            col(MemoryCard.learner_id) == learner_id,
+            col(MemoryCard.unit_kind) == unit_kind,
+            col(MemoryCard.unit_key).is_not(None),
+        )
+        .order_by(col(MemoryCard.id))
+    )
+    return [
+        CardProgress(card.unit_key, card.stability, card.due, answers, right)
+        for card, answers, right in result.all()
+        if card.unit_key is not None
+    ]
 
 
 async def count_unreviewed_cards(

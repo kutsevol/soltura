@@ -10,11 +10,15 @@ from soltura.learner.models import (
     Lexeme,
     LexemeOrigin,
     LexemeStatus,
+    Rating,
+    ReviewLog,
+    ReviewSource,
     UnitKind,
 )
 from soltura.learner.repository import (
     BandCounts,
     count_due_cards,
+    get_card_progress,
     get_due_cards,
     get_latest_placement_run,
     get_lexemes_by_lemmas,
@@ -221,3 +225,54 @@ async def test_marking_lemmas_known_leaves_words_already_in_the_model_alone(
         )
     ).all()
     assert dict(rows) == {"ser": LexemeStatus.KNOWN, "estar": LexemeStatus.LEARNING}
+
+
+async def test_card_progress_counts_the_answers_of_each_card_of_one_kind(
+    session: AsyncSession, learner: Learner, other_learner: Learner
+) -> None:
+    assert learner.id is not None and other_learner.id is not None
+    answered, untouched, theirs = (
+        MemoryCardFactory.build(
+            learner_id=learner_id,
+            unit_kind=UnitKind.GRAMMAR,
+            unit_key=key,
+            lexeme_id=None,
+            knowledge_type=KnowledgeType.RECALL,
+            stability=stability,
+            due=datetime(2026, 11, 5, tzinfo=UTC),
+        )
+        for learner_id, key, stability in (
+            (learner.id, "ser_estar|e1", 9.5),
+            (learner.id, "ser_estar|e2", None),
+            (other_learner.id, "ser_estar|e1", 30.0),
+        )
+    )
+    word = MemoryCardFactory.build(
+        learner_id=learner.id, unit_kind=UnitKind.WORD, unit_key="7", lexeme_id=None
+    )
+    session.add_all([answered, untouched, theirs, word])
+    await session.flush()
+    assert answered.id is not None and theirs.id is not None
+    session.add_all(
+        ReviewLog(
+            card_id=card_id,
+            rating=rating,
+            source=ReviewSource.GRAMMAR,
+            reviewed_at=datetime(2026, 11, 5, tzinfo=UTC),
+        )
+        for card_id, rating in (
+            (answered.id, Rating.GOOD),
+            (answered.id, Rating.HARD),
+            (answered.id, Rating.AGAIN),
+            (answered.id, Rating.EASY),
+            (theirs.id, Rating.GOOD),
+        )
+    )
+    await session.flush()
+
+    progress = await get_card_progress(session, learner.id, UnitKind.GRAMMAR)
+
+    assert [(card.unit_key, card.stability, card.answers, card.right) for card in progress] == [
+        ("ser_estar|e1", 9.5, 4, 2),
+        ("ser_estar|e2", None, 0, 0),
+    ]
