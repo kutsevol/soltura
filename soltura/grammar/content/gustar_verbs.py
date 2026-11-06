@@ -9,7 +9,7 @@ UNIT = GrammarUnit(
         points=(
             "Gustar значить «подобатися»: подобається те, що є підметом, а людина стоїть у непрямому додатку: me gusta el café — мені подобається кава.",
             "Me, te, le, nos, os, les показують, кому подобається. Gusta чи gustan узгоджується з тим, що подобається: me gusta el libro, me gustan los libros.",
-            "Коли подобається дія і далі йде інфінітив, завжди gusta: me gusta leer, me gusta leer y escribir.",
+            "Коли подобається дія і далі йде інфінітив (навіть два), зазвичай gusta: me gusta leer, me gusta leer y escribir.",
             "Так само працюють encantar (дуже подобатися), interesar, doler: me encanta Madrid, me duelen los pies.",
             "Хто саме — додаємо a mí, a ti, a él, a nosotros або ім’я, але me, te, le, nos, os, les залишаються обов’язковими: a Juan le gusta el fútbol.",
         ),
@@ -41,7 +41,7 @@ UNIT = GrammarUnit(
             translation="Мені подобається їздити потягом.",
             options=("gusta", "gustan"),
             answer="gusta",
-            note="Коли далі йде інфінітив, завжди gusta.",
+            note="Коли далі йде інфінітив, зазвичай gusta.",
         ),
         Exercise(
             id="e3",

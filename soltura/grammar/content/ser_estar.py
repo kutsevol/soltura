@@ -26,8 +26,8 @@ UNIT = GrammarUnit(
     exercises=(
         Exercise(
             id="e1",
-            sentence="Mi madre ___ de Kyiv.",
-            translation="Моя мама з Києва.",
+            sentence="Mi madre ___ de Ucrania.",
+            translation="Моя мама з України.",
             options=("es", "está"),
             answer="es",
             note="Походження — це ser.",
@@ -58,11 +58,11 @@ UNIT = GrammarUnit(
         ),
         Exercise(
             id="e5",
-            sentence="Mi hermano ___ muy alto.",
-            translation="Мій брат дуже високий.",
+            sentence="Mi hermano ___ ingeniero.",
+            translation="Мій брат інженер.",
             options=(),
             answer="es",
-            note="Характеристика людини — це ser.",
+            note="Професія — це ser.",
         ),
         Exercise(
             id="e6",

@@ -10,7 +10,7 @@ UNIT = GrammarUnit(
             "Коли прямий додаток — конкретна людина (або тварина, яку ми любимо як людину), перед ним стоїть a: veo a María, llamo a mi madre, quiero a mi perro.",
             "Перед речами a немає: veo la casa, busco mi llave.",
             "Коли tener значить «мати» (родичів, друзів), особове a не ставимо: tengo dos hermanos.",
-            "З alguien, nadie, quién особове a обов’язкове: no veo a nadie, ¿a quién ves?",
+            "З alguien, nadie, quién особове a зазвичай потрібне: no conozco a nadie, ¿a quién ves? Після hay його немає: no hay nadie.",
             "A + el зливається в al: conozco al nuevo profesor.",
             "Не плутайте з a, що означає напрямок: voy a casa.",
         ),
@@ -58,11 +58,11 @@ UNIT = GrammarUnit(
         ),
         Exercise(
             id="e5",
-            sentence="No veo ___ nadie.",
-            translation="Я нікого не бачу.",
+            sentence="No conozco ___ nadie aquí.",
+            translation="Тут я нікого не знаю.",
             options=(),
             answer="a",
-            note="З nadie особове a обов’язкове.",
+            note="З nadie особове a зазвичай потрібне.",
         ),
         Exercise(
             id="e6",
@@ -70,7 +70,7 @@ UNIT = GrammarUnit(
             translation="Я дуже люблю свого пса.",
             options=(),
             answer="a",
-            note="Тварину, яку любимо, називаємо з a, як людину.",
+            note="Домашню тварину, яку любимо, зазвичай називаємо з a, як людину.",
         ),
     ),
 )

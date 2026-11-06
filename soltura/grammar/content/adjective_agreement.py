@@ -8,8 +8,8 @@ UNIT = GrammarUnit(
     lesson=Lesson(
         points=(
             "Прикметник узгоджується з іменником у роді й числі: un chico alto, una chica alta, unos chicos altos, unas chicas altas.",
-            "Більшість прикметників на -e та на приголосну мають одну форму для обох родів: un coche grande, una casa grande, un examen difícil, una prueba difícil. Виняток — прикметники на -or: trabajador, trabajadora.",
-            "Назви національностей на приголосну в жіночому роді отримують -a: español — española, alemán — alemana.",
+            "Більшість прикметників на -e та на -l, -z мають одну форму для обох родів: un coche grande, una casa grande, un examen difícil, una prueba difícil. Порівняльні mejor, peor, mayor, menor теж не змінюються.",
+            "Прикметники на -or, -ón, -án, -ín і назви національностей на приголосну мають жіночу форму на -a: trabajador — trabajadora, español — española. Письмовий наголос зникає: alemán — alemana, francés — francesa.",
             "Прикметник зазвичай стоїть після іменника: una casa grande. Але bueno і malo перед чоловічим іменником в однині скорочуються: un buen amigo, un mal día.",
             "Якщо іменники різного роду, прикметник стоїть у чоловічому множині: un chico y una chica simpáticos.",
         ),

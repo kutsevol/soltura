@@ -11,7 +11,7 @@ UNIT = GrammarUnit(
             "Займенники: me, te, lo, la, nos, os, los, las. Lo, la, los, las узгоджуються з тим, що замінюють, у роді й числі.",
             "Займенник стоїть перед відмінюваним дієсловом: la veo, no lo sé. З інфінітивом він пишеться разом з ним (voy a verla, quiero comprarlo) або стоїть перед першим дієсловом (la voy a ver, lo quiero comprar).",
             "Lo може замінювати цілу думку: ¿sabes que Ana viene? — sí, lo sé.",
-            "В Іспанії про чоловіка часто кажуть le (le veo), і це припустимо; про речі тільки lo, la. Тут вчимо lo.",
+            "В Іспанії про чоловіка часто кажуть le (le veo), і це припустимо; про речі та про жінок тільки lo, la, los, las. Тут вчимо lo.",
         ),
         examples=(
             Example(spanish="¿El pan? Lo compro cada día.", ukrainian="Хліб? Я купую його щодня."),

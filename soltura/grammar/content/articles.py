@@ -8,11 +8,11 @@ UNIT = GrammarUnit(
     lesson=Lesson(
         points=(
             "Означений артикль (el, la, los, las) стоїть, коли обидва знають, про що мова: el libro que compré. Неозначений (un, una, unos, unas) — коли річ нова або одна з багатьох: compré un libro.",
-            "Після hay стоїть неозначений артикль, числівник або жодного артикля, ніколи el: hay un parque, hay parques.",
-            "Після ser професія й національність зазвичай без артикля: soy médica, es ucraniano. Коли професію описує прикметник після іменника, артикль зазвичай потрібен: es una médica muy buena.",
+            "Після hay зазвичай стоїть неозначений артикль, числівник або жодного артикля, а не el: hay un parque, hay parques.",
+            "Після ser професія й національність зазвичай без артикля: soy médica, es ucraniano. Якщо людину оцінюють (bueno, excelente), додаємо un чи una: es una médica excelente.",
             "Мову після hablar, estudiar, aprender зазвичай називаємо без артикля: hablo español. Як підмет мова з артиклем: el español es fácil.",
-            "Los lunes — щопонеділка; el lunes — у конкретний понеділок, наприклад цього.",
-            "Перед жіночим іменником з наголошеним a- стоїть el: el agua fría, але las aguas.",
+            "Los lunes — щопонеділка; el lunes — якийсь один конкретний понеділок.",
+            "Перед жіночим іменником з наголошеним a- стоїть el, а прикметник лишається жіночим: el agua fría, але las aguas.",
         ),
         examples=(
             Example(spanish="Soy médica.", ukrainian="Я лікарка."),
@@ -38,11 +38,11 @@ UNIT = GrammarUnit(
         ),
         Exercise(
             id="e2",
-            sentence="Es ___ médica muy buena.",
-            translation="Вона дуже хороша лікарка.",
-            options=("(без артикля)", "una"),
-            answer="una",
-            note="Коли професію описує прикметник після іменника, артикль зазвичай потрібен.",
+            sentence="En mi ciudad hay ___ museos muy buenos.",
+            translation="У моєму місті є дуже хороші музеї.",
+            options=("(без артикля)", "los"),
+            answer="(без артикля)",
+            note="Після hay зазвичай без артикля: hay museos.",
         ),
         Exercise(
             id="e3",
@@ -50,7 +50,7 @@ UNIT = GrammarUnit(
             translation="По понеділках я працюю вдома.",
             options=("el", "los"),
             answer="los",
-            note="Los lunes означає «щопонеділка»; el lunes — лише цього понеділка.",
+            note="Los lunes — щопонеділка; el lunes — один конкретний понеділок.",
         ),
         Exercise(
             id="e4",

@@ -7,7 +7,7 @@ UNIT = GrammarUnit(
     title="este, ese, aquel: цей, той, он той",
     lesson=Lesson(
         points=(
-            "Este, esta — близько до мене; ese, esa — близько до співрозмовника або не дуже далеко; aquel, aquella — далеко від обох.",
+            "В Іспанії розрізняють три ступені: este, esta — близько до мене; ese, esa — близько до співрозмовника; aquel, aquella — далеко від обох. У багатьох країнах Латинської Америки ese означає і далекий предмет, а aquel рідкісне.",
             "Вони узгоджуються: este libro, esta casa, estos libros, estas casas; ese, esa, esos, esas; aquel, aquella, aquellos, aquellas.",
             "Коли іменник пропущено, але відомо, про що мова, кажемо este, esta, ese: esta es mi hermana. Esto, eso, aquello — коли не знаємо, що це, або про цілу ситуацію: ¿qué es esto?, eso es verdad.",
             "З часом: este año, esta semana, esta noche — цього року, цього тижня, сьогодні ввечері.",
@@ -45,7 +45,7 @@ UNIT = GrammarUnit(
             translation="Цей будинок мій, той — мого сусіда, а он той, далеко в глибині, — моїх батьків.",
             options=("esa", "aquella"),
             answer="aquella",
-            note="Найдалі від обох — aquella.",
+            note="В Іспанії найдалі від обох — aquella.",
         ),
         Exercise(
             id="e4",
@@ -59,7 +59,7 @@ UNIT = GrammarUnit(
             id="e5",
             sentence="___ año voy a estudiar más.",
             translation="Цього року буду вчитися більше.",
-            options=(),
+            options=("este", "esta"),
             answer="este",
             note="Año чоловічого роду: este año.",
         ),
@@ -67,7 +67,7 @@ UNIT = GrammarUnit(
             id="e6",
             sentence="¿Me das ___ botella que tienes ahí?",
             translation="Даси мені ту пляшку, що в тебе там?",
-            options=(),
+            options=("esta", "esa"),
             answer="esa",
             note="Пляшка біля співрозмовника (ahí) — esa.",
         ),

@@ -7,8 +7,8 @@ from soltura.practice.checking import SpanishCheck
 
 CHOICE = Exercise(
     id="e1",
-    sentence="Mi madre ___ de Kyiv.",
-    translation="Моя мама з Києва.",
+    sentence="Mi madre ___ de Ucrania.",
+    translation="Моя мама з України.",
     options=("es", "está"),
     answer="es",
     note="Походження — це ser.",
