@@ -9,7 +9,7 @@ UNIT = GrammarUnit(
         points=(
             "Para — мета і напрямок: для чого, для кого, до якого терміну. Para + інфінітив означає «щоб».",
             "Por — причина, засіб, ціна й обмін, частина доби, місце, через яке проходять.",
-            "Gracias por... — дякую за...: після подяки завжди por.",
+            "Gracias por... — дякую за...: після подяки por; а gracias a означає «завдяки».",
             "Por la mañana, por la tarde, por la noche — вранці, після обіду, ввечері.",
         ),
         examples=(
@@ -51,17 +51,17 @@ UNIT = GrammarUnit(
         ),
         Exercise(
             id="e4",
-            sentence="Hablamos ___ teléfono.",
-            translation="Ми говоримо по телефону.",
+            sentence="Paseamos ___ el parque.",
+            translation="Ми гуляємо парком.",
             options=("por", "para"),
             answer="por",
-            note="Засіб зв’язку — це por.",
+            note="Місце, через яке проходять чи де рухаються, — це por.",
         ),
         Exercise(
             id="e5",
             sentence="Necesito el informe ___ el viernes.",
             translation="Мені потрібен звіт до п’ятниці.",
-            options=(),
+            options=("por", "para"),
             answer="para",
             note="Термін («до п’ятниці») — це para.",
         ),
