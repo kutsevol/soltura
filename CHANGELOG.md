@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.34.0 (2026-11-07)
+
+### Features
+
+- **grammar**: Add the A2 verbs and sentences units
+  ([#63](https://github.com/kutsevol/soltura/pull/63),
+  [`7659a85`](https://github.com/kutsevol/soltura/commit/7659a85a3addde2c08752b8be3a6b5bdf004aff2))
+
+
 ## v0.33.0 (2026-11-06)
 
 ### Features
