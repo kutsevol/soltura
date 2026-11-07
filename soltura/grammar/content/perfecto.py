@@ -1,0 +1,75 @@
+from soltura.grammar.units import Example, Exercise, GrammarUnit, Lesson
+
+UNIT = GrammarUnit(
+    id="perfecto",
+    level="A2",
+    order=130,
+    title="Pretérito perfecto: he comido",
+    lesson=Lesson(
+        points=(
+            "Perfecto складається з haber і дієприкметника: he comido, has comido, ha comido, hemos comido, habéis comido, han comido.",
+            "Дієприкметник: -ar → -ado (hablar → hablado); -er і -ir → -ido (comer → comido, vivir → vivido).",
+            "Неправильні: hacer → hecho, ver → visto, escribir → escrito, decir → dicho, abrir → abierto, poner → puesto, volver → vuelto.",
+            "Haber і дієприкметник стоять разом, займенник перед haber: ya lo he visto.",
+            "У більшості регіонів Іспанії perfecto кажуть про час, що ще триває (hoy, esta semana, este año), і про досвід: hoy he trabajado mucho, ¿has estado en Sevilla? В Латинській Америці й подекуди в Іспанії тут частіше indefinido: hoy trabajé. Для вчора й торік — indefinido (наступні уроки).",
+            "Ya — вже, todavía no — ще не: ya he comido, todavía no he comido.",
+        ),
+        examples=(
+            Example(spanish="Hoy he trabajado mucho.", ukrainian="Сьогодні я багато працював."),
+            Example(spanish="¿Has estado en Sevilla?", ukrainian="Ти бував у Севільї?"),
+            Example(spanish="Mi madre ha hecho una tarta.", ukrainian="Мама спекла пиріг."),
+            Example(spanish="Todavía no hemos comido.", ukrainian="Ми ще не їли."),
+            Example(spanish="Ya lo he visto.", ukrainian="Я це вже бачив."),
+        ),
+    ),
+    exercises=(
+        Exercise(
+            id="e1",
+            sentence="Hoy yo ___ comido pronto.",
+            translation="Сьогодні я поїв рано.",
+            options=("he", "ha"),
+            answer="he",
+            note="Підмет yo, тому he.",
+        ),
+        Exercise(
+            id="e2",
+            sentence="Mis padres ___ viajado a Italia este año.",
+            translation="Мої батьки цього року подорожували до Італії.",
+            options=("han", "hemos"),
+            answer="han",
+            note="Mis padres — вони, тому han.",
+        ),
+        Exercise(
+            id="e3",
+            sentence="Tú ___ visto esa película, ¿verdad?",
+            translation="Ти ж бачив цей фільм?",
+            options=("has", "he"),
+            answer="has",
+            note="Підмет tú, тому has.",
+        ),
+        Exercise(
+            id="e4",
+            sentence="Hoy he ___ la cena.",
+            translation="Сьогодні я приготував вечерю.",
+            options=("hecho", "hacido"),
+            answer="hecho",
+            note="Hacer має неправильний дієприкметник: hecho.",
+        ),
+        Exercise(
+            id="e5",
+            sentence="Yo todavía no ___ escrito el correo de hoy.",
+            translation="Я ще не написав сьогоднішнього листа.",
+            options=(),
+            answer="he",
+            note="Підмет yo, тому he.",
+        ),
+        Exercise(
+            id="e6",
+            sentence="Mi hermana ha ___ (abrir) la ventana.",
+            translation="Моя сестра відчинила вікно.",
+            options=(),
+            answer="abierto",
+            note="Abrir має неправильний дієприкметник: abierto.",
+        ),
+    ),
+)
