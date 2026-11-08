@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.35.0 (2026-11-08)
+
+### Features
+
+- **grammar**: Add the B1 subjunctive, conditions and pluperfect units
+  ([#65](https://github.com/kutsevol/soltura/pull/65),
+  [`b86876b`](https://github.com/kutsevol/soltura/commit/b86876b23ee5bde0366f30028d3597bbb6c6b830))
+
+
 ## v0.34.0 (2026-11-07)
 
 ### Features
