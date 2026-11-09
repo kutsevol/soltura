@@ -15,7 +15,7 @@ WEB = sorted(path for path in SOLTURA.rglob("*.py") if path.name in WEB_FILES)
 LOWER_LAYER = re.compile(r"^soltura\.\w+\.(service|repository|vocabulary)$")
 # The features: each has its own folder with a service of its own. Shared foundations
 # (learner, language, llm, practice, srs, db) are not features.
-FEATURES = ("conjugation", "grammar", "home", "onboarding", "reading", "warmup", "words")
+FEATURES = ("conjugation", "grammar", "home", "onboarding", "reading", "warmup", "words", "writing")
 # Only the web layer may import the use cases; everything else sits below them.
 MAY_IMPORT_USE_CASES = WEB_FILES
 
