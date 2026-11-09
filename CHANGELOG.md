@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.40.0 (2026-11-09)
+
+### Features
+
+- **writing**: Count words written correctly as reviews
+  ([#70](https://github.com/kutsevol/soltura/pull/70),
+  [`344b148`](https://github.com/kutsevol/soltura/commit/344b14898a8f0214e1994d04a116b17817f1e0c2))
+
+
 ## v0.39.0 (2026-11-09)
 
 ### Features
