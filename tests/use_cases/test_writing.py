@@ -4,7 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from soltura.learner.models import ErrorKind, Learner
 from soltura.learner.repository import get_errors_for_entries, get_journal_entries
 from soltura.llm.client import LLMUnavailableError
-from soltura.use_cases.writing import submit_entry
+from soltura.use_cases.writing import HISTORY_SIZE, journal_history, submit_entry
+from soltura.writing.prompts import PROMPTS
 from soltura.writing.service import Correction, FoundError, InvalidText, TextProblem
 from tests.fakes import FakeLLM
 
@@ -25,12 +26,12 @@ async def test_a_submitted_text_is_saved_with_its_errors(
         )
     )
 
-    result = await submit_entry(session, llm, learner.id, "  Una nota  ", f"  {TEXT}\n")
+    result = await submit_entry(session, llm, learner.id, PROMPTS[0], f"  {TEXT}\n")
 
     entries = await get_journal_entries(session, learner.id, limit=5)
     errors = await get_errors_for_entries(session, [result.entry_id])
     assert [(entry.id, entry.prompt, entry.body, entry.corrected) for entry in entries] == [
-        (result.entry_id, "Una nota", TEXT, FIXED)
+        (result.entry_id, PROMPTS[0], TEXT, FIXED)
     ]
     assert [(error.kind, error.unit_id, error.original) for error in errors[result.entry_id]] == [
         (ErrorKind.GRAMMAR, "ser_estar", "Yo soy")
@@ -65,3 +66,61 @@ async def test_a_model_failure_saves_nothing(
         await submit_entry(session, llm, learner.id, None, TEXT)
 
     assert await get_journal_entries(session, learner.id, limit=5) == []
+
+
+async def test_a_prompt_that_is_not_one_of_the_tasks_is_not_stored(
+    session: AsyncSession, learner: Learner, llm: FakeLLM
+) -> None:
+    assert learner.id is not None
+    llm.answer(Correction(corrected_text=TEXT, errors=[]))
+
+    result = await submit_entry(session, llm, learner.id, "forged task", TEXT)
+
+    assert result.prompt is None
+
+
+async def test_a_newline_counts_once_toward_the_length_limit(
+    session: AsyncSession, learner: Learner, llm: FakeLLM
+) -> None:
+    assert learner.id is not None
+    text = "\r\n".join(["a" * 99] * 10)
+    llm.answer(Correction(corrected_text=text, errors=[]))
+
+    result = await submit_entry(session, llm, learner.id, None, text)
+
+    assert result.body == "\n".join(["a" * 99] * 10)
+
+
+@pytest.mark.parametrize(
+    ("length", "accepted"), [(19, False), (20, True), (1_000, True), (1_001, False)]
+)
+async def test_the_length_limits_are_inclusive(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, length: int, accepted: bool
+) -> None:
+    assert learner.id is not None
+    text = "a" * length
+    llm.answer(Correction(corrected_text=text, errors=[]))
+
+    if accepted:
+        await submit_entry(session, llm, learner.id, None, text)
+    else:
+        with pytest.raises(InvalidText):
+            await submit_entry(session, llm, learner.id, None, text)
+
+
+async def test_the_history_is_the_newest_texts_of_this_learner_only(
+    session: AsyncSession, learner: Learner, other_learner: Learner, llm: FakeLLM
+) -> None:
+    assert learner.id is not None and other_learner.id is not None
+    for number in range(HISTORY_SIZE + 2):
+        text = f"{TEXT} {number}"
+        llm.answer(Correction(corrected_text=text, errors=[]))
+        await submit_entry(session, llm, learner.id, None, text)
+    llm.answer(Correction(corrected_text=TEXT, errors=[]))
+    await submit_entry(session, llm, other_learner.id, None, TEXT)
+
+    history = await journal_history(session, learner.id)
+
+    assert [entry.body for entry in history] == [
+        f"{TEXT} {number}" for number in range(HISTORY_SIZE + 1, 1, -1)
+    ]

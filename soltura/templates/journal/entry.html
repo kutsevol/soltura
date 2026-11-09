@@ -1,0 +1,12 @@
+<p class="diff">{% for segment in entry.segments %}{% if segment.kind == "removed" %}<del>{{ segment.text }}</del>{% elif segment.kind == "added" %}<ins>{{ segment.text }}</ins>{% else %}{{ segment.text }}{% endif %}{% endfor %}</p>
+{% if entry.errors %}
+  <ul class="answers">
+    {% for error in entry.errors %}
+      <li>
+        <span class="note">{{ error.kind }}</span><br>
+        <del>{{ error.original }}</del> → <ins>{{ error.corrected or "—" }}</ins><br>
+        {{ error.note }}
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}

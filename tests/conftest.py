@@ -100,6 +100,14 @@ async def learner(session: AsyncSession) -> Learner:
 
 
 @pytest.fixture
+async def other_learner(session: AsyncSession) -> Learner:
+    learner = LearnerFactory.build()
+    session.add(learner)
+    await session.flush()
+    return learner
+
+
+@pytest.fixture
 async def lexemes(session: AsyncSession) -> list[Lexeme]:
     lexemes = [
         LexemeFactory.build(lemma=lemma, frequency_rank=rank)

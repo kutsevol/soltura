@@ -12,7 +12,6 @@ from soltura.llm.client import LLMClient
 
 MIN_LENGTH = 20
 MAX_LENGTH = 1_000
-MAX_PROMPT_LENGTH = 200
 
 # Error kinds the model may name besides a grammar unit id.
 OTHER_KINDS = {kind.value: kind for kind in ErrorKind if kind != ErrorKind.GRAMMAR}

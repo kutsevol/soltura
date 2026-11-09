@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Щоденник · Soltura{% endblock %}
+{% block heading %}Щоденник{% endblock %}
+
+{% block content %}
+  <article>
+    <form hx-post="/journal" hx-target="#result" hx-indicator="#loading">
+      <label>
+        Завдання
+        <select name="prompt">
+          <option value="">Вільна тема</option>
+          {% for prompt in prompts %}
+            <option value="{{ prompt }}">{{ prompt }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        Ваш текст іспанською
+        <textarea name="text" rows="6" maxlength="1000" required></textarea>
+      </label>
+      <button type="submit">Перевірити</button>
+      <span id="loading" class="htmx-indicator" aria-busy="true">Перевіряю текст…</span>
+    </form>
+  </article>
+
+  <article id="result" aria-live="polite"></article>
+
+  {% if history %}
+    <h2>Попередні тексти</h2>
+    {% for entry in history %}
+      <details>
+        <summary>{{ entry.date }} · {{ entry.prompt }} · {{ entry.summary }}</summary>
+        {% include "journal/entry.html" %}
+      </details>
+    {% endfor %}
+  {% endif %}
+{% endblock %}
