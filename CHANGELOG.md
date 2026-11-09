@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.44.0 (2026-11-09)
+
+### Features
+
+- **study**: Lead each module back to the session
+  ([#75](https://github.com/kutsevol/soltura/pull/75),
+  [`613f0d3`](https://github.com/kutsevol/soltura/commit/613f0d3875c3914e8351fe85c1f62f0e09dea261))
+
+
 ## v0.43.0 (2026-11-09)
 
 ### Features
