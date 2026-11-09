@@ -21,8 +21,15 @@ from soltura.learner.repository import (
     save_journal_entry,
 )
 from soltura.llm.client import LLMUnavailableError
+from soltura.reading.topics import TOPICS
 from soltura.srs.service import save_word
-from soltura.use_cases.writing import HISTORY_SIZE, error_summary, journal_history, submit_entry
+from soltura.use_cases.writing import (
+    HISTORY_SIZE,
+    error_summary,
+    journal_history,
+    session_prompt,
+    submit_entry,
+)
 from soltura.writing.prompts import PROMPTS
 from soltura.writing.service import Correction, FoundError, InvalidText, TextProblem
 from tests.conftest import RankFn
@@ -97,6 +104,23 @@ async def test_a_prompt_that_is_not_one_of_the_tasks_is_not_stored(
     result = await submit_entry(session, llm, learner.id, "forged task", TEXT, NOW)
 
     assert result.prompt is None
+
+
+async def test_the_retelling_prompt_of_a_topic_is_stored_with_the_entry(
+    session: AsyncSession, learner: Learner, llm: FakeLLM
+) -> None:
+    assert learner.id is not None
+    prompt = session_prompt(TOPICS[0].label)
+    assert prompt is not None
+    llm.answer(Correction(corrected_text=TEXT, errors=[]))
+
+    result = await submit_entry(session, llm, learner.id, prompt, TEXT, NOW)
+
+    assert result.prompt == prompt
+
+
+def test_only_a_topic_that_is_offered_has_a_retelling_prompt() -> None:
+    assert session_prompt("forged topic") is None
 
 
 async def test_a_newline_counts_once_toward_the_length_limit(

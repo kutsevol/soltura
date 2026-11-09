@@ -23,6 +23,24 @@ async def test_the_reading_page_renders(reading_client: AsyncClient) -> None:
     assert 'hx-post="/reading/text"' in response.text
 
 
+async def test_a_topic_label_in_the_address_starts_the_text_for_that_topic(
+    reading_client: AsyncClient,
+) -> None:
+    response = await reading_client.get("/reading", params={"topic": TOPICS[1].label})
+
+    assert 'hx-trigger="load"' in response.text
+    assert json.dumps({"topic": TOPICS[1].prompt}) in response.text.replace("&#34;", '"')
+
+
+@pytest.mark.parametrize("params", [{}, {"topic": "forged topic"}])
+async def test_without_a_known_topic_in_the_address_no_text_starts_by_itself(
+    reading_client: AsyncClient, params: dict[str, str]
+) -> None:
+    response = await reading_client.get("/reading", params=params)
+
+    assert 'hx-trigger="load"' not in response.text
+
+
 async def test_a_new_text_comes_back_with_every_word_tappable(
     reading_client: AsyncClient, llm: FakeLLM, know: KnowFn
 ) -> None:

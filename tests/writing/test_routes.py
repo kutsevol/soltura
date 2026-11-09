@@ -1,7 +1,8 @@
 from httpx import AsyncClient
 
 from soltura.llm.client import LLMUnavailableError
-from soltura.writing.prompts import PROMPTS
+from soltura.reading.topics import TOPICS
+from soltura.writing.prompts import PROMPTS, retelling_prompt
 from soltura.writing.service import Correction, FoundError
 from tests.fakes import FakeLLM
 
@@ -27,6 +28,18 @@ async def test_the_journal_page_offers_the_tasks_and_a_free_topic(
     assert all(prompt in page.text for prompt in PROMPTS)
     assert 'hx-target="#result"' in page.text
     assert "Попередні тексти" not in page.text
+
+
+async def test_a_session_topic_in_the_address_selects_the_retelling_prompt(
+    learner_client: AsyncClient,
+) -> None:
+    label = TOPICS[0].label
+
+    page = await learner_client.get("/journal", params={"topic": label})
+
+    assert f'<option value="{retelling_prompt(label)}" selected>' in page.text
+    assert retelling_prompt(label) not in (await learner_client.get("/journal")).text
+    assert retelling_prompt(label) not in (await learner_client.get("/journal?topic=forged")).text
 
 
 async def test_a_text_with_a_mistake_shows_the_diff_and_a_note_per_error(

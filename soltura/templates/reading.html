@@ -27,6 +27,11 @@
     </form>
   </article>
 
+  {% if auto_topic %}
+    <span hx-post="/reading/text" hx-trigger="load" hx-target="#text" hx-indicator="#loading"
+          hx-vals='{{ {"topic": auto_topic} | tojson }}'></span>
+  {% endif %}
+
   <article id="text" aria-live="polite"></article>
   <article id="gloss" aria-live="polite"></article>
 {% endblock %}

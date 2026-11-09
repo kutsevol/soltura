@@ -15,8 +15,9 @@ from soltura.learner.repository import (
     save_journal_entry,
 )
 from soltura.llm.client import LLMClient
+from soltura.reading.topics import TOPICS
 from soltura.srs.service import review
-from soltura.writing.prompts import PROMPTS
+from soltura.writing.prompts import PROMPTS, retelling_prompt
 from soltura.writing.service import (
     ErrorCategory,
     Segment,
@@ -28,6 +29,9 @@ from soltura.writing.service import (
 )
 
 HISTORY_SIZE = 10
+# The tasks the code wrote: the fixed ones and, for a study session, one per reading topic.
+RETELLING_PROMPTS = {topic.label: retelling_prompt(topic.label) for topic in TOPICS}
+KNOWN_PROMPTS = {*PROMPTS, *RETELLING_PROMPTS.values()}
 
 
 @dataclass(frozen=True)
@@ -53,7 +57,7 @@ async def submit_entry(
     check_length(body)
     units = {unit.id: unit.title for unit in all_units()}
     result = await correct_text(llm, body, units)
-    prompt = prompt if prompt in PROMPTS else None
+    prompt = prompt if prompt in KNOWN_PROMPTS else None
     entry = await save_journal_entry(
         session, learner_id, prompt, body, result.corrected, result.errors
     )
@@ -89,6 +93,10 @@ async def review_written_words(
     # classification of an error is not reliable enough to lower a card.
     for card in cards:
         await review(session, card, Rating.GOOD, ReviewSource.WRITING, now)
+
+
+def session_prompt(topic: str) -> str | None:
+    return RETELLING_PROMPTS.get(topic)
 
 
 async def journal_history(session: AsyncSession, learner_id: int) -> list[JournalResult]:

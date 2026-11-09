@@ -10,6 +10,9 @@
         Завдання
         <select name="prompt">
           <option value="">Вільна тема</option>
+          {% if session_prompt %}
+            <option value="{{ session_prompt }}" selected>{{ session_prompt }}</option>
+          {% endif %}
           {% for prompt in prompts %}
             <option value="{{ prompt }}">{{ prompt }}</option>
           {% endfor %}
