@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.42.0 (2026-11-09)
+
+### Features
+
+- **study**: Add the session screen and a hub button
+  ([#73](https://github.com/kutsevol/soltura/pull/73),
+  [`24d5aec`](https://github.com/kutsevol/soltura/commit/24d5aecbb76a10799df60abd987eb81857de1660))
+
+
 ## v0.41.0 (2026-11-09)
 
 ### Documentation
