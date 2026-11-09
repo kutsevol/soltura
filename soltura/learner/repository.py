@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import and_, case, func, literal, literal_column
+from sqlalchemy import and_, case, func, literal, literal_column, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -25,6 +25,8 @@ from soltura.learner.models import (
     Rating,
     ReadingText,
     ReviewLog,
+    StudySession,
+    StudyStep,
     UnitKind,
     WordContext,
 )
@@ -508,3 +510,46 @@ async def get_saved_words(
         SavedWord(lemma, status, recognize_due, recall_due, sentences[lexeme_id])
         for lexeme_id, lemma, status, recognize_due, recall_due in rows
     ]
+
+
+async def start_study_session(
+    session: AsyncSession, learner_id: int, topic: str, now: datetime
+) -> StudySession:
+    # A learner has one open session: starting another ends whatever was still open. The
+    # learner row is locked so two starts at once (a double tap) take turns, and the
+    # partial unique index on open sessions backs it up.
+    await session.execute(select(Learner.id).where(col(Learner.id) == learner_id).with_for_update())
+    await session.execute(
+        update(StudySession)
+        .where(col(StudySession.learner_id) == learner_id, col(StudySession.finished_at).is_(None))
+        .values(finished_at=now)
+    )
+    study = StudySession(learner_id=learner_id, topic=topic, started_at=now)
+    session.add(study)
+    await session.flush()
+    return study
+
+
+async def get_open_study_session(
+    session: AsyncSession, learner_id: int, started_since: datetime
+) -> StudySession | None:
+    result = await session.execute(
+        select(StudySession)
+        .where(
+            col(StudySession.learner_id) == learner_id,
+            col(StudySession.finished_at).is_(None),
+            col(StudySession.started_at) >= started_since,
+        )
+        .order_by(col(StudySession.started_at).desc(), col(StudySession.id).desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+async def set_study_step(
+    session: AsyncSession, study: StudySession, step: StudyStep, now: datetime
+) -> None:
+    study.step = step
+    if step == StudyStep.DONE:
+        study.finished_at = now
+    await session.flush()
