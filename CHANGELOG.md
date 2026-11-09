@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.38.0 (2026-11-09)
+
+### Features
+
+- **writing**: Add the journal screen ([#68](https://github.com/kutsevol/soltura/pull/68),
+  [`7fd9745`](https://github.com/kutsevol/soltura/commit/7fd97456419b85415a3325622b039d8cd2add41e))
+
+
 ## v0.37.0 (2026-11-09)
 
 ### Features
