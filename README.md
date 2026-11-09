@@ -50,6 +50,8 @@ The single source of truth about the learner:
 4. **Output:** writing or speaking on the topic of the input.
 5. **Fluency:** quick work on already familiar material.
 
+Built so far: a study session of four steps on one topic (warm-up, reading, grammar, writing) and a summary, started from the hub. The grammar step is the next lesson or the exercises due rather than a rule picked from the text, and the fluency step waits for material the learner already knows.
+
 ## Assessment and motivation
 
 - Every session: small checks without grades.
