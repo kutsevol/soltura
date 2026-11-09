@@ -69,6 +69,7 @@ class ReviewSource(StrEnum):
     READING_TAP = "reading_tap"
     CONJUGATION = "conjugation"
     GRAMMAR = "grammar"
+    WRITING = "writing"
 
 
 class ErrorKind(StrEnum):

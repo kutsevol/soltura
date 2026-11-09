@@ -8,6 +8,7 @@ from soltura.writing.service import (
     build_error_summary,
     correct_text,
     diff_segments,
+    words_written_correctly,
 )
 from tests.fakes import FakeLLM
 
@@ -156,3 +157,20 @@ def test_a_frequent_spelling_error_ranks_above_a_rarer_unit() -> None:
     summary = build_error_summary(errors, UNIT_TITLES)
 
     assert [(c.kind, c.count) for c in summary] == [(ErrorKind.SPELLING, 3), (ErrorKind.GRAMMAR, 1)]
+
+
+def test_words_inside_an_error_fragment_are_not_counted_as_written_right() -> None:
+    errors = [JournalError(ErrorKind.GRAMMAR, "ser_estar", "Yo soy", "Estoy", "")]
+
+    lemmas = words_written_correctly("Yo soy cansado porque trabajo mucho.", errors)
+
+    assert {"cansar", "trabajar", "mucho"} <= lemmas
+    assert not {"ser", "yo"} & lemmas
+
+
+def test_a_word_is_matched_by_its_form_when_the_fragment_gives_it_another_lemma() -> None:
+    errors = [JournalError(ErrorKind.VOCABULARY, None, "vino", "vinho", "")]
+
+    lemmas = words_written_correctly("Quiero vino", errors)
+
+    assert lemmas == {"querer"}

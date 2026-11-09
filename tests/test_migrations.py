@@ -108,7 +108,7 @@ def test_undoing_the_review_source_migration_drops_the_conjugation_reviews(
 
         command.upgrade(config, "head")
         assert asyncio.run(_run(database_url, values)) == [
-            ("{warmup,reading_tap,conjugation,grammar}",)
+            ("{warmup,reading_tap,conjugation,grammar,writing}",)
         ]
     finally:
         command.downgrade(config, "base")
@@ -141,7 +141,42 @@ def test_undoing_the_grammar_migration_drops_the_grammar_reviews(database_url: s
 
         command.upgrade(config, "head")
         assert asyncio.run(_run(database_url, values)) == [
+            ("{warmup,reading_tap,conjugation,grammar,writing}",)
+        ]
+    finally:
+        command.downgrade(config, "base")
+        command.upgrade(config, "head")
+
+
+def test_undoing_the_writing_migration_drops_the_writing_reviews(database_url: str) -> None:
+    config = _alembic_config(database_url)
+    sources = "SELECT source::text FROM review_log"
+    values = "SELECT enum_range(NULL::review_source)::text"
+    try:
+        asyncio.run(
+            _run(
+                database_url,
+                "INSERT INTO learner (id, telegram_user_id) VALUES (1, 1)",
+                """
+                INSERT INTO memory_card (learner_id, unit_kind, unit_key, knowledge_type, due)
+                VALUES (1, 'word', '1', 'recall', now())
+                """,
+                "INSERT INTO review_log (card_id, rating, source, reviewed_at) "
+                "SELECT id, 'good', 'writing'::review_source, now() FROM memory_card",
+                "INSERT INTO review_log (card_id, rating, source, reviewed_at) "
+                "SELECT id, 'good', 'warmup'::review_source, now() FROM memory_card",
+            )
+        )
+
+        command.downgrade(config, "0008")
+        assert asyncio.run(_run(database_url, sources)) == [("warmup",)]
+        assert asyncio.run(_run(database_url, values)) == [
             ("{warmup,reading_tap,conjugation,grammar}",)
+        ]
+
+        command.upgrade(config, "head")
+        assert asyncio.run(_run(database_url, values)) == [
+            ("{warmup,reading_tap,conjugation,grammar,writing}",)
         ]
     finally:
         command.downgrade(config, "base")
