@@ -12,6 +12,7 @@ class HubView:
     conjugation_due: int
     grammar_status: str
     placement_rank: int | None
+    study_topic: str | None
 
 
 def _grammar_status(summary: HubSummary) -> str:
@@ -30,4 +31,5 @@ def hub_view(summary: HubSummary) -> HubView:
         conjugation_due=summary.conjugation_due,
         grammar_status=_grammar_status(summary),
         placement_rank=summary.placement_rank,
+        study_topic=summary.study.topic if summary.study else None,
     )

@@ -12,6 +12,8 @@ from soltura.learner.repository import (
 from soltura.reading.topics import TOPICS
 from soltura.study.service import OPEN_FOR, next_step
 
+TOPIC_LABELS = [topic.label for topic in TOPICS]
+
 
 @dataclass(frozen=True)
 class StudyProgress:
@@ -26,7 +28,7 @@ def _progress(study: StudySession) -> StudyProgress:
 async def start_session(
     session: AsyncSession, learner_id: int, topic: str, now: datetime
 ) -> StudyProgress:
-    if topic not in {known.label for known in TOPICS}:
+    if topic not in TOPIC_LABELS:
         raise LookupError(f"No reading topic {topic}")
     study = await start_study_session(session, learner_id, topic, now)
     progress = _progress(study)

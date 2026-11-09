@@ -19,6 +19,7 @@ from soltura.llm.client import LLMNotConfiguredError, LLMUnavailableError
 from soltura.onboarding.routes import router as onboarding_router
 from soltura.pages.routes import router as pages_router
 from soltura.reading.routes import router as reading_router
+from soltura.study.routes import router as study_router
 from soltura.templating import STATIC_DIR, templates
 from soltura.warmup.routes import router as warmup_router
 from soltura.words.routes import router as words_router
@@ -66,6 +67,7 @@ def create_app() -> FastAPI:
     app.include_router(conjugation_router)
     app.include_router(grammar_router)
     app.include_router(journal_router)
+    app.include_router(study_router)
     app.include_router(words_router)
     app.include_router(onboarding_router)
 
