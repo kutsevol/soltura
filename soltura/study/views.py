@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from urllib.parse import quote
 
 from soltura.learner.models import StudyStep
 from soltura.study.service import STEPS
@@ -10,10 +11,14 @@ STEP_CONTENT: dict[StudyStep, tuple[str, str, str]] = {
     StudyStep.READING: (
         "Читання",
         "Текст за темою сесії; тапніть слово, щоб побачити переклад і зберегти",
-        "/reading",
+        "/reading?topic={topic}",
     ),
     StudyStep.GRAMMAR: ("Граматика", "Правило або вправи, які пора повторити", "/grammar"),
-    StudyStep.WRITING: ("Письмо", "Кілька речень іспанською за темою сесії", "/journal"),
+    StudyStep.WRITING: (
+        "Письмо",
+        "Кілька речень іспанською за темою сесії",
+        "/journal?topic={topic}",
+    ),
 }
 
 
@@ -33,9 +38,11 @@ class StudyView:
     current: StepView
 
 
-def landing_href(step: StudyStep) -> str:
+def landing_href(step: StudyStep, topic: str) -> str:
     # Where a step is carried out; a finished session has no screen but the session page.
-    return STEP_CONTENT[step][2] if step in STEP_CONTENT else SESSION_HREF
+    return (
+        STEP_CONTENT[step][2].format(topic=quote(topic)) if step in STEP_CONTENT else SESSION_HREF
+    )
 
 
 def study_view(topic: str, current: StudyStep) -> StudyView:
@@ -45,7 +52,7 @@ def study_view(topic: str, current: StudyStep) -> StudyView:
             step=step.value,
             label=STEP_CONTENT[step][0],
             purpose=STEP_CONTENT[step][1],
-            href=STEP_CONTENT[step][2],
+            href=landing_href(step, topic),
             state="done" if index < order else "current" if index == order else "upcoming",
         )
         for index, step in enumerate(STEPS)

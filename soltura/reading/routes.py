@@ -20,8 +20,15 @@ LLMDep = Annotated[LLMClient, Depends(get_llm)]
 
 
 @router.get("", response_class=HTMLResponse)
-async def reading_page(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(request, "reading.html", {"topics": TOPICS})
+async def reading_page(request: Request, topic: str = "") -> HTMLResponse:
+    # A study session sends the learner here with the label of its topic, and the text
+    # for it starts on its own.
+    chosen = next((known for known in TOPICS if known.label == topic), None)
+    return templates.TemplateResponse(
+        request,
+        "reading.html",
+        {"topics": TOPICS, "auto_topic": chosen.prompt if chosen else None},
+    )
 
 
 @router.post("/text", response_class=HTMLResponse)

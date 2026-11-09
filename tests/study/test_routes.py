@@ -1,8 +1,11 @@
+from urllib.parse import quote
+
 from httpx import AsyncClient
 
 from soltura.reading.topics import TOPICS
 
 TOPIC = TOPICS[0].label
+READING = f"/reading?topic={quote(TOPIC)}"
 
 
 async def _start(client: AsyncClient) -> None:
@@ -54,10 +57,10 @@ async def test_skipping_moves_to_the_next_step_and_opens_its_screen(
 
     response = await learner_client.post("/study/next", data={"step": "warmup"})
 
-    assert (response.status_code, response.headers["location"]) == (303, "/reading")
+    assert (response.status_code, response.headers["location"]) == (303, READING)
     page = await learner_client.get("/study")
     assert '<li class="done">' in page.text
-    assert 'href="/reading" role="button">Відкрити' in page.text
+    assert f'href="{READING}" role="button">Відкрити' in page.text
 
 
 async def test_a_second_tap_on_the_same_step_does_not_skip_another(
@@ -68,7 +71,7 @@ async def test_a_second_tap_on_the_same_step_does_not_skip_another(
     await learner_client.post("/study/next", data={"step": "warmup"})
     again = await learner_client.post("/study/next", data={"step": "warmup"})
 
-    assert again.headers["location"] == "/reading"
+    assert again.headers["location"] == READING
 
 
 async def test_leaving_the_last_step_ends_the_session(learner_client: AsyncClient) -> None:

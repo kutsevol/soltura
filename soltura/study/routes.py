@@ -40,7 +40,7 @@ async def start(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Unknown topic"
         ) from error
-    return _redirect(landing_href(progress.step))
+    return _redirect(landing_href(progress.step, progress.topic))
 
 
 @router.post("/next")
@@ -51,4 +51,4 @@ async def next_step(
         progress = await advance_session(session, learner_id, step, datetime.now(UTC))
     except LookupError:
         return _redirect(SESSION_HREF)
-    return _redirect(landing_href(progress.step))
+    return _redirect(landing_href(progress.step, progress.topic))

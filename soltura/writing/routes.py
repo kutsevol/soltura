@@ -9,7 +9,12 @@ from soltura.db import get_session
 from soltura.learner.dependencies import LearnerIdDep
 from soltura.llm.client import LLMClient, get_llm
 from soltura.templating import templates
-from soltura.use_cases.writing import error_summary, journal_history, submit_entry
+from soltura.use_cases.writing import (
+    error_summary,
+    journal_history,
+    session_prompt,
+    submit_entry,
+)
 from soltura.writing.prompts import PROMPTS
 from soltura.writing.service import InvalidText
 from soltura.writing.views import PROBLEM_MESSAGE, category_view, entry_view
@@ -22,13 +27,17 @@ LLMDep = Annotated[LLMClient, Depends(get_llm)]
 
 @router.get("", response_class=HTMLResponse)
 async def journal_page(
-    request: Request, session: SessionDep, learner_id: LearnerIdDep
+    request: Request, session: SessionDep, learner_id: LearnerIdDep, topic: str = ""
 ) -> HTMLResponse:
     history = await journal_history(session, learner_id)
     return templates.TemplateResponse(
         request,
         "journal.html",
-        {"prompts": PROMPTS, "history": [entry_view(entry) for entry in history]},
+        {
+            "prompts": PROMPTS,
+            "session_prompt": session_prompt(topic),
+            "history": [entry_view(entry) for entry in history],
+        },
     )
 
 
