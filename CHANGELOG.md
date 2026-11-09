@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.36.0 (2026-11-09)
+
+### Features
+
+- **writing**: Store journal entries and their classified errors
+  ([#66](https://github.com/kutsevol/soltura/pull/66),
+  [`30c2382`](https://github.com/kutsevol/soltura/commit/30c2382cbd0e674543a348c9ca0bf6fa1e757c9b))
+
+
 ## v0.35.0 (2026-11-08)
 
 ### Features
