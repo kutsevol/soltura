@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.37.0 (2026-11-09)
+
+### Features
+
+- **writing**: Correct a text and keep only the errors code can verify
+  ([#67](https://github.com/kutsevol/soltura/pull/67),
+  [`a43aca7`](https://github.com/kutsevol/soltura/commit/a43aca71d8a63b85eb194f10472a19cf95b52fc3))
+
+
 ## v0.36.0 (2026-11-09)
 
 ### Features
