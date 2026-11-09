@@ -126,11 +126,11 @@ async def test_a_grammar_lesson_is_not_the_end_of_the_step(learner_client: Async
     assert BUTTON not in page.text
 
 
-async def test_leaving_the_journal_ends_the_session_on_the_session_page(
+async def test_leaving_the_journal_ends_the_session_on_its_summary(
     learner_client: AsyncClient,
 ) -> None:
     await _session_on(learner_client, "writing")
 
     response = await learner_client.post("/study/next", data={"step": "writing"})
 
-    assert response.headers["location"] == "/study"
+    assert response.headers["location"] == "/study/summary"

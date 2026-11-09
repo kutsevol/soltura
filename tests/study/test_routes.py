@@ -1,7 +1,11 @@
+from datetime import UTC, datetime
 from urllib.parse import quote
 
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from soltura.learner.models import ErrorKind, ErrorLog, Learner
+from soltura.learner.repository import save_journal_entry
 from soltura.reading.topics import TOPICS
 
 TOPIC = TOPICS[0].label
@@ -81,8 +85,33 @@ async def test_leaving_the_last_step_ends_the_session(learner_client: AsyncClien
 
     response = await learner_client.post("/study/next", data={"step": "writing"})
 
-    assert response.headers["location"] == "/study"
+    assert response.headers["location"] == "/study/summary"
     assert 'action="/study/start"' in (await learner_client.get("/study")).text
+
+
+async def test_the_summary_of_a_finished_session_names_the_topic_and_the_counts(
+    learner_client: AsyncClient,
+) -> None:
+    await _start(learner_client)
+    for step in ("warmup", "reading", "grammar", "writing"):
+        await learner_client.post("/study/next", data={"step": step})
+
+    page = await learner_client.get("/study/summary")
+
+    assert page.status_code == 200
+    assert TOPIC in page.text
+    assert "Карток повторено: 0" in page.text
+    assert "/journal/errors" not in page.text
+
+
+async def test_without_a_finished_session_the_summary_leads_to_the_session_page(
+    learner_client: AsyncClient,
+) -> None:
+    await _start(learner_client)
+
+    response = await learner_client.get("/study/summary")
+
+    assert (response.status_code, response.headers["location"]) == (303, "/study")
 
 
 async def test_moving_on_without_a_session_leads_back_to_the_session_page(
@@ -110,3 +139,30 @@ async def test_a_step_that_does_not_exist_is_refused(learner_client: AsyncClient
     response = await learner_client.post("/study/next", data={"step": "dinner"})
 
     assert response.status_code == 422
+
+
+async def test_the_summary_shows_the_errors_found_and_leads_to_the_repeated_ones(
+    learner_client: AsyncClient, session: AsyncSession, learner: Learner
+) -> None:
+    assert learner.id is not None
+    await _start(learner_client)
+    entry = await save_journal_entry(session, learner.id, None, "b", "c", [])
+    session.add(
+        ErrorLog(
+            entry_id=entry.id or 0,
+            learner_id=learner.id,
+            kind=ErrorKind.OTHER,
+            original="a",
+            corrected="b",
+            note="n",
+            created_at=datetime.now(UTC),
+        )
+    )
+    await session.flush()
+    for step in ("warmup", "reading", "grammar", "writing"):
+        await learner_client.post("/study/next", data={"step": step})
+
+    page = await learner_client.get("/study/summary")
+
+    assert "Помилок знайдено в тексті: 1" in page.text
+    assert 'href="/journal/errors"' in page.text

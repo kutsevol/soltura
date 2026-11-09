@@ -5,6 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.learner.models import StudySession, StudyStep
 from soltura.learner.repository import (
+    count_activity,
+    get_last_finished_study_session,
     get_open_study_session,
     set_study_step,
     start_study_session,
@@ -19,6 +21,14 @@ TOPIC_LABELS = [topic.label for topic in TOPICS]
 class StudyProgress:
     topic: str
     step: StudyStep
+
+
+@dataclass(frozen=True)
+class StudySummary:
+    topic: str
+    reviews: int
+    words_saved: int
+    errors: int
 
 
 def _progress(study: StudySession) -> StudyProgress:
@@ -66,3 +76,18 @@ async def advance_session(
     progress = _progress(study)
     await session.commit()
     return progress
+
+
+async def session_summary(
+    session: AsyncSession, learner_id: int, now: datetime
+) -> StudySummary | None:
+    study = await get_last_finished_study_session(session, learner_id, now - OPEN_FOR)
+    if study is None or study.finished_at is None:
+        return None
+    activity = await count_activity(session, learner_id, study.started_at, study.finished_at)
+    return StudySummary(
+        topic=study.topic,
+        reviews=activity.reviews,
+        words_saved=activity.words_saved,
+        errors=activity.errors,
+    )

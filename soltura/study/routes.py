@@ -10,7 +10,13 @@ from soltura.learner.dependencies import LearnerIdDep
 from soltura.learner.models import StudyStep
 from soltura.study.views import SESSION_HREF, landing_href, study_view
 from soltura.templating import templates
-from soltura.use_cases.study import TOPIC_LABELS, advance_session, open_session, start_session
+from soltura.use_cases.study import (
+    TOPIC_LABELS,
+    advance_session,
+    open_session,
+    session_summary,
+    start_session,
+)
 
 router = APIRouter(prefix="/study")
 
@@ -28,6 +34,16 @@ async def study_page(
     progress = await open_session(session, learner_id, datetime.now(UTC))
     view = study_view(progress.topic, progress.step) if progress else None
     return templates.TemplateResponse(request, "study.html", {"topics": TOPIC_LABELS, "view": view})
+
+
+@router.get("/summary", response_model=None)
+async def summary_page(
+    request: Request, session: SessionDep, learner_id: LearnerIdDep
+) -> HTMLResponse | RedirectResponse:
+    summary = await session_summary(session, learner_id, datetime.now(UTC))
+    if summary is None:
+        return _redirect(SESSION_HREF)
+    return templates.TemplateResponse(request, "study/summary.html", {"summary": summary})
 
 
 @router.post("/start")

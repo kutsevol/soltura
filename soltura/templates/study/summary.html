@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Підсумок сесії · Soltura{% endblock %}
+{% block heading %}Сесія{% endblock %}
+
+{% block content %}
+  <article class="focus">
+    <p class="eyebrow">Сесію завершено</p>
+    <h2>{{ summary.topic }}</h2>
+    <ul>
+      <li>Карток повторено: {{ summary.reviews }}</li>
+      <li>Слів збережено: {{ summary.words_saved }}</li>
+      <li>Помилок знайдено в тексті: {{ summary.errors }}</li>
+    </ul>
+    {% if summary.errors %}
+      <p class="note"><a href="/journal/errors">Повторювані помилки</a></p>
+    {% endif %}
+    <a href="/" role="button">На головну</a>
+  </article>
+{% endblock %}

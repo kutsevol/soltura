@@ -5,6 +5,7 @@ from soltura.learner.models import StudyStep
 from soltura.study.service import STEPS
 
 SESSION_HREF = "/study"
+SUMMARY_HREF = "/study/summary"
 
 STEP_CONTENT: dict[StudyStep, tuple[str, str, str]] = {
     StudyStep.WARMUP: ("Розминка", "Короткі вправи на слова, які пора повторити", "/warmup"),
@@ -39,12 +40,10 @@ class StudyView:
 
 
 def landing_href(step: StudyStep, topic: str) -> str:
-    # Where a step is carried out; a finished session has no screen but the session page.
-    return (
-        STEP_CONTENT[step][2].format(topic=quote(topic, safe=""))
-        if step in STEP_CONTENT
-        else SESSION_HREF
-    )
+    # Where a step is carried out; a finished session has the summary of the sitting.
+    if step not in STEP_CONTENT:
+        return SUMMARY_HREF
+    return STEP_CONTENT[step][2].format(topic=quote(topic, safe=""))
 
 
 def study_view(topic: str, current: StudyStep) -> StudyView:
