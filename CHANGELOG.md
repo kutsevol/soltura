@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.43.0 (2026-11-09)
+
+### Features
+
+- **study**: Carry the session topic into reading and writing
+  ([#74](https://github.com/kutsevol/soltura/pull/74),
+  [`17e871c`](https://github.com/kutsevol/soltura/commit/17e871c0886bbf6f2b0452d6da00b8c24dd0588c))
+
+
 ## v0.42.0 (2026-11-09)
 
 ### Features
