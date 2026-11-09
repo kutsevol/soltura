@@ -278,6 +278,13 @@ async def get_errors_for_entries(
     return errors
 
 
+async def get_learner_errors(session: AsyncSession, learner_id: int) -> list[ErrorLog]:
+    result = await session.execute(
+        select(ErrorLog).where(col(ErrorLog.learner_id) == learner_id).order_by(col(ErrorLog.id))
+    )
+    return list(result.scalars())
+
+
 async def get_recent_titles(session: AsyncSession, learner_id: int, limit: int) -> list[str]:
     result = await session.execute(
         select(ReadingText.title)

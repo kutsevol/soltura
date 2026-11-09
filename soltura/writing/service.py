@@ -1,5 +1,5 @@
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from enum import StrEnum
@@ -12,6 +12,8 @@ from soltura.llm.client import LLMClient
 
 MIN_LENGTH = 20
 MAX_LENGTH = 1_000
+# Errors in one grammar unit after which the unit is offered; fewer may be chance.
+SUGGEST_AFTER = 3
 
 # Error kinds the model may name besides a grammar unit id.
 OTHER_KINDS = {kind.value: kind for kind in ErrorKind if kind != ErrorKind.GRAMMAR}
@@ -148,4 +150,43 @@ async def correct_text(llm: LLMClient, text: str, units: Mapping[str, str]) -> C
         corrected=corrected,
         errors=verified_errors(text, correction, units),
         segments=diff_segments(text, corrected),
+    )
+
+
+@dataclass(frozen=True)
+class ErrorCategory:
+    kind: ErrorKind
+    unit_id: str | None
+    title: str | None
+    count: int
+    last: JournalError
+    suggested: bool
+
+
+def build_error_summary(
+    errors: Sequence[JournalError], unit_titles: Mapping[str, str]
+) -> list[ErrorCategory]:
+    teaching_order = {unit_id: index for index, unit_id in enumerate(unit_titles)}
+    kind_order = {kind: len(teaching_order) + index for index, kind in enumerate(ErrorKind)}
+    grouped: dict[tuple[ErrorKind, str | None], list[JournalError]] = {}
+    for error in errors:
+        unit_id = error.unit_id if error.unit_id in unit_titles else None
+        grouped.setdefault((error.kind, unit_id), []).append(error)
+    categories = [
+        ErrorCategory(
+            kind=kind,
+            unit_id=unit_id,
+            title=unit_titles[unit_id] if unit_id else None,
+            count=len(group),
+            last=group[-1],
+            suggested=unit_id is not None and len(group) >= SUGGEST_AFTER,
+        )
+        for (kind, unit_id), group in grouped.items()
+    ]
+    return sorted(
+        categories,
+        key=lambda category: (
+            -category.count,
+            teaching_order[category.unit_id] if category.unit_id else kind_order[category.kind],
+        ),
     )

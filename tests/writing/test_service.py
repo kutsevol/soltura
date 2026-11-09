@@ -5,6 +5,7 @@ from soltura.writing.service import (
     FoundError,
     Segment,
     SegmentKind,
+    build_error_summary,
     correct_text,
     diff_segments,
 )
@@ -98,3 +99,52 @@ def test_the_diff_marks_a_removed_word_without_an_added_one() -> None:
     )
     assert "".join(s.text for s in segments if s.kind != SegmentKind.ADDED) == "Voy a a casa."
     assert "".join(s.text for s in segments if s.kind != SegmentKind.REMOVED) == "Voy a casa."
+
+
+UNIT_TITLES = {"ser_estar": "Ser і estar", "por_para": "Por і para"}
+
+
+def _grammar(unit_id: str | None, original: str = "x", corrected: str = "y") -> JournalError:
+    return JournalError(ErrorKind.GRAMMAR, unit_id, original, corrected, "")
+
+
+def test_the_summary_counts_errors_per_unit_and_keeps_the_last_example() -> None:
+    errors = [_grammar("por_para", "a", "b"), _grammar("ser_estar", "c", "d")]
+    errors += [_grammar("ser_estar", "e", "f"), _grammar("ser_estar", "g", "h")]
+
+    summary = build_error_summary(errors, UNIT_TITLES)
+
+    assert [(c.unit_id, c.title, c.count, c.last.original) for c in summary] == [
+        ("ser_estar", "Ser і estar", 3, "g"),
+        ("por_para", "Por і para", 1, "a"),
+    ]
+
+
+def test_a_unit_is_suggested_only_from_three_errors() -> None:
+    errors = [_grammar("ser_estar")] * 3 + [_grammar("por_para")] * 2
+
+    summary = build_error_summary(errors, UNIT_TITLES)
+
+    assert {c.unit_id: c.suggested for c in summary} == {"ser_estar": True, "por_para": False}
+
+
+def test_equal_counts_follow_the_teaching_order_and_other_kinds_come_last() -> None:
+    errors = [
+        JournalError(ErrorKind.SPELLING, None, "a", "b", ""),
+        _grammar("por_para"),
+        _grammar("ser_estar"),
+    ]
+
+    summary = build_error_summary(errors, UNIT_TITLES)
+
+    assert [(c.unit_id, c.kind) for c in summary] == [
+        ("ser_estar", ErrorKind.GRAMMAR),
+        ("por_para", ErrorKind.GRAMMAR),
+        (None, ErrorKind.SPELLING),
+    ]
+
+
+def test_a_grammar_error_of_a_removed_unit_stays_without_a_lesson_or_a_suggestion() -> None:
+    summary = build_error_summary([_grammar("gone")] * 4, UNIT_TITLES)
+
+    assert [(c.unit_id, c.title, c.count, c.suggested) for c in summary] == [(None, None, 4, False)]

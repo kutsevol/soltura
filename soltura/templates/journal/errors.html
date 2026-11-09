@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Повторювані помилки · Soltura{% endblock %}
+{% block heading %}Повторювані помилки{% endblock %}
+
+{% block content %}
+  {% if categories %}
+    {% for category in categories %}
+      <article>
+        <h3>{{ category.label }} · {{ category.count }}</h3>
+        <p><del>{{ category.original }}</del> → <ins>{{ category.corrected }}</ins></p>
+        {% if category.suggestion %}<p class="note">{{ category.suggestion }}</p>{% endif %}
+        {% if category.lesson_href %}<a href="{{ category.lesson_href }}">Відкрити правило</a>{% endif %}
+      </article>
+    {% endfor %}
+  {% else %}
+    <article>
+      <p>Помилок поки немає. <a href="/journal">Напишіть текст у щоденнику</a>, і тут з’явиться, над чим працювати.</p>
+    </article>
+  {% endif %}
+{% endblock %}

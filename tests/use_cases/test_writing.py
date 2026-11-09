@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from soltura.learner.models import ErrorKind, Learner
 from soltura.learner.repository import get_errors_for_entries, get_journal_entries
 from soltura.llm.client import LLMUnavailableError
-from soltura.use_cases.writing import HISTORY_SIZE, journal_history, submit_entry
+from soltura.use_cases.writing import HISTORY_SIZE, error_summary, journal_history, submit_entry
 from soltura.writing.prompts import PROMPTS
 from soltura.writing.service import Correction, FoundError, InvalidText, TextProblem
 from tests.fakes import FakeLLM
@@ -124,3 +124,20 @@ async def test_the_history_is_the_newest_texts_of_this_learner_only(
     assert [entry.body for entry in history] == [
         f"{TEXT} {number}" for number in range(HISTORY_SIZE + 1, 1, -1)
     ]
+
+
+async def test_the_error_summary_counts_only_this_learners_errors(
+    session: AsyncSession, learner: Learner, other_learner: Learner, llm: FakeLLM
+) -> None:
+    assert learner.id is not None and other_learner.id is not None
+    correction = Correction(
+        corrected_text=FIXED,
+        errors=[FoundError(original="Yo soy", corrected="Estoy", category="ser_estar", note="n")],
+    )
+    for learner_id in (learner.id, other_learner.id, other_learner.id):
+        llm.answer(correction)
+        await submit_entry(session, llm, learner_id, None, TEXT)
+
+    summary = await error_summary(session, learner.id)
+
+    assert [(c.unit_id, c.count) for c in summary] == [("ser_estar", 1)]
