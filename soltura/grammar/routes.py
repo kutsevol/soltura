@@ -11,6 +11,7 @@ from soltura.grammar.service import GrammarItem
 from soltura.grammar.units import get_unit
 from soltura.grammar.views import card_view, lesson_view, progress_view, result_view
 from soltura.learner.dependencies import LearnerIdDep
+from soltura.learner.models import StudyStep
 from soltura.templating import templates
 from soltura.use_cases.grammar import (
     GrammarState,
@@ -20,6 +21,7 @@ from soltura.use_cases.grammar import (
     next_lesson,
     start_unit,
 )
+from soltura.use_cases.study import next_step_offer
 from soltura.web import answer_duration_ms, now_ms, parse_state
 
 router = APIRouter(prefix="/grammar")
@@ -38,17 +40,29 @@ def _card_context(item: GrammarItem, queue: list[GrammarItem]) -> dict[str, Any]
     }
 
 
-def _state_context(state: GrammarState) -> tuple[str, dict[str, Any]]:
+def _state_context(
+    state: GrammarState, study_step: StudyStep | None = None
+) -> tuple[str, dict[str, Any]]:
     if state.items:
         first, *queue = state.items
         return "grammar/card.html", _card_context(first, queue)
     if state.lesson is not None:
         return "grammar/lesson.html", {"lesson": lesson_view(state.lesson)}
-    return "grammar/done.html", {"lesson": None}
+    return "grammar/done.html", {"lesson": None, "study_step": study_step}
 
 
-def _page(request: Request, state: GrammarState) -> HTMLResponse:
-    fragment, context = _state_context(state)
+async def _offer(
+    session: AsyncSession, learner_id: int, state: GrammarState, now: datetime
+) -> StudyStep | None:
+    if state.items or state.lesson is not None:
+        return None
+    return await next_step_offer(session, learner_id, StudyStep.GRAMMAR, now)
+
+
+def _page(
+    request: Request, state: GrammarState, study_step: StudyStep | None = None
+) -> HTMLResponse:
+    fragment, context = _state_context(state, study_step)
     return templates.TemplateResponse(request, "grammar.html", {"fragment": fragment, **context})
 
 
@@ -56,7 +70,9 @@ def _page(request: Request, state: GrammarState) -> HTMLResponse:
 async def grammar_page(
     request: Request, session: SessionDep, learner_id: LearnerIdDep
 ) -> HTMLResponse:
-    return _page(request, await grammar_state(session, learner_id, datetime.now(UTC)))
+    now = datetime.now(UTC)
+    state = await grammar_state(session, learner_id, now)
+    return _page(request, state, await _offer(session, learner_id, state, now))
 
 
 @router.get("/progress", response_class=HTMLResponse)
@@ -91,7 +107,8 @@ async def start(
         await start_unit(session, learner_id, unit_id, now)
     except LookupError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from error
-    fragment, context = _state_context(await grammar_state(session, learner_id, now))
+    state = await grammar_state(session, learner_id, now)
+    fragment, context = _state_context(state, await _offer(session, learner_id, state, now))
     return templates.TemplateResponse(request, fragment, context)
 
 
@@ -133,10 +150,11 @@ async def next_card(
     items = parse_state(QUEUE, queue, STATE_ERROR)
     if not items:
         lesson = await next_lesson(session, learner_id)
+        offer = await next_step_offer(session, learner_id, StudyStep.GRAMMAR, datetime.now(UTC))
         return templates.TemplateResponse(
             request,
             "grammar/done.html",
-            {"lesson": lesson_view(lesson) if lesson is not None else None},
+            {"lesson": lesson_view(lesson) if lesson is not None else None, "study_step": offer},
         )
     first, *rest = items
     return templates.TemplateResponse(request, "grammar/card.html", _card_context(first, rest))

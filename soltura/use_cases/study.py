@@ -43,6 +43,15 @@ async def open_session(
     return _progress(study) if study else None
 
 
+async def next_step_offer(
+    session: AsyncSession, learner_id: int, module: StudyStep, now: datetime
+) -> StudyStep | None:
+    # A module offers "next" only while the session is on its own step, so opening
+    # another screen on the side does not move the session.
+    progress = await open_session(session, learner_id, now)
+    return module if progress and progress.step == module else None
+
+
 async def advance_session(
     session: AsyncSession, learner_id: int, expected: StudyStep, now: datetime
 ) -> StudyProgress:

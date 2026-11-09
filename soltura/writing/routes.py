@@ -7,8 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.db import get_session
 from soltura.learner.dependencies import LearnerIdDep
+from soltura.learner.models import StudyStep
 from soltura.llm.client import LLMClient, get_llm
 from soltura.templating import templates
+from soltura.use_cases.study import next_step_offer
 from soltura.use_cases.writing import (
     error_summary,
     journal_history,
@@ -61,7 +63,8 @@ async def submit(
     prompt: Annotated[str, Form()] = "",
 ) -> HTMLResponse:
     try:
-        result = await submit_entry(session, llm, learner_id, prompt, text, datetime.now(UTC))
+        now = datetime.now(UTC)
+        result = await submit_entry(session, llm, learner_id, prompt, text, now)
     except InvalidText as error:
         return templates.TemplateResponse(
             request,
@@ -69,4 +72,7 @@ async def submit(
             {"message": PROBLEM_MESSAGE[error.problem]},
             status_code=422,
         )
-    return templates.TemplateResponse(request, "journal/result.html", {"entry": entry_view(result)})
+    offer = await next_step_offer(session, learner_id, StudyStep.WRITING, now)
+    return templates.TemplateResponse(
+        request, "journal/result.html", {"entry": entry_view(result), "study_step": offer}
+    )
