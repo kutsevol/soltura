@@ -11,8 +11,8 @@ from soltura.learner.repository import (
     save_journal_entry,
 )
 from soltura.llm.client import LLMClient
+from soltura.writing.prompts import PROMPTS
 from soltura.writing.service import (
-    MAX_PROMPT_LENGTH,
     Segment,
     check_length,
     correct_text,
@@ -36,11 +36,11 @@ class JournalResult:
 async def submit_entry(
     session: AsyncSession, llm: LLMClient, learner_id: int, prompt: str | None, text: str
 ) -> JournalResult:
-    body = text.strip()
+    body = text.replace("\r\n", "\n").strip()
     check_length(body)
     units = {unit.id: unit.title for unit in all_units()}
     result = await correct_text(llm, body, units)
-    prompt = (prompt or "").strip()[:MAX_PROMPT_LENGTH] or None
+    prompt = prompt if prompt in PROMPTS else None
     entry = await save_journal_entry(
         session, learner_id, prompt, body, result.corrected, result.errors
     )

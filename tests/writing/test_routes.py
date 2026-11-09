@@ -96,3 +96,27 @@ async def test_a_submitted_text_appears_among_the_past_texts(
     assert "Попередні тексти" in page.text
     assert PROMPTS[1] in page.text.split("Попередні тексти")[1]
     assert "<del>Yo soy</del><ins>Estoy</ins>" in page.text
+
+
+async def test_markup_in_the_text_and_in_the_model_note_is_escaped(
+    learner_client: AsyncClient, llm: FakeLLM
+) -> None:
+    text = "Yo <script>alert(1)</script> soy cansado hoy."
+    llm.answer(
+        Correction(
+            corrected_text=text,
+            errors=[
+                FoundError(
+                    original="soy cansado",
+                    corrected="estoy cansado",
+                    category="other",
+                    note="<script>alert(2)</script>",
+                )
+            ],
+        )
+    )
+
+    response = await learner_client.post("/journal", data={"text": text})
+
+    assert "<script>" not in response.text
+    assert "&lt;script&gt;alert(2)&lt;/script&gt;" in response.text
