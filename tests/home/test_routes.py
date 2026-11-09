@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.grammar.units import all_units
 from soltura.learner.models import Learner, MemoryCard, PlacementRun
+from soltura.reading.topics import TOPICS
 from soltura.templating import NAV
 from soltura.use_cases.grammar import start_unit
 
@@ -142,3 +143,23 @@ async def test_the_hub_links_to_the_journal(learner_client: AsyncClient) -> None
     response = await learner_client.get("/")
 
     assert '<h3><a href="/journal">Щоденник</a></h3>' in response.text
+
+
+async def test_the_hub_offers_to_start_a_session(learner_client: AsyncClient) -> None:
+    response = await learner_client.get("/")
+
+    assert (
+        '<a href="/study" role="button" class="secondary outline">Почати сесію</a>' in response.text
+    )
+    assert "Продовжити сесію" not in response.text
+
+
+async def test_the_hub_continues_an_open_session_instead(learner_client: AsyncClient) -> None:
+    await learner_client.post("/study/start", data={"topic": TOPICS[0].label})
+
+    response = await learner_client.get("/")
+
+    assert f"Сесія: {TOPICS[0].label}" in response.text
+    assert '<a href="/study" role="button">Продовжити сесію</a>' in response.text
+    assert "Почати сесію" not in response.text
+    assert '<a href="/warmup" role="button">' not in response.text

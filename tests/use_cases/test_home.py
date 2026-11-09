@@ -1,11 +1,13 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.grammar.units import all_units
 from soltura.learner.models import Learner, MemoryCard, PlacementRun
+from soltura.reading.topics import TOPICS
 from soltura.use_cases.grammar import start_unit
 from soltura.use_cases.home import hub_summary
+from soltura.use_cases.study import start_session
 
 NOW = datetime(2026, 10, 31, 12, 0, tzinfo=UTC)
 
@@ -68,3 +70,17 @@ async def test_a_new_learner_is_next_in_line_for_the_first_lesson(
     summary = await hub_summary(session, learner.id, NOW)
 
     assert (summary.grammar_due, summary.grammar_next) == (0, all_units()[0].title)
+
+
+async def test_the_hub_knows_about_an_open_session_only_while_it_is_open(
+    session: AsyncSession, learner: Learner
+) -> None:
+    assert learner.id is not None
+    assert (await hub_summary(session, learner.id, NOW)).study is None
+
+    await start_session(session, learner.id, TOPICS[0].label, NOW)
+
+    opened = (await hub_summary(session, learner.id, NOW)).study
+    expired = (await hub_summary(session, learner.id, NOW + timedelta(hours=13))).study
+    assert opened is not None and opened.topic == TOPICS[0].label
+    assert expired is None

@@ -10,6 +10,7 @@ from soltura.learner.repository import (
     get_latest_placement_run,
 )
 from soltura.use_cases.grammar import next_lesson
+from soltura.use_cases.study import StudyProgress, open_session
 from soltura.words.vocabulary import VocabularyMap, build_vocabulary_map
 
 
@@ -22,6 +23,7 @@ class HubSummary:
     grammar_next: str | None
     placement_rank: int | None
     vocabulary: VocabularyMap
+    study: StudyProgress | None = None
 
 
 async def hub_summary(session: AsyncSession, learner_id: int, now: datetime) -> HubSummary:
@@ -35,4 +37,5 @@ async def hub_summary(session: AsyncSession, learner_id: int, now: datetime) -> 
         grammar_next=lesson.title if lesson else None,
         placement_rank=placement.known_rank if placement else None,
         vocabulary=await build_vocabulary_map(session, learner_id),
+        study=await open_session(session, learner_id, now),
     )

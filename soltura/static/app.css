@@ -544,3 +544,29 @@ button.word:focus-visible {
 .key-learning {
   background: var(--verdict-hard);
 }
+
+/* The study session: its steps in order, the current one marked. */
+
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.steps li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--border);
+  color: var(--ink-muted);
+}
+
+.steps li:first-child {
+  border-top: 0;
+}
+
+.steps li.current {
+  color: var(--ink);
+  font-weight: 650;
+}

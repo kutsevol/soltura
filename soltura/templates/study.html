@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Сесія · Soltura{% endblock %}
+{% block heading %}Сесія{% endblock %}
+
+{% block content %}
+  {% if view %}
+    <article>
+      <p class="eyebrow">Тема сесії</p>
+      <h2>{{ view.topic }}</h2>
+      <ol class="steps">
+        {% for step in view.steps %}
+          <li class="{{ step.state }}"{% if step.state == "current" %} aria-current="step"{% endif %}>
+            <span>{{ step.label }}</span>
+            {% if step.state == "done" %}<span class="note">Пройдено</span>{% endif %}
+          </li>
+        {% endfor %}
+      </ol>
+    </article>
+    <article class="focus">
+      <p class="eyebrow">Зараз</p>
+      <h2>{{ view.current.label }}</h2>
+      <p class="note">{{ view.current.purpose }}</p>
+      <a href="{{ view.current.href }}" role="button">Відкрити</a>
+      <form method="post" action="/study/next">
+        <input type="hidden" name="step" value="{{ view.current.step }}">
+        <button type="submit" class="secondary outline">Пропустити</button>
+      </form>
+    </article>
+  {% else %}
+    <article>
+      <h2>Одна сесія — одна тема</h2>
+      <p class="note">Розминка, текст, правило й письмо — про одне й те саме. Оберіть тему.</p>
+      <form method="post" action="/study/start">
+        {% for topic in topics %}
+          <button type="submit" name="topic" value="{{ topic }}" class="secondary">{{ topic }}</button>
+        {% endfor %}
+      </form>
+    </article>
+  {% endif %}
+{% endblock %}
