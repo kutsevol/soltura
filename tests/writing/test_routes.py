@@ -38,8 +38,8 @@ async def test_a_session_topic_in_the_address_selects_the_retelling_prompt(
     page = await learner_client.get("/journal", params={"topic": label})
 
     assert f'<option value="{retelling_prompt(label)}" selected>' in page.text
-    assert "selected" not in (await learner_client.get("/journal")).text
-    assert "selected" not in (await learner_client.get("/journal?topic=forged")).text
+    assert retelling_prompt(label) not in (await learner_client.get("/journal")).text
+    assert retelling_prompt(label) not in (await learner_client.get("/journal?topic=forged")).text
 
 
 async def test_a_text_with_a_mistake_shows_the_diff_and_a_note_per_error(

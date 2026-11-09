@@ -41,7 +41,9 @@ class StudyView:
 def landing_href(step: StudyStep, topic: str) -> str:
     # Where a step is carried out; a finished session has no screen but the session page.
     return (
-        STEP_CONTENT[step][2].format(topic=quote(topic)) if step in STEP_CONTENT else SESSION_HREF
+        STEP_CONTENT[step][2].format(topic=quote(topic, safe=""))
+        if step in STEP_CONTENT
+        else SESSION_HREF
     )
 
 

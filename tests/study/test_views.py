@@ -20,7 +20,7 @@ def test_reading_and_writing_open_on_the_topic_of_the_session() -> None:
     view = study_view("Сусіди й бар", StudyStep.WARMUP)
 
     hrefs = {step.label: step.href for step in view.steps}
-    topic = quote("Сусіди й бар")
+    topic = quote("Сусіди й бар", safe="")
     assert hrefs["Читання"] == f"/reading?topic={topic}"
     assert hrefs["Письмо"] == f"/journal?topic={topic}"
     assert "й" not in hrefs["Читання"]

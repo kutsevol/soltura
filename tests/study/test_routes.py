@@ -5,7 +5,7 @@ from httpx import AsyncClient
 from soltura.reading.topics import TOPICS
 
 TOPIC = TOPICS[0].label
-READING = f"/reading?topic={quote(TOPIC)}"
+READING = f"/reading?topic={quote(TOPIC, safe='')}"
 
 
 async def _start(client: AsyncClient) -> None:
