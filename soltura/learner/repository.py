@@ -332,14 +332,15 @@ async def get_most_frequent_lemmas(session: AsyncSession, max_rank: int) -> set[
     return set(result.scalars())
 
 
-async def get_recall_cards(
-    session: AsyncSession, learner_id: int, lexeme_ids: Iterable[int]
+async def get_due_recall_cards(
+    session: AsyncSession, learner_id: int, lexeme_ids: Iterable[int], now: datetime
 ) -> list[MemoryCard]:
     result = await session.execute(
         select(MemoryCard).where(
             col(MemoryCard.learner_id) == learner_id,
             col(MemoryCard.lexeme_id).in_(set(lexeme_ids)),
             col(MemoryCard.knowledge_type) == KnowledgeType.RECALL,
+            col(MemoryCard.due) <= now,
         )
     )
     return list(result.scalars())

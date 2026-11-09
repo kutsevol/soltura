@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
@@ -257,3 +257,51 @@ async def test_the_recognition_card_of_a_written_word_is_not_reviewed(
     await submit_entry(session, llm, learner.id, None, TEXT, NOW)
 
     assert recognize.id not in {log.card_id for log in await _reviews(session)}
+
+
+async def test_a_card_that_is_not_due_is_left_alone(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, rank_text: RankFn
+) -> None:
+    assert learner.id is not None
+    await rank_text(TEXT, 100)
+    cards = await _save_cards(session, learner, "trabajar")
+    recall = cards["trabajar"][KnowledgeType.RECALL]
+    llm.answer(Correction(corrected_text=TEXT, errors=[]))
+
+    await submit_entry(session, llm, learner.id, None, TEXT, NOW - timedelta(days=1))
+
+    assert await _reviews(session) == []
+    assert recall.due == NOW
+
+
+async def test_a_word_written_twice_is_reviewed_once(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, rank_text: RankFn
+) -> None:
+    assert learner.id is not None
+    text = "Trabajo mucho y trabajo los sábados, porque trabajo en una tienda."
+    await rank_text(text, 100)
+    await _save_cards(session, learner, "trabajar")
+    llm.answer(Correction(corrected_text=text, errors=[]))
+
+    await submit_entry(session, llm, learner.id, None, text, NOW)
+
+    assert len(await _reviews(session)) == 1
+
+
+async def test_the_entry_is_committed_even_when_no_card_is_reviewed(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    assert learner.id is not None
+    commits: list[int] = []
+    commit = session.commit
+
+    async def counting_commit() -> None:
+        commits.append(1)
+        await commit()
+
+    monkeypatch.setattr(session, "commit", counting_commit)
+    llm.answer(Correction(corrected_text=TEXT, errors=[]))
+
+    await submit_entry(session, llm, learner.id, None, TEXT, NOW)
+
+    assert commits == [1]

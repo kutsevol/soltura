@@ -196,7 +196,12 @@ def build_error_summary(
 
 
 def words_written_correctly(text: str, errors: Sequence[JournalError]) -> set[str]:
-    # A lemma that appears inside any error fragment is left out even when the text also uses
-    # it correctly elsewhere: the model's fragments are too coarse to tell the two apart.
-    wrong = {token.lemma for error in errors for token in analyze(error.original)}
-    return {token.lemma for token in analyze(text)} - wrong
+    # A fragment analysed on its own can get another lemma than the same word inside the text,
+    # so the words are matched by form as well as by lemma. A lemma that is wrong anywhere in
+    # the text is left out everywhere: the model's fragments are too coarse to tell the two apart.
+    fragment_tokens = [token for error in errors for token in analyze(error.original)]
+    wrong_lemmas = {token.lemma for token in fragment_tokens}
+    wrong_forms = {token.text.lower() for token in fragment_tokens}
+    tokens = analyze(text)
+    wrong_lemmas |= {token.lemma for token in tokens if token.text.lower() in wrong_forms}
+    return {token.lemma for token in tokens} - wrong_lemmas

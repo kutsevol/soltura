@@ -7,11 +7,11 @@ from soltura.grammar.units import all_units
 from soltura.learner.models import Rating, ReviewSource
 from soltura.learner.repository import (
     JournalError,
+    get_due_recall_cards,
     get_errors_for_entries,
     get_journal_entries,
     get_learner_errors,
     get_lexemes_by_lemmas,
-    get_recall_cards,
     save_journal_entry,
 )
 from soltura.llm.client import LLMClient
@@ -58,6 +58,8 @@ async def submit_entry(
         session, learner_id, prompt, body, result.corrected, result.errors
     )
     assert entry.id is not None
+    # Nothing else commits the session, and the reviews below commit only when a card is due.
+    await session.commit()
     await review_written_words(session, learner_id, body, result.errors, now)
     return JournalResult(
         entry_id=entry.id,
@@ -78,8 +80,10 @@ async def review_written_words(
     now: datetime,
 ) -> None:
     lexemes = await get_lexemes_by_lemmas(session, words_written_correctly(body, errors))
-    cards = await get_recall_cards(
-        session, learner_id, [lexeme.id for lexeme in lexemes if lexeme.id is not None]
+    # Only a card that is due: a word reviewed earlier today would otherwise be pushed
+    # further out by every text that uses it.
+    cards = await get_due_recall_cards(
+        session, learner_id, [lexeme.id for lexeme in lexemes if lexeme.id is not None], now
     )
     # Writing a word right is evidence of recall, never of failure: the model's
     # classification of an error is not reliable enough to lower a card.

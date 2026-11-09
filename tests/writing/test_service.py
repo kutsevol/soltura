@@ -166,3 +166,11 @@ def test_words_inside_an_error_fragment_are_not_counted_as_written_right() -> No
 
     assert {"cansar", "trabajar", "mucho"} <= lemmas
     assert not {"ser", "yo"} & lemmas
+
+
+def test_a_word_is_matched_by_its_form_when_the_fragment_gives_it_another_lemma() -> None:
+    errors = [JournalError(ErrorKind.VOCABULARY, None, "vino", "vinho", "")]
+
+    lemmas = words_written_correctly("Quiero vino", errors)
+
+    assert lemmas == {"querer"}
