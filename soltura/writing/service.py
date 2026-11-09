@@ -6,6 +6,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
+from soltura.language.nlp import analyze
 from soltura.learner.models import ErrorKind
 from soltura.learner.repository import JournalError
 from soltura.llm.client import LLMClient
@@ -192,3 +193,10 @@ def build_error_summary(
             teaching_order[category.unit_id] if category.unit_id else kind_order[category.kind],
         ),
     )
+
+
+def words_written_correctly(text: str, errors: Sequence[JournalError]) -> set[str]:
+    # A lemma that appears inside any error fragment is left out even when the text also uses
+    # it correctly elsewhere: the model's fragments are too coarse to tell the two apart.
+    wrong = {token.lemma for error in errors for token in analyze(error.original)}
+    return {token.lemma for token in analyze(text)} - wrong

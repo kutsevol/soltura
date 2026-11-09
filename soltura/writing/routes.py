@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -51,7 +52,7 @@ async def submit(
     prompt: Annotated[str, Form()] = "",
 ) -> HTMLResponse:
     try:
-        result = await submit_entry(session, llm, learner_id, prompt, text)
+        result = await submit_entry(session, llm, learner_id, prompt, text, datetime.now(UTC))
     except InvalidText as error:
         return templates.TemplateResponse(
             request,

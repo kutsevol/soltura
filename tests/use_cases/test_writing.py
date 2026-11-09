@@ -1,19 +1,34 @@
+from datetime import UTC, datetime
+
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from soltura.learner.models import ErrorKind, Learner
+from soltura.learner.models import (
+    ErrorKind,
+    KnowledgeType,
+    Learner,
+    MemoryCard,
+    Rating,
+    ReviewLog,
+    ReviewSource,
+)
 from soltura.learner.repository import (
     JournalError,
     get_errors_for_entries,
     get_journal_entries,
+    get_lexemes_by_lemmas,
     save_journal_entry,
 )
 from soltura.llm.client import LLMUnavailableError
+from soltura.srs.service import save_word
 from soltura.use_cases.writing import HISTORY_SIZE, error_summary, journal_history, submit_entry
 from soltura.writing.prompts import PROMPTS
 from soltura.writing.service import Correction, FoundError, InvalidText, TextProblem
+from tests.conftest import RankFn
 from tests.fakes import FakeLLM
 
+NOW = datetime(2026, 11, 9, 8, 0, tzinfo=UTC)
 TEXT = "Yo soy cansado porque trabajo mucho."
 FIXED = "Estoy cansado porque trabajo mucho."
 
@@ -31,7 +46,7 @@ async def test_a_submitted_text_is_saved_with_its_errors(
         )
     )
 
-    result = await submit_entry(session, llm, learner.id, PROMPTS[0], f"  {TEXT}\n")
+    result = await submit_entry(session, llm, learner.id, PROMPTS[0], f"  {TEXT}\n", NOW)
 
     entries = await get_journal_entries(session, learner.id, limit=5)
     errors = await get_errors_for_entries(session, [result.entry_id])
@@ -55,7 +70,7 @@ async def test_a_text_of_the_wrong_length_is_refused_before_the_model_is_called(
     assert learner.id is not None
 
     with pytest.raises(InvalidText) as raised:
-        await submit_entry(session, llm, learner.id, None, text)
+        await submit_entry(session, llm, learner.id, None, text, NOW)
 
     assert raised.value.problem == problem
     assert llm.prompts == []
@@ -68,7 +83,7 @@ async def test_a_model_failure_saves_nothing(
     llm.fail(Correction, LLMUnavailableError("down"))
 
     with pytest.raises(LLMUnavailableError):
-        await submit_entry(session, llm, learner.id, None, TEXT)
+        await submit_entry(session, llm, learner.id, None, TEXT, NOW)
 
     assert await get_journal_entries(session, learner.id, limit=5) == []
 
@@ -79,7 +94,7 @@ async def test_a_prompt_that_is_not_one_of_the_tasks_is_not_stored(
     assert learner.id is not None
     llm.answer(Correction(corrected_text=TEXT, errors=[]))
 
-    result = await submit_entry(session, llm, learner.id, "forged task", TEXT)
+    result = await submit_entry(session, llm, learner.id, "forged task", TEXT, NOW)
 
     assert result.prompt is None
 
@@ -91,7 +106,7 @@ async def test_a_newline_counts_once_toward_the_length_limit(
     text = "\r\n".join(["a" * 99] * 10)
     llm.answer(Correction(corrected_text=text, errors=[]))
 
-    result = await submit_entry(session, llm, learner.id, None, text)
+    result = await submit_entry(session, llm, learner.id, None, text, NOW)
 
     assert result.body == "\n".join(["a" * 99] * 10)
 
@@ -107,10 +122,10 @@ async def test_the_length_limits_are_inclusive(
     llm.answer(Correction(corrected_text=text, errors=[]))
 
     if accepted:
-        await submit_entry(session, llm, learner.id, None, text)
+        await submit_entry(session, llm, learner.id, None, text, NOW)
     else:
         with pytest.raises(InvalidText):
-            await submit_entry(session, llm, learner.id, None, text)
+            await submit_entry(session, llm, learner.id, None, text, NOW)
 
 
 async def test_the_history_is_the_newest_texts_of_this_learner_only(
@@ -120,9 +135,9 @@ async def test_the_history_is_the_newest_texts_of_this_learner_only(
     for number in range(HISTORY_SIZE + 2):
         text = f"{TEXT} {number}"
         llm.answer(Correction(corrected_text=text, errors=[]))
-        await submit_entry(session, llm, learner.id, None, text)
+        await submit_entry(session, llm, learner.id, None, text, NOW)
     llm.answer(Correction(corrected_text=TEXT, errors=[]))
-    await submit_entry(session, llm, other_learner.id, None, TEXT)
+    await submit_entry(session, llm, other_learner.id, None, TEXT, NOW)
 
     history = await journal_history(session, learner.id)
 
@@ -141,7 +156,7 @@ async def test_the_error_summary_counts_only_this_learners_errors(
     )
     for learner_id in (learner.id, other_learner.id, other_learner.id):
         llm.answer(correction)
-        await submit_entry(session, llm, learner_id, None, TEXT)
+        await submit_entry(session, llm, learner_id, None, TEXT, NOW)
 
     summary = await error_summary(session, learner.id)
 
@@ -158,3 +173,87 @@ async def test_an_old_entry_naming_a_removed_unit_has_no_lesson_to_link(
     history = await journal_history(session, learner.id)
 
     assert [error.unit_id for error in history[0].errors] == [None]
+
+
+async def _save_cards(
+    session: AsyncSession, learner: Learner, *lemmas: str
+) -> dict[str, dict[KnowledgeType, MemoryCard]]:
+    assert learner.id is not None
+    lexemes = await get_lexemes_by_lemmas(session, lemmas)
+    saved: dict[str, dict[KnowledgeType, MemoryCard]] = {}
+    for lexeme in lexemes:
+        assert lexeme.id is not None
+        cards = await save_word(session, learner.id, lexeme.id, "Una frase.", NOW)
+        saved[lexeme.lemma] = {card.knowledge_type: card for card in cards}
+    return saved
+
+
+async def _reviews(session: AsyncSession) -> list[ReviewLog]:
+    return list((await session.execute(select(ReviewLog))).scalars())
+
+
+async def test_a_word_written_right_gets_a_good_review_from_writing(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, rank_text: RankFn
+) -> None:
+    assert learner.id is not None
+    await rank_text(TEXT, 100)
+    cards = await _save_cards(session, learner, "trabajar")
+    recall = cards["trabajar"][KnowledgeType.RECALL]
+    assert recall.id is not None
+    llm.answer(Correction(corrected_text=TEXT, errors=[]))
+
+    await submit_entry(session, llm, learner.id, None, TEXT, NOW)
+
+    logs = await _reviews(session)
+    assert [(log.card_id, log.rating, log.source) for log in logs] == [
+        (recall.id, Rating.GOOD, ReviewSource.WRITING)
+    ]
+    assert recall.due > NOW
+
+
+async def test_a_word_inside_an_error_is_not_reviewed(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, rank_text: RankFn
+) -> None:
+    assert learner.id is not None
+    await rank_text(TEXT, 100)
+    cards = await _save_cards(session, learner, "ser", "trabajar")
+    llm.answer(
+        Correction(
+            corrected_text=FIXED,
+            errors=[
+                FoundError(original="Yo soy", corrected="Estoy", category="ser_estar", note="n")
+            ],
+        )
+    )
+
+    await submit_entry(session, llm, learner.id, None, TEXT, NOW)
+
+    reviewed = {log.card_id for log in await _reviews(session)}
+    assert reviewed == {cards["trabajar"][KnowledgeType.RECALL].id}
+
+
+async def test_a_word_without_a_card_gets_no_card(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, rank_text: RankFn
+) -> None:
+    assert learner.id is not None
+    await rank_text(TEXT, 100)
+    llm.answer(Correction(corrected_text=TEXT, errors=[]))
+
+    await submit_entry(session, llm, learner.id, None, TEXT, NOW)
+
+    assert (await session.execute(select(MemoryCard))).scalars().all() == []
+    assert await _reviews(session) == []
+
+
+async def test_the_recognition_card_of_a_written_word_is_not_reviewed(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, rank_text: RankFn
+) -> None:
+    assert learner.id is not None
+    await rank_text(TEXT, 100)
+    cards = await _save_cards(session, learner, "trabajar")
+    recognize = cards["trabajar"][KnowledgeType.RECOGNIZE]
+    llm.answer(Correction(corrected_text=TEXT, errors=[]))
+
+    await submit_entry(session, llm, learner.id, None, TEXT, NOW)
+
+    assert recognize.id not in {log.card_id for log in await _reviews(session)}
