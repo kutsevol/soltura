@@ -6,6 +6,7 @@
         <span class="note">{{ error.kind }}</span><br>
         <del>{{ error.original }}</del> → <ins>{{ error.corrected or "—" }}</ins><br>
         {{ error.note }}
+        {% if error.lesson_href %}<br><a href="{{ error.lesson_href }}">Відкрити правило</a>{% endif %}
       </li>
     {% endfor %}
   </ul>

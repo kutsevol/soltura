@@ -8,12 +8,15 @@ from soltura.learner.repository import (
     JournalError,
     get_errors_for_entries,
     get_journal_entries,
+    get_learner_errors,
     save_journal_entry,
 )
 from soltura.llm.client import LLMClient
 from soltura.writing.prompts import PROMPTS
 from soltura.writing.service import (
+    ErrorCategory,
     Segment,
+    build_error_summary,
     check_length,
     correct_text,
     diff_segments,
@@ -61,6 +64,8 @@ async def journal_history(session: AsyncSession, learner_id: int) -> list[Journa
     errors = await get_errors_for_entries(
         session, [entry.id for entry in entries if entry.id is not None]
     )
+    # An entry may name a unit that was renamed or removed since; it then has no lesson to link.
+    known = {unit.id for unit in all_units()}
     return [
         JournalResult(
             entry_id=entry.id,
@@ -69,7 +74,13 @@ async def journal_history(session: AsyncSession, learner_id: int) -> list[Journa
             body=entry.body,
             corrected=entry.corrected,
             errors=[
-                JournalError(e.kind, e.unit_id, e.original, e.corrected, e.note)
+                JournalError(
+                    e.kind,
+                    e.unit_id if e.unit_id in known else None,
+                    e.original,
+                    e.corrected,
+                    e.note,
+                )
                 for e in errors.get(entry.id, [])
             ],
             segments=diff_segments(entry.body, entry.corrected),
@@ -77,3 +88,11 @@ async def journal_history(session: AsyncSession, learner_id: int) -> list[Journa
         for entry in entries
         if entry.id is not None
     ]
+
+
+async def error_summary(session: AsyncSession, learner_id: int) -> list[ErrorCategory]:
+    errors = await get_learner_errors(session, learner_id)
+    return build_error_summary(
+        [JournalError(e.kind, e.unit_id, e.original, e.corrected, e.note) for e in errors],
+        {unit.id: unit.title for unit in all_units()},
+    )

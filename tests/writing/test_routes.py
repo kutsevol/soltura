@@ -120,3 +120,91 @@ async def test_markup_in_the_text_and_in_the_model_note_is_escaped(
 
     assert "<script>" not in response.text
     assert "&lt;script&gt;alert(2)&lt;/script&gt;" in response.text
+
+
+async def test_an_error_in_a_grammar_unit_links_to_its_lesson(
+    learner_client: AsyncClient, llm: FakeLLM
+) -> None:
+    llm.answer(CORRECTION)
+
+    response = await learner_client.post("/journal", data={"text": TEXT})
+
+    assert 'href="/grammar/units/ser_estar"' in response.text
+
+
+async def test_an_error_outside_the_grammar_units_has_no_lesson_link(
+    learner_client: AsyncClient, llm: FakeLLM
+) -> None:
+    llm.answer(
+        Correction(
+            corrected_text=FIXED,
+            errors=[
+                FoundError(original="Yo soy", corrected="Estoy", category="spelling", note="n")
+            ],
+        )
+    )
+
+    response = await learner_client.post("/journal", data={"text": TEXT})
+
+    assert "/grammar/units/" not in response.text
+
+
+async def test_the_errors_page_counts_per_category_and_suggests_a_unit_after_three(
+    learner_client: AsyncClient, llm: FakeLLM
+) -> None:
+    for _ in range(3):
+        llm.answer(CORRECTION)
+        await learner_client.post("/journal", data={"text": TEXT})
+
+    page = await learner_client.get("/journal/errors")
+
+    assert page.status_code == 200
+    assert "· 3" in page.text
+    assert "<del>Yo soy</del> → <ins>Estoy</ins>" in page.text
+    assert "Варто перечитати урок" in page.text
+    assert 'href="/grammar/units/ser_estar"' in page.text
+
+
+async def test_the_errors_page_does_not_suggest_a_unit_after_two_errors(
+    learner_client: AsyncClient, llm: FakeLLM
+) -> None:
+    for _ in range(2):
+        llm.answer(CORRECTION)
+        await learner_client.post("/journal", data={"text": TEXT})
+
+    page = await learner_client.get("/journal/errors")
+
+    assert "· 2" in page.text
+    assert "Варто перечитати урок" not in page.text
+
+
+async def test_the_errors_page_without_entries_points_to_the_journal(
+    learner_client: AsyncClient,
+) -> None:
+    page = await learner_client.get("/journal/errors")
+
+    assert page.status_code == 200
+    assert 'href="/journal"' in page.text
+    assert "Помилок поки немає" in page.text
+
+
+async def test_a_removed_word_shows_a_dash_and_a_spelling_row_has_no_lesson_or_suggestion(
+    learner_client: AsyncClient, llm: FakeLLM
+) -> None:
+    for _ in range(3):
+        llm.answer(
+            Correction(
+                corrected_text="Estoy cansado porque trabajo mucho.",
+                errors=[
+                    FoundError(original="Yo", corrected="", category="spelling", note="n"),
+                ],
+            )
+        )
+        await learner_client.post("/journal", data={"text": TEXT})
+
+    page = await learner_client.get("/journal/errors")
+
+    assert "Правопис · 3" in page.text
+    assert "<del>Yo</del> → <ins>—</ins>" in page.text
+    assert "/grammar/units/" not in page.text
+    assert "Варто перечитати урок" not in page.text

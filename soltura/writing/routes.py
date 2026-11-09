@@ -8,10 +8,10 @@ from soltura.db import get_session
 from soltura.learner.dependencies import LearnerIdDep
 from soltura.llm.client import LLMClient, get_llm
 from soltura.templating import templates
-from soltura.use_cases.writing import journal_history, submit_entry
+from soltura.use_cases.writing import error_summary, journal_history, submit_entry
 from soltura.writing.prompts import PROMPTS
 from soltura.writing.service import InvalidText
-from soltura.writing.views import PROBLEM_MESSAGE, entry_view
+from soltura.writing.views import PROBLEM_MESSAGE, category_view, entry_view
 
 router = APIRouter(prefix="/journal")
 
@@ -28,6 +28,16 @@ async def journal_page(
         request,
         "journal.html",
         {"prompts": PROMPTS, "history": [entry_view(entry) for entry in history]},
+    )
+
+
+@router.get("/errors", response_class=HTMLResponse)
+async def errors_page(
+    request: Request, session: SessionDep, learner_id: LearnerIdDep
+) -> HTMLResponse:
+    summary = await error_summary(session, learner_id)
+    return templates.TemplateResponse(
+        request, "journal/errors.html", {"categories": [category_view(c) for c in summary]}
     )
 
 
