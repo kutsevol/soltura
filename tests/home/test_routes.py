@@ -136,3 +136,9 @@ async def test_the_grammar_tile_counts_the_exercises_due(
     response = await learner_client.get("/")
 
     assert "Вправ до повторення: 6" in response.text
+
+
+async def test_the_hub_links_to_the_journal(learner_client: AsyncClient) -> None:
+    response = await learner_client.get("/")
+
+    assert '<h3><a href="/journal">Щоденник</a></h3>' in response.text

@@ -64,6 +64,14 @@ GRAMMAR = NavItem(
     purpose="Правило з прикладами, потім вправи на нього",
 )
 
+JOURNAL = NavItem(
+    href="/journal",
+    label="Щоденник",
+    icon="book",
+    tone="journal",
+    purpose="Напишіть кілька речень іспанською і побачте виправлення",
+)
+
 STATIC_DIR = Path(__file__).parent / "static"
 
 
@@ -77,4 +85,5 @@ templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 templates.env.globals["nav"] = NAV
 templates.env.globals["trainer"] = TRAINER
 templates.env.globals["grammar_module"] = GRAMMAR
+templates.env.globals["journal_module"] = JOURNAL
 templates.env.globals["asset_version"] = asset_version
