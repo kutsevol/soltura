@@ -88,3 +88,22 @@ async def test_moving_on_without_a_session_leads_back_to_the_session_page(
     response = await learner_client.post("/study/next", data={"step": "warmup"})
 
     assert (response.status_code, response.headers["location"]) == (303, "/study")
+
+
+async def test_starting_another_session_replaces_the_one_that_was_open(
+    learner_client: AsyncClient,
+) -> None:
+    await _start(learner_client)
+    await learner_client.post("/study/next", data={"step": "warmup"})
+
+    await learner_client.post("/study/start", data={"topic": TOPICS[1].label})
+
+    page = await learner_client.get("/study")
+    assert TOPICS[1].label in page.text
+    assert 'href="/warmup" role="button">Відкрити' in page.text
+
+
+async def test_a_step_that_does_not_exist_is_refused(learner_client: AsyncClient) -> None:
+    response = await learner_client.post("/study/next", data={"step": "dinner"})
+
+    assert response.status_code == 422

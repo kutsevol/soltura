@@ -1,5 +1,7 @@
 from soltura.home.views import hub_view
+from soltura.learner.models import StudyStep
 from soltura.use_cases.home import HubSummary
+from soltura.use_cases.study import StudyProgress
 from soltura.words.vocabulary import BandProgress, VocabularyMap
 
 
@@ -42,3 +44,11 @@ def test_the_grammar_tile_names_the_next_lesson_when_nothing_is_due() -> None:
 
 def test_the_grammar_tile_says_so_when_every_unit_is_started() -> None:
     assert hub_view(_summary(0, None)).grammar_status == "Усі правила пройдено"
+
+
+def test_the_hub_view_names_the_topic_of_an_open_session() -> None:
+    summary = _summary(0, None)
+    opened = HubSummary(**{**vars(summary), "study": StudyProgress("Покупки", StudyStep.READING)})
+
+    assert hub_view(summary).study_topic is None
+    assert hub_view(opened).study_topic == "Покупки"
