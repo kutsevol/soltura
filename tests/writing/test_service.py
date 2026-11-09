@@ -148,3 +148,11 @@ def test_a_grammar_error_of_a_removed_unit_stays_without_a_lesson_or_a_suggestio
     summary = build_error_summary([_grammar("gone")] * 4, UNIT_TITLES)
 
     assert [(c.unit_id, c.title, c.count, c.suggested) for c in summary] == [(None, None, 4, False)]
+
+
+def test_a_frequent_spelling_error_ranks_above_a_rarer_unit() -> None:
+    errors = [JournalError(ErrorKind.SPELLING, None, "a", "b", "")] * 3 + [_grammar("ser_estar")]
+
+    summary = build_error_summary(errors, UNIT_TITLES)
+
+    assert [(c.kind, c.count) for c in summary] == [(ErrorKind.SPELLING, 3), (ErrorKind.GRAMMAR, 1)]

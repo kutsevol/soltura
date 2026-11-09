@@ -166,11 +166,13 @@ class ErrorCategory:
 def build_error_summary(
     errors: Sequence[JournalError], unit_titles: Mapping[str, str]
 ) -> list[ErrorCategory]:
+    # unit_titles must be in teaching order: the order of its keys breaks ties between counts.
     teaching_order = {unit_id: index for index, unit_id in enumerate(unit_titles)}
     kind_order = {kind: len(teaching_order) + index for index, kind in enumerate(ErrorKind)}
     grouped: dict[tuple[ErrorKind, str | None], list[JournalError]] = {}
     for error in errors:
-        unit_id = error.unit_id if error.unit_id in unit_titles else None
+        known = error.kind == ErrorKind.GRAMMAR and error.unit_id in unit_titles
+        unit_id = error.unit_id if known else None
         grouped.setdefault((error.kind, unit_id), []).append(error)
     categories = [
         ErrorCategory(

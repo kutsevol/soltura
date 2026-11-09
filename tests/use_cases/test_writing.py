@@ -2,7 +2,12 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.learner.models import ErrorKind, Learner
-from soltura.learner.repository import get_errors_for_entries, get_journal_entries
+from soltura.learner.repository import (
+    JournalError,
+    get_errors_for_entries,
+    get_journal_entries,
+    save_journal_entry,
+)
 from soltura.llm.client import LLMUnavailableError
 from soltura.use_cases.writing import HISTORY_SIZE, error_summary, journal_history, submit_entry
 from soltura.writing.prompts import PROMPTS
@@ -141,3 +146,15 @@ async def test_the_error_summary_counts_only_this_learners_errors(
     summary = await error_summary(session, learner.id)
 
     assert [(c.unit_id, c.count) for c in summary] == [("ser_estar", 1)]
+
+
+async def test_an_old_entry_naming_a_removed_unit_has_no_lesson_to_link(
+    session: AsyncSession, learner: Learner
+) -> None:
+    assert learner.id is not None
+    gone = JournalError(ErrorKind.GRAMMAR, "gone_unit", "a", "b", "n")
+    await save_journal_entry(session, learner.id, None, TEXT, FIXED, [gone])
+
+    history = await journal_history(session, learner.id)
+
+    assert [error.unit_id for error in history[0].errors] == [None]

@@ -186,3 +186,25 @@ async def test_the_errors_page_without_entries_points_to_the_journal(
     assert page.status_code == 200
     assert 'href="/journal"' in page.text
     assert "Помилок поки немає" in page.text
+
+
+async def test_a_removed_word_shows_a_dash_and_a_spelling_row_has_no_lesson_or_suggestion(
+    learner_client: AsyncClient, llm: FakeLLM
+) -> None:
+    for _ in range(3):
+        llm.answer(
+            Correction(
+                corrected_text="Estoy cansado porque trabajo mucho.",
+                errors=[
+                    FoundError(original="Yo", corrected="", category="spelling", note="n"),
+                ],
+            )
+        )
+        await learner_client.post("/journal", data={"text": TEXT})
+
+    page = await learner_client.get("/journal/errors")
+
+    assert "Правопис · 3" in page.text
+    assert "<del>Yo</del> → <ins>—</ins>" in page.text
+    assert "/grammar/units/" not in page.text
+    assert "Варто перечитати урок" not in page.text

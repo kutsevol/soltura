@@ -278,6 +278,7 @@ async def get_errors_for_entries(
     return errors
 
 
+# Oldest first: callers take the last error of a group as the latest example.
 async def get_learner_errors(session: AsyncSession, learner_id: int) -> list[ErrorLog]:
     result = await session.execute(
         select(ErrorLog).where(col(ErrorLog.learner_id) == learner_id).order_by(col(ErrorLog.id))
