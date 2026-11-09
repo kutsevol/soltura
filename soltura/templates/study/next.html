@@ -1,0 +1,7 @@
+{# Shown at the end of a module while a study session is on that module's step. #}
+{% if study_step %}
+  <form method="post" action="/study/next">
+    <input type="hidden" name="step" value="{{ study_step }}">
+    <button type="submit">Далі в сесії</button>
+  </form>
+{% endif %}

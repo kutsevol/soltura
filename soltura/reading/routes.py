@@ -7,11 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.db import get_session
 from soltura.learner.dependencies import LearnerDep, LearnerIdDep
+from soltura.learner.models import StudyStep
 from soltura.llm.client import LLMClient, get_llm
 from soltura.reading.topics import TOPICS
 from soltura.reading.views import split_for_reading
 from soltura.templating import templates
 from soltura.use_cases.reading import prepare_text, save_tapped_word, tap_word
+from soltura.use_cases.study import next_step_offer
 
 router = APIRouter(prefix="/reading")
 
@@ -48,9 +50,10 @@ async def new_text(
             {"message": "Вкажіть тему або вставте текст."},
             status_code=422,
         )
-    prepared = await prepare_text(
-        session, llm, learner, datetime.now(UTC), topic=topic, source_text=source
-    )
+    now = datetime.now(UTC)
+    prepared = await prepare_text(session, llm, learner, now, topic=topic, source_text=source)
+    assert learner.id is not None
+    offer = await next_step_offer(session, learner.id, StudyStep.READING, now)
     return templates.TemplateResponse(
         request,
         "reading/text.html",
@@ -58,6 +61,7 @@ async def new_text(
             "prepared": prepared,
             "paragraphs": split_for_reading(prepared.text),
             "topic": topic or prepared.title,
+            "study_step": offer,
         },
     )
 

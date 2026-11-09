@@ -8,8 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.db import get_session
 from soltura.learner.dependencies import LearnerIdDep
+from soltura.learner.models import StudyStep
 from soltura.llm.client import LLMClient, get_llm
 from soltura.templating import templates
+from soltura.use_cases.study import next_step_offer
 from soltura.use_cases.warmup import answer_item, build_warmup
 from soltura.warmup.service import WarmupItem
 from soltura.warmup.views import card_view, result_view
@@ -40,7 +42,10 @@ async def warmup_page(
 ) -> HTMLResponse:
     items = await build_warmup(session, llm, learner_id, datetime.now(UTC))
     if not items:
-        return templates.TemplateResponse(request, "warmup.html", {"empty": True})
+        offer = await next_step_offer(session, learner_id, StudyStep.WARMUP, datetime.now(UTC))
+        return templates.TemplateResponse(
+            request, "warmup.html", {"empty": True, "study_step": offer}
+        )
     first, *queue = items
     return templates.TemplateResponse(
         request, "warmup.html", {"empty": False, **_card_context(first, queue)}
@@ -78,9 +83,15 @@ async def answer(
 
 
 @router.post("/next", response_class=HTMLResponse)
-async def next_card(request: Request, queue: Annotated[str, Form()]) -> HTMLResponse:
+async def next_card(
+    request: Request,
+    session: SessionDep,
+    learner_id: LearnerIdDep,
+    queue: Annotated[str, Form()],
+) -> HTMLResponse:
     items = parse_state(QUEUE, queue, STATE_ERROR)
     if not items:
-        return templates.TemplateResponse(request, "warmup/done.html")
+        offer = await next_step_offer(session, learner_id, StudyStep.WARMUP, datetime.now(UTC))
+        return templates.TemplateResponse(request, "warmup/done.html", {"study_step": offer})
     first, *rest = items
     return templates.TemplateResponse(request, "warmup/card.html", _card_context(first, rest))
