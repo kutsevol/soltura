@@ -79,6 +79,14 @@ class ErrorKind(StrEnum):
     OTHER = "other"
 
 
+class StudyStep(StrEnum):
+    WARMUP = "warmup"
+    READING = "reading"
+    GRAMMAR = "grammar"
+    WRITING = "writing"
+    DONE = "done"
+
+
 def _enum_column(enum: type[StrEnum], name: str, **kwargs: Any) -> Column[Any]:
     return Column(
         Enum(enum, name=name, values_callable=lambda members: [m.value for m in members]),
@@ -383,6 +391,37 @@ class ErrorLog(SQLModel, table=True):
         description="Why the fragment is wrong, in the learner's language",
     )
     created_at: datetime = _created_at()
+
+
+class StudySession(SQLModel, table=True):
+    __tablename__ = "study_session"
+
+    id: int | None = Field(default=None, primary_key=True, description="Study session id")
+    learner_id: int = Field(
+        sa_column=Column(
+            Integer, ForeignKey("learner.id", ondelete="CASCADE"), nullable=False, index=True
+        ),
+        description="Learner who is studying",
+    )
+    topic: str = Field(
+        sa_column=Column(String(100), nullable=False),
+        description="Label of the reading topic the whole session is about",
+    )
+    step: StudyStep = Field(
+        default=StudyStep.WARMUP,
+        sa_column=_enum_column(StudyStep, "study_step", server_default=StudyStep.WARMUP.value),
+        description="The step the learner is on; done once the session is over",
+    )
+    started_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False),
+        description="Moment the learner started the session",
+    )
+    finished_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(TIMESTAMP(timezone=True), nullable=True),
+        description="Moment the session ended; unset while it is open",
+    )
 
 
 class ReviewLog(SQLModel, table=True):
