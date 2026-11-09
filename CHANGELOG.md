@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.39.0 (2026-11-09)
+
+### Features
+
+- **writing**: Show repeated errors and lead to the grammar lessons
+  ([#69](https://github.com/kutsevol/soltura/pull/69),
+  [`78f29eb`](https://github.com/kutsevol/soltura/commit/78f29ebb7c9c09ccde6ccecc5f0a30039fa4aebd))
+
+
 ## v0.38.0 (2026-11-09)
 
 ### Features
