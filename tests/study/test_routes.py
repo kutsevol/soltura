@@ -1,7 +1,11 @@
+from datetime import UTC, datetime
 from urllib.parse import quote
 
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from soltura.learner.models import ErrorKind, ErrorLog, Learner
+from soltura.learner.repository import save_journal_entry
 from soltura.reading.topics import TOPICS
 
 TOPIC = TOPICS[0].label
@@ -135,3 +139,30 @@ async def test_a_step_that_does_not_exist_is_refused(learner_client: AsyncClient
     response = await learner_client.post("/study/next", data={"step": "dinner"})
 
     assert response.status_code == 422
+
+
+async def test_the_summary_shows_the_errors_found_and_leads_to_the_repeated_ones(
+    learner_client: AsyncClient, session: AsyncSession, learner: Learner
+) -> None:
+    assert learner.id is not None
+    await _start(learner_client)
+    entry = await save_journal_entry(session, learner.id, None, "b", "c", [])
+    session.add(
+        ErrorLog(
+            entry_id=entry.id or 0,
+            learner_id=learner.id,
+            kind=ErrorKind.OTHER,
+            original="a",
+            corrected="b",
+            note="n",
+            created_at=datetime.now(UTC),
+        )
+    )
+    await session.flush()
+    for step in ("warmup", "reading", "grammar", "writing"):
+        await learner_client.post("/study/next", data={"step": step})
+
+    page = await learner_client.get("/study/summary")
+
+    assert "Помилок знайдено в тексті: 1" in page.text
+    assert 'href="/journal/errors"' in page.text

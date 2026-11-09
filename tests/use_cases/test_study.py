@@ -16,7 +16,7 @@ from soltura.learner.models import (
     StudyStep,
     WordContext,
 )
-from soltura.learner.repository import save_journal_entry
+from soltura.learner.repository import JournalError, save_journal_entry
 from soltura.reading.topics import TOPICS
 from soltura.srs.service import review, save_word
 from soltura.use_cases.study import (
@@ -205,6 +205,18 @@ def _at(minutes: int) -> datetime:
     return STARTED + timedelta(minutes=minutes)
 
 
+def _error(entry_id: int, learner_id: int, created_at: datetime) -> ErrorLog:
+    return ErrorLog(
+        entry_id=entry_id,
+        learner_id=learner_id,
+        kind=ErrorKind.OTHER,
+        original="a",
+        corrected="b",
+        note="n",
+        created_at=created_at,
+    )
+
+
 async def _finished_session(session: AsyncSession, learner: Learner) -> None:
     assert learner.id is not None
     await start_session(session, learner.id, TOPIC, STARTED)
@@ -214,13 +226,13 @@ async def _finished_session(session: AsyncSession, learner: Learner) -> None:
 
 
 async def test_the_summary_counts_only_what_happened_during_the_session(
-    session: AsyncSession, learner: Learner, lexemes: list[Lexeme]
+    session: AsyncSession, learner: Learner, other_learner: Learner, lexemes: list[Lexeme]
 ) -> None:
-    assert learner.id is not None
+    assert learner.id is not None and other_learner.id is not None
     cards = await save_word(session, learner.id, lexemes[0].id or 0, "Una frase.", _at(-60))
     for minutes in (-30, 10, 20, 90):
         await review(session, cards[0], Rating.GOOD, ReviewSource.WARMUP, _at(minutes))
-    for lexeme, minutes in ((lexemes[0], 10), (lexemes[0], 15), (lexemes[1], 20), (lexemes[2], 90)):
+    for lexeme, minutes in ((lexemes[0], 10), (lexemes[0], 15), (lexemes[1], 20)):
         session.add(
             WordContext(
                 learner_id=learner.id,
@@ -229,19 +241,25 @@ async def test_the_summary_counts_only_what_happened_during_the_session(
                 created_at=_at(minutes),
             )
         )
-    entry = await save_journal_entry(session, learner.id, None, "b", "c", [])
+    # Rows the database or the application stamps with today's date fall outside a 2020 sitting.
+    await save_word(session, learner.id, lexemes[2].id or 0, "Otra frase.", _at(30))
+    real = JournalError(ErrorKind.OTHER, None, "x", "y", "n")
+    entry = await save_journal_entry(session, learner.id, None, "b", "c", [real])
     for minutes in (-5, 30, 45, 70):
-        session.add(
-            ErrorLog(
-                entry_id=entry.id or 0,
-                learner_id=learner.id,
-                kind=ErrorKind.OTHER,
-                original="a",
-                corrected="b",
-                note="n",
-                created_at=_at(minutes),
-            )
+        session.add(_error(entry.id or 0, learner.id, _at(minutes)))
+    # Everything the other learner did inside the same hour is theirs.
+    theirs = await save_word(session, other_learner.id, lexemes[0].id or 0, "Una frase.", _at(0))
+    await review(session, theirs[0], Rating.GOOD, ReviewSource.WARMUP, _at(30))
+    session.add(
+        WordContext(
+            learner_id=other_learner.id,
+            lexeme_id=lexemes[1].id or 0,
+            sentence="Una frase.",
+            created_at=_at(30),
         )
+    )
+    other_entry = await save_journal_entry(session, other_learner.id, None, "b", "c", [])
+    session.add(_error(other_entry.id or 0, other_learner.id, _at(30)))
     await _finished_session(session, learner)
 
     summary = await session_summary(session, learner.id, FINISHED)
@@ -253,6 +271,32 @@ async def test_the_summary_counts_only_what_happened_during_the_session(
         2,
         2,
     )
+
+
+async def test_rows_exactly_at_the_start_and_the_finish_are_counted(
+    session: AsyncSession, learner: Learner, lexemes: list[Lexeme]
+) -> None:
+    assert learner.id is not None
+    cards = await save_word(session, learner.id, lexemes[0].id or 0, "Una frase.", _at(-60))
+    entry = await save_journal_entry(session, learner.id, None, "b", "c", [])
+    for minutes in (0, 60):
+        await review(session, cards[0], Rating.GOOD, ReviewSource.WARMUP, _at(minutes))
+        session.add(_error(entry.id or 0, learner.id, _at(minutes)))
+    for lexeme, minutes in ((lexemes[0], 0), (lexemes[1], 60)):
+        session.add(
+            WordContext(
+                learner_id=learner.id,
+                lexeme_id=lexeme.id or 0,
+                sentence="Una frase.",
+                created_at=_at(minutes),
+            )
+        )
+    await _finished_session(session, learner)
+
+    summary = await session_summary(session, learner.id, FINISHED)
+
+    assert summary is not None
+    assert (summary.reviews, summary.words_saved, summary.errors) == (2, 2, 2)
 
 
 async def test_an_open_or_replaced_session_has_no_summary(
@@ -274,5 +318,5 @@ async def test_the_summary_is_gone_after_twelve_hours_and_belongs_to_its_learner
     await _finished_session(session, learner)
 
     assert await session_summary(session, other_learner.id, FINISHED) is None
-    assert await session_summary(session, learner.id, FINISHED + timedelta(hours=11)) is not None
+    assert await session_summary(session, learner.id, FINISHED + timedelta(hours=12)) is not None
     assert await session_summary(session, learner.id, FINISHED + timedelta(hours=13)) is None
