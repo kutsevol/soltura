@@ -546,6 +546,57 @@ async def get_open_study_session(
     return result.scalar_one_or_none()
 
 
+async def get_last_finished_study_session(
+    session: AsyncSession, learner_id: int, finished_since: datetime
+) -> StudySession | None:
+    # A session replaced by a newer one has a finish time too, but never reached done.
+    result = await session.execute(
+        select(StudySession)
+        .where(
+            col(StudySession.learner_id) == learner_id,
+            col(StudySession.step) == StudyStep.DONE,
+            col(StudySession.finished_at) >= finished_since,
+        )
+        .order_by(col(StudySession.finished_at).desc(), col(StudySession.id).desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+@dataclass(frozen=True)
+class Activity:
+    reviews: int
+    words_saved: int
+    errors: int
+
+
+async def count_activity(
+    session: AsyncSession, learner_id: int, start: datetime, end: datetime
+) -> Activity:
+    reviews = await session.scalar(
+        select(func.count())
+        .select_from(ReviewLog)
+        .join(MemoryCard, col(MemoryCard.id) == col(ReviewLog.card_id))
+        .where(
+            col(MemoryCard.learner_id) == learner_id,
+            col(ReviewLog.reviewed_at).between(start, end),
+        )
+    )
+    words = await session.scalar(
+        select(func.count(func.distinct(col(WordContext.lexeme_id)))).where(
+            col(WordContext.learner_id) == learner_id,
+            col(WordContext.created_at).between(start, end),
+        )
+    )
+    errors = await session.scalar(
+        select(func.count()).where(
+            col(ErrorLog.learner_id) == learner_id,
+            col(ErrorLog.created_at).between(start, end),
+        )
+    )
+    return Activity(reviews or 0, words or 0, errors or 0)
+
+
 async def set_study_step(
     session: AsyncSession, study: StudySession, step: StudyStep, now: datetime
 ) -> None:

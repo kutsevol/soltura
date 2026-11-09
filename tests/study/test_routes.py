@@ -81,8 +81,33 @@ async def test_leaving_the_last_step_ends_the_session(learner_client: AsyncClien
 
     response = await learner_client.post("/study/next", data={"step": "writing"})
 
-    assert response.headers["location"] == "/study"
+    assert response.headers["location"] == "/study/summary"
     assert 'action="/study/start"' in (await learner_client.get("/study")).text
+
+
+async def test_the_summary_of_a_finished_session_names_the_topic_and_the_counts(
+    learner_client: AsyncClient,
+) -> None:
+    await _start(learner_client)
+    for step in ("warmup", "reading", "grammar", "writing"):
+        await learner_client.post("/study/next", data={"step": step})
+
+    page = await learner_client.get("/study/summary")
+
+    assert page.status_code == 200
+    assert TOPIC in page.text
+    assert "Карток повторено: 0" in page.text
+    assert "/journal/errors" not in page.text
+
+
+async def test_without_a_finished_session_the_summary_leads_to_the_session_page(
+    learner_client: AsyncClient,
+) -> None:
+    await _start(learner_client)
+
+    response = await learner_client.get("/study/summary")
+
+    assert (response.status_code, response.headers["location"]) == (303, "/study")
 
 
 async def test_moving_on_without_a_session_leads_back_to_the_session_page(

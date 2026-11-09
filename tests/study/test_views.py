@@ -26,5 +26,5 @@ def test_reading_and_writing_open_on_the_topic_of_the_session() -> None:
     assert "й" not in hrefs["Читання"]
 
 
-def test_a_finished_session_leads_to_the_session_page() -> None:
-    assert landing_href(StudyStep.DONE, "Покупки") == "/study"
+def test_a_finished_session_leads_to_its_summary() -> None:
+    assert landing_href(StudyStep.DONE, "Покупки") == "/study/summary"
