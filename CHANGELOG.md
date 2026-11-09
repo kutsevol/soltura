@@ -2,6 +2,21 @@
 
 <!-- version list -->
 
+## v0.41.0 (2026-11-09)
+
+### Documentation
+
+- Update the module status after grammar and the writing journal
+  ([#71](https://github.com/kutsevol/soltura/pull/71),
+  [`45edf91`](https://github.com/kutsevol/soltura/commit/45edf91f8b5aa02a9a5a1a6d51fb535219773039))
+
+### Features
+
+- **study**: Store a study session and step it forward
+  ([#72](https://github.com/kutsevol/soltura/pull/72),
+  [`c57729e`](https://github.com/kutsevol/soltura/commit/c57729e94cd987069c8a1a1451c93c1a3e096707))
+
+
 ## v0.40.0 (2026-11-09)
 
 ### Features
