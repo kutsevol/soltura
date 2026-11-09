@@ -515,7 +515,10 @@ async def get_saved_words(
 async def start_study_session(
     session: AsyncSession, learner_id: int, topic: str, now: datetime
 ) -> StudySession:
-    # A learner has one open session: starting another ends whatever was still open.
+    # A learner has one open session: starting another ends whatever was still open. The
+    # learner row is locked so two starts at once (a double tap) take turns, and the
+    # partial unique index on open sessions backs it up.
+    await session.execute(select(Learner.id).where(col(Learner.id) == learner_id).with_for_update())
     await session.execute(
         update(StudySession)
         .where(col(StudySession.learner_id) == learner_id, col(StudySession.finished_at).is_(None))

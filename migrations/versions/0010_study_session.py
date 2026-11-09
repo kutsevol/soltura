@@ -39,6 +39,13 @@ def upgrade() -> None:
         ),
     )
     op.create_index("ix_study_session_learner_id", STUDY_SESSION, ["learner_id"])
+    op.create_index(
+        "uq_study_session_open",
+        STUDY_SESSION,
+        ["learner_id"],
+        unique=True,
+        postgresql_where=sa.text("finished_at IS NULL"),
+    )
 
 
 def downgrade() -> None:

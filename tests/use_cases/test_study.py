@@ -2,6 +2,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.learner.models import Learner, StudySession, StudyStep
@@ -55,17 +56,52 @@ async def test_advancing_walks_the_steps_and_ends_at_done(
     assert learner.id is not None
     await start_session(session, learner.id, TOPIC, NOW)
 
-    steps = [(await advance_session(session, learner.id, NOW)).step for _ in range(4)]
+    steps = [StudyStep.WARMUP]
+    for _ in range(4):
+        steps.append((await advance_session(session, learner.id, steps[-1], NOW)).step)
 
-    assert steps == [StudyStep.READING, StudyStep.GRAMMAR, StudyStep.WRITING, StudyStep.DONE]
+    assert steps == [
+        StudyStep.WARMUP,
+        StudyStep.READING,
+        StudyStep.GRAMMAR,
+        StudyStep.WRITING,
+        StudyStep.DONE,
+    ]
     assert await open_session(session, learner.id, NOW) is None
     with pytest.raises(LookupError):
-        await advance_session(session, learner.id, NOW)
+        await advance_session(session, learner.id, StudyStep.DONE, NOW)
+
+
+async def test_a_second_tap_on_the_same_step_does_not_skip_a_step(
+    session: AsyncSession, learner: Learner
+) -> None:
+    assert learner.id is not None
+    await start_session(session, learner.id, TOPIC, NOW)
+
+    first = await advance_session(session, learner.id, StudyStep.WARMUP, NOW)
+    second = await advance_session(session, learner.id, StudyStep.WARMUP, NOW)
+
+    assert (first.step, second.step) == (StudyStep.READING, StudyStep.READING)
+
+
+async def test_two_open_sessions_of_one_learner_cannot_exist(
+    session: AsyncSession, learner: Learner
+) -> None:
+    assert learner.id is not None
+    await start_session(session, learner.id, TOPIC, NOW)
+
+    with pytest.raises(IntegrityError):
+        async with session.begin_nested():
+            session.add(StudySession(learner_id=learner.id, topic=OTHER_TOPIC))
 
 
 @pytest.mark.parametrize(
     ("age", "is_open"),
-    [(timedelta(hours=11, minutes=59), True), (timedelta(hours=12, minutes=1), False)],
+    [
+        (timedelta(hours=11, minutes=59), True),
+        (timedelta(hours=12), True),
+        (timedelta(hours=12, minutes=1), False),
+    ],
 )
 async def test_a_session_older_than_twelve_hours_counts_as_closed(
     session: AsyncSession, learner: Learner, age: timedelta, is_open: bool
@@ -83,7 +119,7 @@ async def test_a_stale_session_cannot_be_advanced(session: AsyncSession, learner
     await start_session(session, learner.id, TOPIC, NOW)
 
     with pytest.raises(LookupError):
-        await advance_session(session, learner.id, NOW + timedelta(days=1))
+        await advance_session(session, learner.id, StudyStep.WARMUP, NOW + timedelta(days=1))
 
 
 async def test_a_session_belongs_to_its_learner(
@@ -94,7 +130,7 @@ async def test_a_session_belongs_to_its_learner(
 
     assert await open_session(session, other_learner.id, NOW) is None
     with pytest.raises(LookupError):
-        await advance_session(session, other_learner.id, NOW)
+        await advance_session(session, other_learner.id, StudyStep.WARMUP, NOW)
 
 
 async def test_starting_and_advancing_are_committed(
@@ -111,6 +147,6 @@ async def test_starting_and_advancing_are_committed(
     monkeypatch.setattr(session, "commit", counting_commit)
 
     await start_session(session, learner.id, TOPIC, NOW)
-    await advance_session(session, learner.id, NOW)
+    await advance_session(session, learner.id, StudyStep.WARMUP, NOW)
 
     assert commits == [1, 1]

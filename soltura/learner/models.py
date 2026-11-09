@@ -15,6 +15,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlmodel import Field, SQLModel
 
@@ -395,6 +396,14 @@ class ErrorLog(SQLModel, table=True):
 
 class StudySession(SQLModel, table=True):
     __tablename__ = "study_session"
+    __table_args__ = (
+        Index(
+            "uq_study_session_open",
+            "learner_id",
+            unique=True,
+            postgresql_where=text("finished_at IS NULL"),
+        ),
+    )
 
     id: int | None = Field(default=None, primary_key=True, description="Study session id")
     learner_id: int = Field(

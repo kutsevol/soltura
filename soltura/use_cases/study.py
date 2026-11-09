@@ -29,8 +29,9 @@ async def start_session(
     if topic not in {known.label for known in TOPICS}:
         raise LookupError(f"No reading topic {topic}")
     study = await start_study_session(session, learner_id, topic, now)
+    progress = _progress(study)
     await session.commit()
-    return _progress(study)
+    return progress
 
 
 async def open_session(
@@ -40,10 +41,17 @@ async def open_session(
     return _progress(study) if study else None
 
 
-async def advance_session(session: AsyncSession, learner_id: int, now: datetime) -> StudyProgress:
+async def advance_session(
+    session: AsyncSession, learner_id: int, expected: StudyStep, now: datetime
+) -> StudyProgress:
     study = await get_open_study_session(session, learner_id, now - OPEN_FOR)
     if study is None:
         raise LookupError("The learner has no open study session")
+    # The button carries the step the learner saw: a second tap, a retried request or an
+    # old tab finds the session already moved on and must not skip another step.
+    if study.step != expected:
+        return _progress(study)
     await set_study_step(session, study, next_step(study.step), now)
+    progress = _progress(study)
     await session.commit()
-    return _progress(study)
+    return progress
