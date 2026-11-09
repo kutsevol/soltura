@@ -101,3 +101,36 @@ async def test_pressing_the_button_in_a_walk_moves_on_to_the_next_screen(
 
     assert reading.status_code == 200
     assert 'hx-trigger="load"' in reading.text
+
+
+async def test_reading_and_the_journal_offer_nothing_while_the_session_is_elsewhere(
+    learner_client: AsyncClient, llm: FakeLLM, know: KnowFn
+) -> None:
+    await know(f"{EASY_TEXT.title}. {EASY_TEXT.text}")
+    llm.answer(EASY_TEXT)
+    llm.answer(Correction(corrected_text=TEXT, errors=[]))
+    await _session_on(learner_client, "warmup")
+
+    reading = await learner_client.post("/reading/text", data={"topic": "la playa"})
+    journal = await learner_client.post("/journal", data={"text": TEXT})
+
+    assert BUTTON not in reading.text + journal.text
+
+
+async def test_a_grammar_lesson_is_not_the_end_of_the_step(learner_client: AsyncClient) -> None:
+    await _session_on(learner_client, "grammar")
+
+    page = await learner_client.get("/grammar")
+
+    assert "Практикувати" in page.text
+    assert BUTTON not in page.text
+
+
+async def test_leaving_the_journal_ends_the_session_on_the_session_page(
+    learner_client: AsyncClient,
+) -> None:
+    await _session_on(learner_client, "writing")
+
+    response = await learner_client.post("/study/next", data={"step": "writing"})
+
+    assert response.headers["location"] == "/study"

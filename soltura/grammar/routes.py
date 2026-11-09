@@ -51,6 +51,14 @@ def _state_context(
     return "grammar/done.html", {"lesson": None, "study_step": study_step}
 
 
+async def _offer(
+    session: AsyncSession, learner_id: int, state: GrammarState, now: datetime
+) -> StudyStep | None:
+    if state.items or state.lesson is not None:
+        return None
+    return await next_step_offer(session, learner_id, StudyStep.GRAMMAR, now)
+
+
 def _page(
     request: Request, state: GrammarState, study_step: StudyStep | None = None
 ) -> HTMLResponse:
@@ -63,8 +71,8 @@ async def grammar_page(
     request: Request, session: SessionDep, learner_id: LearnerIdDep
 ) -> HTMLResponse:
     now = datetime.now(UTC)
-    offer = await next_step_offer(session, learner_id, StudyStep.GRAMMAR, now)
-    return _page(request, await grammar_state(session, learner_id, now), offer)
+    state = await grammar_state(session, learner_id, now)
+    return _page(request, state, await _offer(session, learner_id, state, now))
 
 
 @router.get("/progress", response_class=HTMLResponse)
@@ -99,8 +107,8 @@ async def start(
         await start_unit(session, learner_id, unit_id, now)
     except LookupError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from error
-    offer = await next_step_offer(session, learner_id, StudyStep.GRAMMAR, now)
-    fragment, context = _state_context(await grammar_state(session, learner_id, now), offer)
+    state = await grammar_state(session, learner_id, now)
+    fragment, context = _state_context(state, await _offer(session, learner_id, state, now))
     return templates.TemplateResponse(request, fragment, context)
 
 

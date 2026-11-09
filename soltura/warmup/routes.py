@@ -40,9 +40,10 @@ def _card_context(item: WarmupItem, queue: list[WarmupItem]) -> dict[str, Any]:
 async def warmup_page(
     request: Request, session: SessionDep, learner_id: LearnerIdDep, llm: LLMDep
 ) -> HTMLResponse:
-    items = await build_warmup(session, llm, learner_id, datetime.now(UTC))
+    now = datetime.now(UTC)
+    items = await build_warmup(session, llm, learner_id, now)
     if not items:
-        offer = await next_step_offer(session, learner_id, StudyStep.WARMUP, datetime.now(UTC))
+        offer = await next_step_offer(session, learner_id, StudyStep.WARMUP, now)
         return templates.TemplateResponse(
             request, "warmup.html", {"empty": True, "study_step": offer}
         )

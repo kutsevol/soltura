@@ -7,7 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.learner.models import Learner, StudySession, StudyStep
 from soltura.reading.topics import TOPICS
-from soltura.use_cases.study import advance_session, open_session, start_session
+from soltura.use_cases.study import (
+    advance_session,
+    next_step_offer,
+    open_session,
+    start_session,
+)
 
 NOW = datetime(2026, 11, 9, 8, 0, tzinfo=UTC)
 TOPIC = TOPICS[0].label
@@ -150,3 +155,29 @@ async def test_starting_and_advancing_are_committed(
     await advance_session(session, learner.id, StudyStep.WARMUP, NOW)
 
     assert commits == [1, 1]
+
+
+@pytest.mark.parametrize("on", list(StudyStep)[:4])
+@pytest.mark.parametrize("module", list(StudyStep)[:4])
+async def test_a_module_is_offered_the_next_step_only_while_the_session_is_on_it(
+    session: AsyncSession, learner: Learner, on: StudyStep, module: StudyStep
+) -> None:
+    assert learner.id is not None
+    await start_session(session, learner.id, TOPIC, NOW)
+    for step in list(StudyStep)[: list(StudyStep).index(on)]:
+        await advance_session(session, learner.id, step, NOW)
+
+    offer = await next_step_offer(session, learner.id, module, NOW)
+
+    assert offer == (module if module == on else None)
+
+
+async def test_no_module_is_offered_the_next_step_without_an_open_session(
+    session: AsyncSession, learner: Learner
+) -> None:
+    assert learner.id is not None
+    await start_session(session, learner.id, TOPIC, NOW)
+
+    later = NOW + timedelta(hours=13)
+
+    assert await next_step_offer(session, learner.id, StudyStep.WARMUP, later) is None

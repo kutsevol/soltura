@@ -38,6 +38,7 @@ async def new_text(
     request: Request,
     session: SessionDep,
     learner: LearnerDep,
+    learner_id: LearnerIdDep,
     llm: LLMDep,
     topic: Annotated[str, Form()] = "",
     source_text: Annotated[str, Form()] = "",
@@ -52,8 +53,7 @@ async def new_text(
         )
     now = datetime.now(UTC)
     prepared = await prepare_text(session, llm, learner, now, topic=topic, source_text=source)
-    assert learner.id is not None
-    offer = await next_step_offer(session, learner.id, StudyStep.READING, now)
+    offer = await next_step_offer(session, learner_id, StudyStep.READING, now)
     return templates.TemplateResponse(
         request,
         "reading/text.html",
