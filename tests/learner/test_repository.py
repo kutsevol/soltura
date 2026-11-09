@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
 from soltura.learner.models import (
+    ErrorKind,
     KnowledgeType,
     Learner,
     LearnerLexeme,
@@ -17,15 +18,19 @@ from soltura.learner.models import (
 )
 from soltura.learner.repository import (
     BandCounts,
+    JournalError,
     count_due_cards,
     get_card_progress,
     get_due_cards,
+    get_errors_for_entries,
+    get_journal_entries,
     get_latest_placement_run,
     get_lexemes_by_lemmas,
     get_or_create_learner,
     get_recent_titles,
     get_vocabulary_bands,
     mark_lemmas_known,
+    save_journal_entry,
     save_placement_run,
     save_reading_text,
 )
@@ -276,3 +281,44 @@ async def test_card_progress_counts_the_answers_of_each_card_of_one_kind(
         ("ser_estar|e1", 9.5, 4, 2),
         ("ser_estar|e2", None, 0, 0),
     ]
+
+
+async def test_journal_entries_come_back_newest_first_with_their_errors(
+    session: AsyncSession, learner: Learner, other_learner: Learner
+) -> None:
+    assert learner.id is not None and other_learner.id is not None
+    older = await save_journal_entry(
+        session, learner.id, None, "Yo soy cansado.", "Estoy cansado.", []
+    )
+    newer = await save_journal_entry(
+        session,
+        learner.id,
+        "Una nota al vecino",
+        "Yo soy cansado y tengo hambre.",
+        "Estoy cansado y tengo hambre.",
+        [
+            JournalError(ErrorKind.GRAMMAR, "ser_estar", "soy cansado", "estoy cansado", "estado"),
+            JournalError(ErrorKind.SPELLING, None, "hambe", "hambre", "буква"),
+        ],
+    )
+    await save_journal_entry(session, other_learner.id, None, "Hola", "Hola", [])
+
+    entries = await get_journal_entries(session, learner.id, limit=10)
+    errors = await get_errors_for_entries(session, [entry.id for entry in entries if entry.id])
+
+    assert [entry.id for entry in entries] == [newer.id, older.id]
+    assert [(error.kind, error.unit_id, error.original) for error in errors[newer.id or 0]] == [
+        (ErrorKind.GRAMMAR, "ser_estar", "soy cansado"),
+        (ErrorKind.SPELLING, None, "hambe"),
+    ]
+    assert older.id not in errors
+
+
+async def test_journal_entries_are_limited(session: AsyncSession, learner: Learner) -> None:
+    assert learner.id is not None
+    for text in ("uno", "dos", "tres"):
+        await save_journal_entry(session, learner.id, None, text, text, [])
+
+    entries = await get_journal_entries(session, learner.id, limit=2)
+
+    assert [entry.body for entry in entries] == ["tres", "dos"]

@@ -11,6 +11,9 @@ from sqlalchemy.orm import aliased
 from sqlmodel import SQLModel, col, select
 
 from soltura.learner.models import (
+    ErrorKind,
+    ErrorLog,
+    JournalEntry,
     KnowledgeType,
     Learner,
     LearnerLexeme,
@@ -210,6 +213,69 @@ async def save_reading_text(
     session.add(text)
     await session.flush()
     return text
+
+
+@dataclass(frozen=True)
+class JournalError:
+    kind: ErrorKind
+    unit_id: str | None
+    original: str
+    corrected: str
+    note: str
+
+
+async def save_journal_entry(
+    session: AsyncSession,
+    learner_id: int,
+    prompt: str | None,
+    body: str,
+    corrected: str,
+    errors: Sequence[JournalError],
+) -> JournalEntry:
+    entry = JournalEntry(learner_id=learner_id, prompt=prompt, body=body, corrected=corrected)
+    session.add(entry)
+    await session.flush()
+    assert entry.id is not None
+    session.add_all(
+        ErrorLog(
+            entry_id=entry.id,
+            learner_id=learner_id,
+            kind=error.kind,
+            unit_id=error.unit_id,
+            original=error.original,
+            corrected=error.corrected,
+            note=error.note,
+        )
+        for error in errors
+    )
+    await session.flush()
+    return entry
+
+
+async def get_journal_entries(
+    session: AsyncSession, learner_id: int, limit: int
+) -> list[JournalEntry]:
+    result = await session.execute(
+        select(JournalEntry)
+        .where(col(JournalEntry.learner_id) == learner_id)
+        .order_by(col(JournalEntry.id).desc())
+        .limit(limit)
+    )
+    return list(result.scalars())
+
+
+async def get_errors_for_entries(
+    session: AsyncSession, entry_ids: Iterable[int]
+) -> dict[int, list[ErrorLog]]:
+    result = await session.execute(
+        select(ErrorLog)
+        .where(col(ErrorLog.entry_id).in_(list(entry_ids)))
+        .order_by(col(ErrorLog.id))
+    )
+    errors: dict[int, list[ErrorLog]] = defaultdict(list)
+    for error in result.scalars():
+        errors[error.entry_id].append(error)
+    return errors
 
 
 async def get_recent_titles(session: AsyncSession, learner_id: int, limit: int) -> list[str]:

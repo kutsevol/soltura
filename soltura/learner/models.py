@@ -71,6 +71,13 @@ class ReviewSource(StrEnum):
     GRAMMAR = "grammar"
 
 
+class ErrorKind(StrEnum):
+    GRAMMAR = "grammar"
+    VOCABULARY = "vocabulary"
+    SPELLING = "spelling"
+    OTHER = "other"
+
+
 def _enum_column(enum: type[StrEnum], name: str, **kwargs: Any) -> Column[Any]:
     return Column(
         Enum(enum, name=name, values_callable=lambda members: [m.value for m in members]),
@@ -307,6 +314,72 @@ class ReadingText(SQLModel, table=True):
     title: str = Field(
         sa_column=Column(Text, nullable=False),
         description="Title of the prepared text",
+    )
+    created_at: datetime = _created_at()
+
+
+class JournalEntry(SQLModel, table=True):
+    __tablename__ = "journal_entry"
+
+    id: int | None = Field(default=None, primary_key=True, description="Journal entry id")
+    learner_id: int = Field(
+        sa_column=Column(
+            Integer, ForeignKey("learner.id", ondelete="CASCADE"), nullable=False, index=True
+        ),
+        description="Learner who wrote the text",
+    )
+    prompt: str | None = Field(
+        default=None,
+        sa_column=Column(String(200), nullable=True),
+        description="The task or topic the text answers; unset for a free topic",
+    )
+    body: str = Field(
+        sa_column=Column(Text, nullable=False),
+        description="The text as the learner wrote it",
+    )
+    corrected: str = Field(
+        sa_column=Column(Text, nullable=False),
+        description="The text after the correction",
+    )
+    created_at: datetime = _created_at()
+
+
+class ErrorLog(SQLModel, table=True):
+    __tablename__ = "error_log"
+
+    id: int | None = Field(default=None, primary_key=True, description="Error id")
+    entry_id: int = Field(
+        sa_column=Column(
+            Integer, ForeignKey("journal_entry.id", ondelete="CASCADE"), nullable=False, index=True
+        ),
+        description="Journal entry the error was found in",
+    )
+    learner_id: int = Field(
+        sa_column=Column(
+            Integer, ForeignKey("learner.id", ondelete="CASCADE"), nullable=False, index=True
+        ),
+        description="Learner who made the error",
+    )
+    kind: ErrorKind = Field(
+        sa_column=_enum_column(ErrorKind, "error_kind"),
+        description="Whether the error is a grammar rule, a word, spelling or something else",
+    )
+    unit_id: str | None = Field(
+        default=None,
+        sa_column=Column(String(64), nullable=True),
+        description="Id of the grammar unit the error belongs to; set only for a grammar error",
+    )
+    original: str = Field(
+        sa_column=Column(Text, nullable=False),
+        description="The fragment as the learner wrote it",
+    )
+    corrected: str = Field(
+        sa_column=Column(Text, nullable=False),
+        description="The fragment after the correction",
+    )
+    note: str = Field(
+        sa_column=Column(Text, nullable=False),
+        description="Why the fragment is wrong, in the learner's language",
     )
     created_at: datetime = _created_at()
 
