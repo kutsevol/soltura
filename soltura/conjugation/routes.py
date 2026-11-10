@@ -40,10 +40,12 @@ def _card_context(item: ConjugationItem, queue: list[ConjugationItem]) -> dict[s
 async def conjugation_page(
     request: Request, session: SessionDep, learner_id: LearnerIdDep
 ) -> HTMLResponse:
-    items = await build_session(session, learner_id, datetime.now(UTC))
-    if not items:
-        return templates.TemplateResponse(request, "conjugation.html", {"empty": True})
-    first, *queue = items
+    study = await build_session(session, learner_id, datetime.now(UTC))
+    if not study.items:
+        return templates.TemplateResponse(
+            request, "conjugation.html", {"empty": True, "capped": study.capped}
+        )
+    first, *queue = study.items
     return templates.TemplateResponse(
         request, "conjugation.html", {"empty": False, **_card_context(first, queue)}
     )

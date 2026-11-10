@@ -176,6 +176,19 @@ async def count_unreviewed_cards(
     return result.scalar_one()
 
 
+async def count_cards_created_since(
+    session: AsyncSession, learner_id: int, unit_kind: UnitKind, since: datetime
+) -> int:
+    result = await session.execute(
+        select(func.count()).where(
+            col(MemoryCard.learner_id) == learner_id,
+            col(MemoryCard.unit_kind) == unit_kind,
+            col(MemoryCard.created_at) >= since,
+        )
+    )
+    return result.scalar_one()
+
+
 async def get_verb_lemmas(session: AsyncSession) -> list[str]:
     result = await session.execute(
         select(Lexeme.lemma)

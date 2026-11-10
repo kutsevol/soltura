@@ -1,9 +1,10 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
+from soltura.config import settings
 from soltura.conjugation.forms import Person, Tense
 from soltura.learner.models import (
     KnowledgeType,
@@ -45,7 +46,7 @@ async def test_a_new_learner_is_offered_the_most_frequent_verb_in_the_present_in
 ) -> None:
     assert learner.id is not None
 
-    items = await build_session(session, learner.id, NOW)
+    items = (await build_session(session, learner.id, NOW)).items
 
     assert [(item.verb, item.tense, item.person) for item in items] == [
         ("ser", Tense.PRESENT, person) for person in Person
@@ -59,9 +60,9 @@ async def test_another_set_waits_until_the_last_one_has_been_answered(
     session: AsyncSession, learner: Learner, verb_lexemes: list[Lexeme]
 ) -> None:
     assert learner.id is not None
-    first = await build_session(session, learner.id, NOW)
+    first = (await build_session(session, learner.id, NOW)).items
 
-    again = await build_session(session, learner.id, NOW)
+    again = (await build_session(session, learner.id, NOW)).items
 
     assert [item.card_id for item in again] == [item.card_id for item in first]
     assert len(await _conjugation_cards(session)) == 6
@@ -71,11 +72,11 @@ async def test_the_next_set_arrives_once_the_last_one_is_answered_and_the_answer
     session: AsyncSession, learner: Learner, verb_lexemes: list[Lexeme]
 ) -> None:
     assert learner.id is not None
-    first = await build_session(session, learner.id, NOW)
+    first = (await build_session(session, learner.id, NOW)).items
     for item in first:
         await answer_item(session, learner.id, item.card_id, "x", 1000, NOW)
 
-    items = await build_session(session, learner.id, NOW)
+    items = (await build_session(session, learner.id, NOW)).items
 
     assert [(item.verb, item.tense) for item in items] == [("ser", Tense.PRETERITE)] * 6
     assert {item.card_id for item in items}.isdisjoint(item.card_id for item in first)
@@ -85,14 +86,14 @@ async def test_an_answered_card_returns_on_the_fsrs_schedule_and_not_before(
     session: AsyncSession, learner: Learner, verb_lexemes: list[Lexeme]
 ) -> None:
     assert learner.id is not None
-    first = await build_session(session, learner.id, NOW)
+    first = (await build_session(session, learner.id, NOW)).items
     answered = first[0]
     await answer_item(session, learner.id, answered.card_id, "soy", 1500, NOW)
     card = await session.get(MemoryCard, answered.card_id)
     assert card is not None
 
-    before = await build_session(session, learner.id, NOW)
-    on_schedule = await build_session(session, learner.id, card.due)
+    before = (await build_session(session, learner.id, NOW)).items
+    on_schedule = (await build_session(session, learner.id, card.due)).items
 
     assert card.due > NOW
     assert answered.card_id not in {item.card_id for item in before}
@@ -173,3 +174,81 @@ async def test_haber_and_pasar_cards_are_checked_against_their_own_forms(
     result = await answer_item(session, learner.id, card_id, answer, 1000, NOW)
 
     assert result.rating == rating
+
+
+async def _answer_the_whole_set(session: AsyncSession, learner: Learner) -> int:
+    assert learner.id is not None
+    items = (await build_session(session, learner.id, NOW)).items
+    for item in items:
+        await answer_item(session, learner.id, item.card_id, "x", 1000, NOW)
+    return len(items)
+
+
+async def test_no_new_set_starts_after_the_daily_cap_and_the_screen_says_why(
+    session: AsyncSession, learner: Learner, verb_lexemes: list[Lexeme]
+) -> None:
+    assert learner.id is not None
+    for _ in range(4):
+        assert await _answer_the_whole_set(session, learner) == 6
+
+    held = await build_session(session, learner.id, NOW)
+
+    assert (held.items, held.capped) == ([], True)
+    assert len(await _conjugation_cards(session)) == 24
+
+
+async def test_the_cap_follows_the_setting(
+    session: AsyncSession,
+    learner: Learner,
+    verb_lexemes: list[Lexeme],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert learner.id is not None
+    monkeypatch.setattr(settings.conjugation, "new_sets_per_day", 1)
+    await _answer_the_whole_set(session, learner)
+
+    assert (await build_session(session, learner.id, NOW)).capped is True
+
+
+async def test_a_new_set_starts_again_a_day_after_the_first(
+    session: AsyncSession, learner: Learner, verb_lexemes: list[Lexeme]
+) -> None:
+    assert learner.id is not None
+    for _ in range(4):
+        await _answer_the_whole_set(session, learner)
+    for card in await _conjugation_cards(session):
+        card.created_at = NOW - timedelta(hours=25)
+    await session.flush()
+
+    study = await build_session(session, learner.id, NOW)
+
+    assert study.capped is False
+    assert [(item.verb, item.tense) for item in study.items] == [("tener", Tense.PRESENT)] * 6
+
+
+async def test_cards_due_for_review_are_still_offered_when_the_cap_holds(
+    session: AsyncSession, learner: Learner, verb_lexemes: list[Lexeme]
+) -> None:
+    assert learner.id is not None
+    for _ in range(4):
+        await _answer_the_whole_set(session, learner)
+
+    # The first moment every answered card is due; the sets were started inside the day before it.
+    later = max(card.due for card in await _conjugation_cards(session))
+    study = await build_session(session, learner.id, later)
+
+    assert study.capped is True
+    assert len(study.items) == 18
+
+
+async def test_another_learners_sets_do_not_count_toward_the_cap(
+    session: AsyncSession, learner: Learner, other_learner: Learner, verb_lexemes: list[Lexeme]
+) -> None:
+    assert learner.id is not None and other_learner.id is not None
+    for _ in range(4):
+        await _answer_the_whole_set(session, other_learner)
+
+    study = await build_session(session, learner.id, NOW)
+
+    assert study.capped is False
+    assert len(study.items) == 6
