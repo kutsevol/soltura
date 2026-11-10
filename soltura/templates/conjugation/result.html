@@ -4,6 +4,7 @@
 {% if result.expected %}
   <p>Очікувалось: <strong>{{ result.expected }}</strong></p>
 {% endif %}
+<p class="note"><a href="/conjugation/verbs/{{ result.verb | urlencode }}">Усі форми: {{ result.verb }}</a></p>
 <form hx-post="/conjugation/next" hx-target="#card">
   <input type="hidden" name="queue" value="{{ queue_json }}">
   <button type="submit" autofocus>Далі</button>

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}{{ verb }} · Дієслова · Soltura{% endblock %}
+{% block heading %}{{ verb }}{% endblock %}
+
+{% block content %}
+  {% for tense in tenses %}
+    <article>
+      <h3>{{ tense.tense }}</h3>
+      <table>
+        <tbody>
+          {% for pronoun, forms in tense.rows %}
+            <tr><th scope="row">{{ pronoun }}</th><td>{{ forms[0] }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </article>
+  {% endfor %}
+  <p class="note"><a href="/conjugation/endings">Закінчення правильних дієслів</a> · <a href="/conjugation">До тренажера</a></p>
+{% endblock %}

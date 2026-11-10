@@ -1,9 +1,11 @@
 import re
 
+import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
+from soltura.config import settings
 from soltura.learner.models import Lexeme, ReviewLog, ReviewSource
 
 SER_PRESENT = ["soy", "eres", "es", "somos", "sois", "son"]
@@ -91,3 +93,58 @@ async def test_a_broken_session_state_is_refused(learner_client: AsyncClient) ->
     response = await learner_client.post("/conjugation/next", data={"queue": "not json"})
 
     assert response.status_code == 400
+
+
+async def test_the_page_of_a_verb_lists_every_tense_and_person(learner_client: AsyncClient) -> None:
+    page = await learner_client.get("/conjugation/verbs/ser")
+
+    assert page.status_code == 200
+    assert page.text.count("<tr>") == 24
+    assert "<td>soy</td>" in page.text and "<td>fueron</td>" in page.text
+    assert "presente" in page.text and "futuro" in page.text
+
+
+@pytest.mark.parametrize("verb", ["zzzar", "llover", "haber", "dar%20%C3%A9l", "x"])
+async def test_the_page_of_a_verb_that_cannot_be_conjugated_is_a_404(
+    learner_client: AsyncClient, verb: str
+) -> None:
+    response = await learner_client.get(f"/conjugation/verbs/{verb}")
+
+    assert response.status_code == 404
+
+
+async def test_the_endings_page_shows_the_three_conjugations_side_by_side(
+    learner_client: AsyncClient,
+) -> None:
+    page = await learner_client.get("/conjugation/endings")
+
+    assert page.status_code == 200
+    for header in ("-ar", "-er", "-ir"):
+        assert f'<th scope="col">{header}</th>' in page.text
+    assert "<td>-amos</td><td>-emos</td><td>-imos</td>" in page.text
+
+
+async def test_an_answer_links_to_the_table_of_its_verb(
+    learner_client: AsyncClient, session: AsyncSession, verb_lexemes: list[Lexeme]
+) -> None:
+    page = (await learner_client.get("/conjugation")).text
+
+    result = await _answer(learner_client, page, "x", give_up=True)
+
+    assert re.search(r'href="/conjugation/verbs/[a-zñáéíóú]+"', result)
+
+
+@pytest.mark.parametrize("path", ["/conjugation/verbs/ser", "/conjugation/endings"])
+async def test_the_reference_pages_need_a_learner(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch, path: str
+) -> None:
+    monkeypatch.setattr(settings.auth, "dev_telegram_user_id", None)
+
+    assert (await client.get(path)).status_code == 401
+
+
+@pytest.mark.parametrize("verb", ["HABLAR", "o%C3%ADr"])
+async def test_a_verb_in_capitals_or_with_an_accent_has_its_page(
+    learner_client: AsyncClient, verb: str
+) -> None:
+    assert (await learner_client.get(f"/conjugation/verbs/{verb}")).status_code == 200
