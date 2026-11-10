@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.48.0 (2026-11-10)
+
+### Features
+
+- **conjugation**: Cap the new verb sets per day
+  ([#81](https://github.com/kutsevol/soltura/pull/81),
+  [`149ae54`](https://github.com/kutsevol/soltura/commit/149ae54c6241452c7ece12c2150935273c824a6d))
+
+
 ## v0.47.0 (2026-11-10)
 
 ### Features
