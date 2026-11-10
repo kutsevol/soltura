@@ -16,11 +16,11 @@ from soltura.learner.models import (
     ReviewSource,
 )
 from soltura.learner.repository import get_recent_titles, save_placement_run, save_reading_text
-from soltura.reading.service import GeneratedText, Gloss
+from soltura.reading.service import GeneratedText, GistVerdict, Gloss
 from soltura.reading.topics import TOPICS
 from soltura.reading.variation import FORMS, NAMES
 from soltura.srs.service import save_word
-from soltura.use_cases.reading import prepare_text, save_tapped_word, tap_word
+from soltura.use_cases.reading import check_gist, prepare_text, save_tapped_word, tap_word
 from tests.conftest import EASY_TEXT, HARD_TEXT, KnowFn, RankFn
 from tests.factories import LexemeFactory
 from tests.fakes import FakeLLM
@@ -306,3 +306,15 @@ async def test_simplification_names_only_the_rarest_words_over_the_budget(
     named = llm.prompts[1].split(": ", 1)[1].split(". Replace", 1)[0]
     # 39 words allow one unknown: the two rarest go, the more frequent "bicicleta" stays.
     assert named == "arrendatario, nieto"
+
+
+async def test_the_gist_check_sends_the_text_and_the_answer_and_returns_the_verdict(
+    llm: FakeLLM,
+) -> None:
+    llm.answer(GistVerdict(verdict="partly", reason="Текст про пляж."))
+
+    verdict = await check_gist(llm, EASY_TEXT.text, "Про сонце")
+
+    assert (verdict.verdict, verdict.reason) == ("partly", "Текст про пляж.")
+    assert f"<text>\n{EASY_TEXT.text}\n</text>" in llm.prompts[0]
+    assert "<answer>\nПро сонце\n</answer>" in llm.prompts[0]

@@ -9,10 +9,11 @@ from soltura.db import get_session
 from soltura.learner.dependencies import LearnerDep, LearnerIdDep
 from soltura.learner.models import StudyStep
 from soltura.llm.client import LLMClient, get_llm
+from soltura.reading.service import MAX_GIST_ANSWER, MAX_GIST_TEXT
 from soltura.reading.topics import TOPICS
-from soltura.reading.views import split_for_reading
+from soltura.reading.views import GIST_LABEL, split_for_reading
 from soltura.templating import templates
-from soltura.use_cases.reading import prepare_text, save_tapped_word, tap_word
+from soltura.use_cases.reading import check_gist, prepare_text, save_tapped_word, tap_word
 from soltura.use_cases.study import next_step_offer
 
 router = APIRouter(prefix="/reading")
@@ -62,6 +63,7 @@ async def new_text(
             "paragraphs": split_for_reading(prepared.text),
             "topic": topic or prepared.title,
             "study_step": offer,
+            "max_gist_answer": MAX_GIST_ANSWER,
         },
     )
 
@@ -93,3 +95,30 @@ async def save(
 ) -> HTMLResponse:
     await save_tapped_word(session, learner_id, lemma, sentence, datetime.now(UTC), topic or None)
     return templates.TemplateResponse(request, "reading/saved.html", {"lemma": lemma})
+
+
+@router.post("/gist", response_class=HTMLResponse)
+async def gist(
+    request: Request,
+    learner_id: LearnerIdDep,
+    llm: LLMDep,
+    text: Annotated[str, Form()],
+    answer: Annotated[str, Form()] = "",
+) -> HTMLResponse:
+    # A browser sends a newline as two characters, which the limit must not count twice.
+    answer = answer.replace("\r\n", "\n").strip()
+    message = None
+    if not answer:
+        message = "Напишіть хоча б кілька слів."
+    elif len(answer) > MAX_GIST_ANSWER or len(text) > MAX_GIST_TEXT:
+        message = "Відповідь або текст задовгі."
+    if message:
+        return templates.TemplateResponse(
+            request, "reading/error.html", {"message": message}, status_code=422
+        )
+    verdict = await check_gist(llm, text, answer)
+    return templates.TemplateResponse(
+        request,
+        "reading/gist.html",
+        {"verdict": verdict, "label": GIST_LABEL[verdict.verdict]},
+    )

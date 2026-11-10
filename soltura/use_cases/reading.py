@@ -17,12 +17,14 @@ from soltura.learner.repository import (
 )
 from soltura.llm.client import LLMClient
 from soltura.reading.service import (
+    GIST_SYSTEM,
     GLOSS_SYSTEM,
     MAX_SIMPLIFICATIONS,
     RECENT_TITLES,
     TARGET_COVERAGE,
     WRITER_SYSTEM,
     GeneratedText,
+    GistVerdict,
     Gloss,
     PreparedText,
     TapResult,
@@ -141,3 +143,13 @@ async def save_tapped_word(
     if lexeme.id is None:
         raise ValueError(f"Lexeme for {lemma!r} has no id")
     return await save_word(session, learner_id, lexeme.id, sentence, now, topic)
+
+
+async def check_gist(llm: LLMClient, text: str, answer: str) -> GistVerdict:
+    return await llm(
+        GistVerdict,
+        system=GIST_SYSTEM,
+        prompt=f"<text>\n{text}\n</text>\n\n<answer>\n{answer}\n</answer>",
+        effort="low",
+        max_tokens=4_000,
+    )

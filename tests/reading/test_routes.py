@@ -3,14 +3,21 @@ import re
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.app import create_app
 from soltura.config import settings
 from soltura.db import get_session
-from soltura.learner.models import Learner, Lexeme
+from soltura.learner.models import Learner, Lexeme, MemoryCard, ReadingText, ReviewLog
 from soltura.llm.client import LLMClient, get_llm
-from soltura.reading.service import Gloss
+from soltura.reading.service import (
+    MAX_GIST_ANSWER,
+    MAX_GIST_TEXT,
+    GeneratedText,
+    GistVerdict,
+    Gloss,
+)
 from soltura.reading.topics import TOPICS
 from tests.conftest import EASY_TEXT, KnowFn
 from tests.fakes import FakeLLM
@@ -113,3 +120,137 @@ async def test_every_topic_button_generates_a_text_on_its_topic(
 
         assert response.status_code == 200
         assert f"Topic: {topic}." in llm.prompts[-1]
+
+
+async def test_a_text_offers_the_gist_box(
+    reading_client: AsyncClient, llm: FakeLLM, know: KnowFn
+) -> None:
+    await know(f"{EASY_TEXT.title}. {EASY_TEXT.text}")
+    llm.answer(EASY_TEXT)
+
+    response = await reading_client.post("/reading/text", data={"topic": "la playa"})
+
+    assert 'hx-post="/reading/gist"' in response.text
+    assert f'name="text" value="{EASY_TEXT.text}"' in response.text
+
+
+async def test_a_gist_answer_comes_back_with_a_verdict_and_a_reason(
+    reading_client: AsyncClient, llm: FakeLLM
+) -> None:
+    llm.answer(GistVerdict(verdict="understood", reason="Текст про день на пляжі."))
+
+    response = await reading_client.post(
+        "/reading/gist", data={"text": EASY_TEXT.text, "answer": "Про день на пляжі"}
+    )
+
+    assert response.status_code == 200
+    assert "Ви зрозуміли текст" in response.text
+    assert "Текст про день на пляжі." in response.text
+
+
+async def test_a_gist_verdict_stores_nothing(
+    reading_client: AsyncClient, llm: FakeLLM, session: AsyncSession
+) -> None:
+    llm.answer(GistVerdict(verdict="missed", reason="Текст про пляж."))
+
+    await reading_client.post("/reading/gist", data={"text": EASY_TEXT.text, "answer": "Про ліс"})
+
+    for table in (MemoryCard, ReviewLog, ReadingText):
+        assert (await session.execute(select(table))).scalars().all() == []
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        {"text": EASY_TEXT.text, "answer": "  "},
+        {"text": EASY_TEXT.text},
+        {"text": "a" * (MAX_GIST_TEXT + 1), "answer": "Про сонце"},
+        {"text": EASY_TEXT.text, "answer": "a" * (MAX_GIST_ANSWER + 1)},
+    ],
+    ids=["blank", "missing", "long text", "long answer"],
+)
+async def test_a_gist_request_that_is_empty_or_too_long_is_refused_before_the_model(
+    reading_client: AsyncClient, llm: FakeLLM, data: dict[str, str]
+) -> None:
+    response = await reading_client.post("/reading/gist", data=data)
+
+    assert response.status_code == 422
+    assert llm.prompts == []
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        {"text": EASY_TEXT.text, "answer": "  "},
+        {"text": "a" * (MAX_GIST_TEXT + 1), "answer": "Про сонце"},
+        {"text": EASY_TEXT.text, "answer": "a" * (MAX_GIST_ANSWER + 1)},
+    ],
+    ids=["blank", "long text", "long answer"],
+)
+async def test_a_refused_gist_request_is_answered_with_the_message_not_a_json_body(
+    reading_client: AsyncClient, data: dict[str, str]
+) -> None:
+    response = await reading_client.post("/reading/gist", data=data)
+
+    assert response.headers["content-type"].startswith("text/html")
+
+
+async def test_the_gist_limits_are_inclusive(reading_client: AsyncClient, llm: FakeLLM) -> None:
+    llm.answer(GistVerdict(verdict="understood", reason="Так."))
+
+    response = await reading_client.post(
+        "/reading/gist", data={"text": "a" * MAX_GIST_TEXT, "answer": "b" * MAX_GIST_ANSWER}
+    )
+
+    assert response.status_code == 200
+
+
+async def test_a_newline_in_the_gist_answer_counts_once(
+    reading_client: AsyncClient, llm: FakeLLM
+) -> None:
+    llm.answer(GistVerdict(verdict="understood", reason="Так."))
+    answer = "\r\n".join(["b" * 9] * (MAX_GIST_ANSWER // 10))
+
+    response = await reading_client.post(
+        "/reading/gist", data={"text": EASY_TEXT.text, "answer": answer}
+    )
+
+    assert response.status_code == 200
+
+
+async def test_the_gist_check_needs_a_learner(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings.auth, "dev_telegram_user_id", None)
+
+    response = await client.post("/reading/gist", data={"text": "Hola", "answer": "Привіт"})
+
+    assert response.status_code == 401
+
+
+async def test_the_models_reason_and_the_text_are_escaped_on_the_page(
+    reading_client: AsyncClient, llm: FakeLLM, know: KnowFn
+) -> None:
+    llm.answer(GistVerdict(verdict="partly", reason="<script>alert(1)</script>"))
+
+    verdict = await reading_client.post(
+        "/reading/gist", data={"text": EASY_TEXT.text, "answer": "Про сонце"}
+    )
+
+    assert "<script>" not in verdict.text
+    assert "&lt;script&gt;" in verdict.text
+
+
+async def test_a_text_with_quotes_does_not_break_out_of_the_hidden_field(
+    reading_client: AsyncClient, llm: FakeLLM, know: KnowFn
+) -> None:
+    quoted = GeneratedText(title="Un día", text='Hoy hace sol. Dice "hola" & <b>sonríe</b>.')
+    await know(f"{quoted.title}. {quoted.text}")
+    llm.answer(quoted)
+
+    response = await reading_client.post("/reading/text", data={"topic": "la playa"})
+
+    assert (
+        'name="text" value="Hoy hace sol. Dice &#34;hola&#34; &amp; &lt;b&gt;sonríe&lt;/b&gt;."'
+        in response.text
+    )
