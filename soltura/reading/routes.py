@@ -9,10 +9,11 @@ from soltura.db import get_session
 from soltura.learner.dependencies import LearnerDep, LearnerIdDep
 from soltura.learner.models import StudyStep
 from soltura.llm.client import LLMClient, get_llm
+from soltura.reading.service import MAX_GIST_ANSWER, MAX_GIST_TEXT
 from soltura.reading.topics import TOPICS
-from soltura.reading.views import split_for_reading
+from soltura.reading.views import GIST_LABEL, split_for_reading
 from soltura.templating import templates
-from soltura.use_cases.reading import prepare_text, save_tapped_word, tap_word
+from soltura.use_cases.reading import check_gist, prepare_text, save_tapped_word, tap_word
 from soltura.use_cases.study import next_step_offer
 
 router = APIRouter(prefix="/reading")
@@ -93,3 +94,26 @@ async def save(
 ) -> HTMLResponse:
     await save_tapped_word(session, learner_id, lemma, sentence, datetime.now(UTC), topic or None)
     return templates.TemplateResponse(request, "reading/saved.html", {"lemma": lemma})
+
+
+@router.post("/gist", response_class=HTMLResponse)
+async def gist(
+    request: Request,
+    llm: LLMDep,
+    text: Annotated[str, Form(max_length=MAX_GIST_TEXT)],
+    answer: Annotated[str, Form(max_length=MAX_GIST_ANSWER)] = "",
+) -> HTMLResponse:
+    answer = answer.strip()
+    if not answer:
+        return templates.TemplateResponse(
+            request,
+            "reading/error.html",
+            {"message": "Напишіть хоча б кілька слів."},
+            status_code=422,
+        )
+    verdict = await check_gist(llm, text, answer)
+    return templates.TemplateResponse(
+        request,
+        "reading/gist.html",
+        {"verdict": verdict, "label": GIST_LABEL[verdict.verdict]},
+    )

@@ -1,6 +1,12 @@
 import re
 from dataclasses import dataclass
 
+GIST_LABEL = {
+    "understood": "Ви зрозуміли текст",
+    "partly": "Частково",
+    "missed": "Схоже, текст не вдалося зрозуміти",
+}
+
 
 @dataclass(frozen=True)
 class Segment:
