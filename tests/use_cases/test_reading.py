@@ -316,4 +316,5 @@ async def test_the_gist_check_sends_the_text_and_the_answer_and_returns_the_verd
     verdict = await check_gist(llm, EASY_TEXT.text, "Про сонце")
 
     assert (verdict.verdict, verdict.reason) == ("partly", "Текст про пляж.")
-    assert EASY_TEXT.text in llm.prompts[0] and "Про сонце" in llm.prompts[0]
+    assert f"<text>\n{EASY_TEXT.text}\n</text>" in llm.prompts[0]
+    assert "<answer>\nПро сонце\n</answer>" in llm.prompts[0]

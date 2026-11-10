@@ -24,7 +24,7 @@
   <input type="hidden" name="text" value="{{ prepared.text }}">
   <label>
     Про що цей текст? Напишіть коротко українською
-    <textarea name="answer" rows="2" maxlength="500" required></textarea>
+    <textarea name="answer" rows="2" maxlength="{{ max_gist_answer }}" required></textarea>
   </label>
   <button type="submit" class="secondary">Перевірити</button>
   <span id="gist-loading" class="htmx-indicator" aria-busy="true">Перевіряю…</span>

@@ -149,7 +149,7 @@ async def check_gist(llm: LLMClient, text: str, answer: str) -> GistVerdict:
     return await llm(
         GistVerdict,
         system=GIST_SYSTEM,
-        prompt=f"Text:\n{text}\n\nLearner's answer: {answer}",
+        prompt=f"<text>\n{text}\n</text>\n\n<answer>\n{answer}\n</answer>",
         effort="low",
         max_tokens=4_000,
     )

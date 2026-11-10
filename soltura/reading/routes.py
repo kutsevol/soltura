@@ -63,6 +63,7 @@ async def new_text(
             "paragraphs": split_for_reading(prepared.text),
             "topic": topic or prepared.title,
             "study_step": offer,
+            "max_gist_answer": MAX_GIST_ANSWER,
         },
     )
 
@@ -99,17 +100,21 @@ async def save(
 @router.post("/gist", response_class=HTMLResponse)
 async def gist(
     request: Request,
+    learner_id: LearnerIdDep,
     llm: LLMDep,
-    text: Annotated[str, Form(max_length=MAX_GIST_TEXT)],
-    answer: Annotated[str, Form(max_length=MAX_GIST_ANSWER)] = "",
+    text: Annotated[str, Form()],
+    answer: Annotated[str, Form()] = "",
 ) -> HTMLResponse:
-    answer = answer.strip()
+    # A browser sends a newline as two characters, which the limit must not count twice.
+    answer = answer.replace("\r\n", "\n").strip()
+    message = None
     if not answer:
+        message = "Напишіть хоча б кілька слів."
+    elif len(answer) > MAX_GIST_ANSWER or len(text) > MAX_GIST_TEXT:
+        message = "Відповідь або текст задовгі."
+    if message:
         return templates.TemplateResponse(
-            request,
-            "reading/error.html",
-            {"message": "Напишіть хоча б кілька слів."},
-            status_code=422,
+            request, "reading/error.html", {"message": message}, status_code=422
         )
     verdict = await check_gist(llm, text, answer)
     return templates.TemplateResponse(
