@@ -5,6 +5,7 @@ from soltura.conjugation.service import ConjugationItem, ConjugationResult
 from soltura.learner.models import Rating
 from soltura.practice.checking import SpanishCheck
 from soltura.practice.views import RATING_LABEL
+from soltura.use_cases.conjugation import VerbTable
 
 TENSE_LABEL = {
     Tense.PRESENT: "теперішній час · presente",
@@ -39,6 +40,16 @@ class ResultView:
     answer: str
     explanation: str
     expected: str | None
+    verb: str
+
+
+@dataclass(frozen=True)
+class TenseTable:
+    tense: str
+    rows: list[tuple[str, list[str]]]
+
+
+ENDINGS_HEADER = ["-ar", "-er", "-ir"]
 
 
 def card_view(item: ConjugationItem, remaining: int) -> CardView:
@@ -68,4 +79,33 @@ def result_view(result: ConjugationResult, answer: str) -> ResultView:
         answer=answer.strip(),
         explanation=_explanation(result.check),
         expected=None if result.rating == Rating.GOOD else result.expected,
+        verb=result.verb,
     )
+
+
+def verb_view(table: VerbTable) -> list[TenseTable]:
+    return [
+        TenseTable(
+            tense=TENSE_LABEL[tense],
+            rows=[
+                (PRONOUN_LABEL[person], [form]) for person, form in zip(Person, forms, strict=True)
+            ],
+        )
+        for tense, forms in table.forms.items()
+    ]
+
+
+def endings_view(endings: dict[Tense, dict[str, list[str]]]) -> list[TenseTable]:
+    return [
+        TenseTable(
+            tense=TENSE_LABEL[tense],
+            rows=[
+                (
+                    PRONOUN_LABEL[person],
+                    [f"-{by_ending[ending][index]}" for ending in ("ar", "er", "ir")],
+                )
+                for index, person in enumerate(Person)
+            ],
+        )
+        for tense, by_ending in endings.items()
+    ]

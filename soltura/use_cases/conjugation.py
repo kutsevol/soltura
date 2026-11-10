@@ -1,13 +1,16 @@
+from dataclasses import dataclass
 from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from soltura.conjugation.forms import conjugate
+from soltura.conjugation.forms import Tense, conjugate
 from soltura.conjugation.service import (
     CONJUGATION_RATING,
     SESSION_SIZE,
     ConjugationItem,
     ConjugationResult,
+    regular_endings,
+    verb_forms,
 )
 from soltura.conjugation.units import (
     introduced_sets,
@@ -28,6 +31,21 @@ from soltura.learner.repository import (
 )
 from soltura.practice.checking import check_spanish
 from soltura.srs.service import due_queue, review, schedule_units
+
+
+@dataclass(frozen=True)
+class VerbTable:
+    verb: str
+    forms: dict[Tense, list[str]]
+
+
+def verb_table(verb: str) -> VerbTable | None:
+    forms = verb_forms(verb)
+    return VerbTable(verb=verb.strip().lower(), forms=forms) if forms else None
+
+
+def endings_table() -> dict[Tense, dict[str, list[str]]]:
+    return regular_endings()
 
 
 async def build_session(
@@ -86,4 +104,4 @@ async def answer_item(
         answer=answer.strip() or None,
         duration_ms=duration_ms,
     )
-    return ConjugationResult(rating=rating, check=check, expected=expected)
+    return ConjugationResult(rating=rating, check=check, expected=expected, verb=parsed[0])

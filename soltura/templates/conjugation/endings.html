@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Закінчення · Дієслова · Soltura{% endblock %}
+{% block heading %}Закінчення{% endblock %}
+
+{% block content %}
+  <p class="note">Закінчення правильних дієслів: hablar, comer, vivir. У майбутньому часі воно додається до всього інфінітива.</p>
+  {% for tense in tenses %}
+    <article>
+      <h3>{{ tense.tense }}</h3>
+      <table>
+        <thead>
+          <tr><th></th>{% for ending in header %}<th scope="col">{{ ending }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+          {% for pronoun, endings in tense.rows %}
+            <tr><th scope="row">{{ pronoun }}</th>{% for ending in endings %}<td>{{ ending }}</td>{% endfor %}</tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </article>
+  {% endfor %}
+  <p class="note"><a href="/conjugation">До тренажера</a></p>
+{% endblock %}
