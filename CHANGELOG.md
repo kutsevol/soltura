@@ -2,6 +2,20 @@
 
 <!-- version list -->
 
+## v0.45.0 (2026-11-10)
+
+### Documentation
+
+- Note the study session in the README ([#77](https://github.com/kutsevol/soltura/pull/77),
+  [`62d3327`](https://github.com/kutsevol/soltura/commit/62d3327ded871d1598a165f321405ae4d7befb17))
+
+### Features
+
+- **reading**: Ask what a text is about after reading it
+  ([#78](https://github.com/kutsevol/soltura/pull/78),
+  [`32e9fdf`](https://github.com/kutsevol/soltura/commit/32e9fdfa65d3167a518672b680cf4df1ac0a12c3))
+
+
 ## v0.44.0 (2026-11-09)
 
 ### Features
