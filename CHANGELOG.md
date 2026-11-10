@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.46.0 (2026-11-10)
+
+### Features
+
+- **conjugation**: Show a verb's forms and the regular endings
+  ([#79](https://github.com/kutsevol/soltura/pull/79),
+  [`444c875`](https://github.com/kutsevol/soltura/commit/444c875803857be46e8441a09ef7bb1b13cf3b50))
+
+
 ## v0.45.0 (2026-11-10)
 
 ### Documentation
