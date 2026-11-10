@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.47.0 (2026-11-10)
+
+### Features
+
+- **conjugation**: Conjugate pasar and haber ([#80](https://github.com/kutsevol/soltura/pull/80),
+  [`3e0c43b`](https://github.com/kutsevol/soltura/commit/3e0c43bed9684ab06e70d1f65ccd62a3612f28a7))
+
+
 ## v0.46.0 (2026-11-10)
 
 ### Features
