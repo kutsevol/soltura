@@ -158,3 +158,39 @@ async def test_haber_and_pasar_have_their_tables(
 
     assert page.status_code == 200
     assert f"<td>{form}</td>" in page.text
+
+
+async def test_after_the_daily_cap_the_screen_says_there_are_enough_new_forms(
+    learner_client: AsyncClient, verb_lexemes: list[Lexeme], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings.conjugation, "new_sets_per_day", 1)
+    page = (await learner_client.get("/conjugation")).text
+    for form in SER_PRESENT:
+        page = await _next(learner_client, await _answer(learner_client, page, form))
+
+    again = (await learner_client.get("/conjugation")).text
+
+    assert "На сьогодні нових форм досить" in again
+    assert "Сесію завершено" not in again
+
+
+async def test_the_last_card_of_a_capped_day_ends_on_the_cap_message(
+    learner_client: AsyncClient, verb_lexemes: list[Lexeme], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings.conjugation, "new_sets_per_day", 1)
+    page = (await learner_client.get("/conjugation")).text
+    for form in SER_PRESENT:
+        page = await _next(learner_client, await _answer(learner_client, page, form))
+
+    assert "На сьогодні нових форм досить" in page
+    assert "Сесію завершено" not in page
+
+
+async def test_the_last_card_before_the_cap_ends_on_the_plain_message(
+    learner_client: AsyncClient, verb_lexemes: list[Lexeme]
+) -> None:
+    page = (await learner_client.get("/conjugation")).text
+    for form in SER_PRESENT:
+        page = await _next(learner_client, await _answer(learner_client, page, form))
+
+    assert "Сесію завершено" in page

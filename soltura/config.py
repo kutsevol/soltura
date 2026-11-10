@@ -68,6 +68,16 @@ class LoggingSettings(BaseConfig):
     )
 
 
+class ConjugationSettings(BaseConfig):
+    model_config = SettingsConfigDict(env_prefix="CONJUGATION_")
+
+    new_sets_per_day: int = Field(
+        default=4,
+        ge=0,
+        description="Most new sets of six verb forms started in any 24 hours; 0 starts none",
+    )
+
+
 class Settings(BaseConfig):
     database: DatabaseSettings = Field(
         default_factory=DatabaseSettings,
@@ -80,6 +90,10 @@ class Settings(BaseConfig):
     srs: SrsSettings = Field(
         default_factory=SrsSettings,
         description="Spaced repetition settings",
+    )
+    conjugation: ConjugationSettings = Field(
+        default_factory=ConjugationSettings,
+        description="Verb trainer settings",
     )
     auth: AuthSettings = Field(
         default_factory=AuthSettings,

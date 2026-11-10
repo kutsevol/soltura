@@ -1,5 +1,6 @@
 import re
 from dataclasses import dataclass
+from datetime import timedelta
 
 from soltura.conjugation.forms import Person, Tense, conjugate
 from soltura.conjugation.units import IMPERSONAL_VERBS
@@ -7,6 +8,8 @@ from soltura.learner.models import Rating
 from soltura.practice.checking import SpanishCheck
 
 SESSION_SIZE = 18
+# A rolling window, so the cap needs no time zone.
+NEW_SETS_WINDOW = timedelta(hours=24)
 
 # The ending is what is being learned: a missing accent is a slip, a changed letter is
 # another form (tuvieron against tuvieran) and does not pass.
@@ -25,6 +28,12 @@ class ConjugationItem:
     verb: str
     tense: Tense
     person: Person
+
+
+@dataclass(frozen=True)
+class ConjugationSession:
+    items: list[ConjugationItem]
+    capped: bool
 
 
 @dataclass(frozen=True)
