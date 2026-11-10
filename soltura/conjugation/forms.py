@@ -56,7 +56,8 @@ IRREGULAR_FORMS: dict[str, dict[Tense, tuple[str, ...]]] = {
 }
 
 # verbecc's data for pasar has endings for one tense only, and a bare stem in the rest. A
-# regular verb takes the endings of a regular model: its stem in place of the model's.
+# regular verb takes the endings of a regular model of the same ending: its stem in place
+# of the model's. The model must be regular in every tense, or the swap fails loudly.
 REGULAR_LIKE = {"pasar": "hablar"}
 
 
@@ -75,7 +76,11 @@ def conjugate(verb: str, tense: Tense, person: Person) -> str | None:
     if verb in REGULAR_LIKE:
         model = REGULAR_LIKE[verb]
         form = conjugate(model, tense, person)
-        return verb[:-2] + form.removeprefix(model[:-2]) if form else None
+        if form is None:
+            return None
+        if not form.startswith(model[:-2]):
+            raise ValueError(f"{model} is not regular in the {tense} tense")
+        return verb[:-2] + form.removeprefix(model[:-2])
     try:
         conjugation = get_conjugator().conjugate_mood_tense(
             verb, MoodEs.Indicativo, TENSES[tense], conjugate_pronouns=False

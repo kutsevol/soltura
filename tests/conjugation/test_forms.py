@@ -2,7 +2,14 @@ import time
 
 import pytest
 
-from soltura.conjugation.forms import Person, Tense, conjugate, get_conjugator
+from soltura.conjugation.forms import (
+    IRREGULAR_FORMS,
+    REGULAR_LIKE,
+    Person,
+    Tense,
+    conjugate,
+    get_conjugator,
+)
 
 
 @pytest.mark.parametrize(
@@ -75,3 +82,18 @@ def test_the_endings_of_pasar_are_those_of_hablar() -> None:
             model = conjugate("hablar", tense, person)
             assert model is not None
             assert conjugate("pasar", tense, person) == "pas" + model.removeprefix("habl")
+
+
+def test_every_written_out_verb_has_a_form_for_every_tense_and_person() -> None:
+    for forms in IRREGULAR_FORMS.values():
+        assert set(forms) == set(Tense)
+        assert all(len(row) == len(Person) for row in forms.values())
+
+
+def test_a_regular_model_that_is_not_regular_breaks_loudly(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setitem(REGULAR_LIKE, "contar", "tener")
+
+    with pytest.raises(ValueError, match="not regular"):
+        conjugate("contar", Tense.PRETERITE, Person.YO)

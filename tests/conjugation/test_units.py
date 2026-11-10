@@ -59,7 +59,7 @@ def test_the_six_persons_of_a_set_count_as_one_introduced_set() -> None:
 
 
 def test_haber_and_pasar_are_offered_in_their_place_by_frequency() -> None:
-    verbs = ["haber", "pasar", "ser"]
+    verbs = ["haber", "zzzar", "pasar", "llover", "ser"]
     sets = []
     introduced: set[UnitSet] = set()
     while (next_set := next_unit_set(verbs, introduced)) is not None:
@@ -67,5 +67,5 @@ def test_haber_and_pasar_are_offered_in_their_place_by_frequency() -> None:
         introduced.add(next_set)
 
     assert [(unit.verb, unit.tense) for unit in sets] == [
-        (verb, tense) for verb in verbs for tense in Tense
+        (verb, tense) for verb in ("haber", "pasar", "ser") for tense in Tense
     ]

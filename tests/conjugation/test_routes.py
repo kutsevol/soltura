@@ -150,9 +150,11 @@ async def test_a_verb_in_capitals_or_with_an_accent_has_its_page(
     assert (await learner_client.get(f"/conjugation/verbs/{verb}")).status_code == 200
 
 
-@pytest.mark.parametrize("verb", ["haber", "pasar"])
-async def test_haber_and_pasar_have_their_tables(learner_client: AsyncClient, verb: str) -> None:
+@pytest.mark.parametrize(("verb", "form"), [("haber", "habéis"), ("pasar", "pasábamos")])
+async def test_haber_and_pasar_have_their_tables(
+    learner_client: AsyncClient, verb: str, form: str
+) -> None:
     page = await learner_client.get(f"/conjugation/verbs/{verb}")
 
     assert page.status_code == 200
-    assert page.text.count("<tr>") == 24
+    assert f"<td>{form}</td>" in page.text
