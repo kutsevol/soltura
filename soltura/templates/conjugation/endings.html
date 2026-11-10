@@ -8,6 +8,7 @@
   {% for tense in tenses %}
     <article>
       <h3>{{ tense.tense }}</h3>
+      <div class="overflow-auto">
       <table>
         <thead>
           <tr><th></th>{% for ending in header %}<th scope="col">{{ ending }}</th>{% endfor %}</tr>
@@ -18,6 +19,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
     </article>
   {% endfor %}
   <p class="note"><a href="/conjugation">До тренажера</a></p>

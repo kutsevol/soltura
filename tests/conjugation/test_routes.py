@@ -5,6 +5,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
+from soltura.config import settings
 from soltura.learner.models import Lexeme, ReviewLog, ReviewSource
 
 SER_PRESENT = ["soy", "eres", "es", "somos", "sois", "son"]
@@ -131,3 +132,19 @@ async def test_an_answer_links_to_the_table_of_its_verb(
     result = await _answer(learner_client, page, "x", give_up=True)
 
     assert re.search(r'href="/conjugation/verbs/[a-zñáéíóú]+"', result)
+
+
+@pytest.mark.parametrize("path", ["/conjugation/verbs/ser", "/conjugation/endings"])
+async def test_the_reference_pages_need_a_learner(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch, path: str
+) -> None:
+    monkeypatch.setattr(settings.auth, "dev_telegram_user_id", None)
+
+    assert (await client.get(path)).status_code == 401
+
+
+@pytest.mark.parametrize("verb", ["HABLAR", "o%C3%ADr"])
+async def test_a_verb_in_capitals_or_with_an_accent_has_its_page(
+    learner_client: AsyncClient, verb: str
+) -> None:
+    assert (await learner_client.get(f"/conjugation/verbs/{verb}")).status_code == 200

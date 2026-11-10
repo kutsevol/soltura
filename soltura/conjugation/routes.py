@@ -87,17 +87,18 @@ async def next_card(request: Request, queue: Annotated[str, Form()]) -> HTMLResp
 
 
 @router.get("/verbs/{verb}", response_class=HTMLResponse)
-async def verb_page(request: Request, verb: str) -> HTMLResponse:
+def verb_page(request: Request, learner_id: LearnerIdDep, verb: str) -> HTMLResponse:
+    # Plain `def` routes run in the thread pool: the library's first load takes seconds.
     table = verb_table(verb)
     if table is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return templates.TemplateResponse(
-        request, "conjugation/verb.html", {"verb": table.verb, "tenses": verb_view(table)}
+        request, "conjugation/verb.html", {"verb": table.verb, "tenses": verb_view(table.forms)}
     )
 
 
 @router.get("/endings", response_class=HTMLResponse)
-async def endings_page(request: Request) -> HTMLResponse:
+def endings_page(request: Request, learner_id: LearnerIdDep) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         "conjugation/endings.html",

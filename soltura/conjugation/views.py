@@ -5,7 +5,6 @@ from soltura.conjugation.service import ConjugationItem, ConjugationResult
 from soltura.learner.models import Rating
 from soltura.practice.checking import SpanishCheck
 from soltura.practice.views import RATING_LABEL
-from soltura.use_cases.conjugation import VerbTable
 
 TENSE_LABEL = {
     Tense.PRESENT: "теперішній час · presente",
@@ -83,7 +82,7 @@ def result_view(result: ConjugationResult, answer: str) -> ResultView:
     )
 
 
-def verb_view(table: VerbTable) -> list[TenseTable]:
+def verb_view(forms_by_tense: dict[Tense, list[str]]) -> list[TenseTable]:
     return [
         TenseTable(
             tense=TENSE_LABEL[tense],
@@ -91,7 +90,7 @@ def verb_view(table: VerbTable) -> list[TenseTable]:
                 (PRONOUN_LABEL[person], [form]) for person, form in zip(Person, forms, strict=True)
             ],
         )
-        for tense, forms in table.forms.items()
+        for tense, forms in forms_by_tense.items()
     ]
 
 

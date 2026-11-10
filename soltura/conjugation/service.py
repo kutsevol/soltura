@@ -38,21 +38,23 @@ class ConjugationResult:
 # The regular verb of each ending: its endings, taken off the forms the trainer accepts,
 # are the regular endings, so the table cannot disagree with an answer that is accepted.
 MODEL_VERBS = ("hablar", "comer", "vivir")
-_WORD = re.compile(r"[a-zñáéíóúü]{2,30}")
+# An infinitive: a stem and -ar, -er, -ir or -ír (oír, freír), or ir itself. The library
+# also conjugates reflexive forms such as lavarse, with the pronoun inside the form.
+_INFINITIVE = re.compile(r"(?:[a-zñáéíóúü]{1,28}(?:ar|er|ir|ír)|ir)")
 
 
 def verb_forms(verb: str) -> dict[Tense, list[str]] | None:
     # The verb comes from an address, so it must look like a word before it reaches the library.
     word = verb.strip().lower()
     # Weather verbs have no personal forms, though the library conjugates them in full.
-    if not _WORD.fullmatch(word) or word in IMPERSONAL_VERBS:
+    if not _INFINITIVE.fullmatch(word) or word in IMPERSONAL_VERBS:
         return None
     forms: dict[Tense, list[str]] = {}
     for tense in Tense:
         row = [conjugate(word, tense, person) for person in Person]
-        if not all(row):
+        if any(form is None for form in row):
             return None
-        forms[tense] = [form for form in row if form]
+        forms[tense] = [form for form in row if form is not None]
     return forms
 
 
@@ -63,6 +65,9 @@ def regular_endings() -> dict[Tense, dict[str, list[str]]]:
         for verb in MODEL_VERBS:
             # The future is built on the whole infinitive, the other tenses on the stem.
             stem = verb if tense == Tense.FUTURE else verb[:-2]
-            forms = [conjugate(verb, tense, person) or "" for person in Person]
-            endings[tense][verb[-2:]] = [form.removeprefix(stem) for form in forms]
+            forms = [conjugate(verb, tense, person) for person in Person]
+            # A model verb that stops being regular must break here, not show a wrong table.
+            if any(form is None or not form.startswith(stem) for form in forms):
+                raise ValueError(f"{verb} is not regular in the {tense} tense")
+            endings[tense][verb[-2:]] = [str(form).removeprefix(stem) for form in forms]
     return endings
