@@ -104,7 +104,7 @@ async def test_the_page_of_a_verb_lists_every_tense_and_person(learner_client: A
     assert "presente" in page.text and "futuro" in page.text
 
 
-@pytest.mark.parametrize("verb", ["zzzar", "llover", "haber", "dar%20%C3%A9l", "x"])
+@pytest.mark.parametrize("verb", ["zzzar", "llover", "resultar", "dar%20%C3%A9l", "x"])
 async def test_the_page_of_a_verb_that_cannot_be_conjugated_is_a_404(
     learner_client: AsyncClient, verb: str
 ) -> None:
@@ -148,3 +148,11 @@ async def test_a_verb_in_capitals_or_with_an_accent_has_its_page(
     learner_client: AsyncClient, verb: str
 ) -> None:
     assert (await learner_client.get(f"/conjugation/verbs/{verb}")).status_code == 200
+
+
+@pytest.mark.parametrize("verb", ["haber", "pasar"])
+async def test_haber_and_pasar_have_their_tables(learner_client: AsyncClient, verb: str) -> None:
+    page = await learner_client.get(f"/conjugation/verbs/{verb}")
+
+    assert page.status_code == 200
+    assert page.text.count("<tr>") == 24

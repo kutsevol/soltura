@@ -9,7 +9,7 @@ from soltura.conjugation.units import (
     unit_keys,
 )
 
-VERBS = ["haber", "zzzar", "llover", "ser", "tener"]
+VERBS = ["zzzar", "llover", "ser", "tener"]
 
 
 def test_the_first_set_is_the_most_frequent_verb_that_can_be_conjugated_in_the_present() -> None:
@@ -56,3 +56,16 @@ def test_the_six_persons_of_a_set_count_as_one_introduced_set() -> None:
     keys = [*unit_keys(UnitSet("ser", Tense.PRESENT)), "not a key"]
 
     assert introduced_sets(keys) == {UnitSet("ser", Tense.PRESENT)}
+
+
+def test_haber_and_pasar_are_offered_in_their_place_by_frequency() -> None:
+    verbs = ["haber", "pasar", "ser"]
+    sets = []
+    introduced: set[UnitSet] = set()
+    while (next_set := next_unit_set(verbs, introduced)) is not None:
+        sets.append(next_set)
+        introduced.add(next_set)
+
+    assert [(unit.verb, unit.tense) for unit in sets] == [
+        (verb, tense) for verb in verbs for tense in Tense
+    ]

@@ -44,8 +44,20 @@ PRONOUNS = {
     Person.ELLOS: PronounEs.ellos,
 }
 
-# verbecc answers "hay" for the third person of haber, which is wrong for the auxiliary.
-UNSUPPORTED_VERBS = frozenset({"haber"})
+# verbecc answers "hay" for the third person of haber, which is wrong for the auxiliary,
+# so its forms are written out, in the order of Person.
+IRREGULAR_FORMS: dict[str, dict[Tense, tuple[str, ...]]] = {
+    "haber": {
+        Tense.PRESENT: ("he", "has", "ha", "hemos", "habéis", "han"),
+        Tense.PRETERITE: ("hube", "hubiste", "hubo", "hubimos", "hubisteis", "hubieron"),
+        Tense.IMPERFECT: ("había", "habías", "había", "habíamos", "habíais", "habían"),
+        Tense.FUTURE: ("habré", "habrás", "habrá", "habremos", "habréis", "habrán"),
+    }
+}
+
+# verbecc's data for pasar has endings for one tense only, and a bare stem in the rest. A
+# regular verb takes the endings of a regular model: its stem in place of the model's.
+REGULAR_LIKE = {"pasar": "hablar"}
 
 
 @cache
@@ -58,15 +70,19 @@ def get_conjugator() -> CompleteConjugator:
 
 
 def conjugate(verb: str, tense: Tense, person: Person) -> str | None:
-    if verb in UNSUPPORTED_VERBS:
-        return None
+    if verb in IRREGULAR_FORMS:
+        return IRREGULAR_FORMS[verb][tense][list(Person).index(person)]
+    if verb in REGULAR_LIKE:
+        model = REGULAR_LIKE[verb]
+        form = conjugate(model, tense, person)
+        return verb[:-2] + form.removeprefix(model[:-2]) if form else None
     try:
         conjugation = get_conjugator().conjugate_mood_tense(
             verb, MoodEs.Indicativo, TENSES[tense], conjugate_pronouns=False
         )
     except (VerbNotFoundError, IndexError):
-        # IndexError: for a verb whose template only has third-person endings (pasar,
-        # resultar, suceder) verbecc fails while building the voseo form.
+        # IndexError: for a verb whose template only has third-person endings (resultar,
+        # suceder) verbecc fails while building the voseo form.
         return None
     pronoun = PRONOUNS[person]
     return next((entry["c"][0] for entry in conjugation.get_data() if entry["pr"] == pronoun), None)
