@@ -20,7 +20,7 @@ def test_a_verb_is_looked_up_in_any_case_and_with_spaces_around() -> None:
 
 @pytest.mark.parametrize(
     "verb",
-    ["", "x", "dar él", "../etc", "ser;drop", "a" * 31, "zzzar", "llover", "haber"]
+    ["", "x", "dar él", "../etc", "ser;drop", "a" * 31, "zzzar", "llover", "resultar"]
     + ["ar", "qqqir", "lavarse", "irse", "ñandar", "hab lar"],
 )
 def test_a_word_that_cannot_be_conjugated_has_no_table(verb: str) -> None:

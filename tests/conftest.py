@@ -190,11 +190,10 @@ async def due_conjugation_card(session: AsyncSession, learner: Learner) -> Memor
 
 @pytest.fixture
 async def verb_lexemes(session: AsyncSession) -> list[Lexeme]:
-    # Everything ahead of ser that must not be offered: a noun, haber, a verb verbecc has
-    # no template for and a weather verb. tener follows ser.
+    # Everything ahead of ser that must not be offered: a noun, a verb verbecc has no
+    # template for and a weather verb. tener follows ser.
     ranked = [
         ("casa", "NOUN"),
-        ("haber", "AUX"),
         ("zzzar", "VERB"),
         ("llover", "VERB"),
         ("ser", "AUX"),

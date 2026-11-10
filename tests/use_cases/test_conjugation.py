@@ -152,3 +152,24 @@ async def test_a_card_of_someone_else_or_of_another_kind_cannot_be_answered(
         await answer_item(session, learner.id + 1, due_conjugation_card.id, "tuvieron", None, NOW)
     with pytest.raises(PermissionError):
         await answer_item(session, learner.id, word_card.id, "soy", None, NOW)
+
+
+@pytest.mark.parametrize(
+    ("key", "answer", "rating"),
+    [
+        ("haber|present|yo", "he", Rating.GOOD),
+        ("haber|present|el", "ha", Rating.GOOD),
+        ("haber|present|el", "hay", Rating.AGAIN),
+        ("haber|preterite|yo", "hubo", Rating.AGAIN),
+        ("pasar|preterite|el", "pasó", Rating.GOOD),
+    ],
+)
+async def test_haber_and_pasar_cards_are_checked_against_their_own_forms(
+    session: AsyncSession, learner: Learner, key: str, answer: str, rating: Rating
+) -> None:
+    assert learner.id is not None
+    card_id = await _schedule(session, learner, key)
+
+    result = await answer_item(session, learner.id, card_id, answer, 1000, NOW)
+
+    assert result.rating == rating
