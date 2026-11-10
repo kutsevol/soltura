@@ -184,12 +184,24 @@ async def _answer_the_whole_set(session: AsyncSession, learner: Learner) -> int:
     return len(items)
 
 
+async def _created(session: AsyncSession, when: datetime) -> None:
+    # Cards are stamped by the database clock; the cap tests say when they were created.
+    for card in await _conjugation_cards(session):
+        card.created_at = when
+    await session.flush()
+
+
+async def _four_sets(session: AsyncSession, learner: Learner) -> None:
+    for _ in range(4):
+        assert await _answer_the_whole_set(session, learner) == 6
+
+
 async def test_no_new_set_starts_after_the_daily_cap_and_the_screen_says_why(
     session: AsyncSession, learner: Learner, verb_lexemes: list[Lexeme]
 ) -> None:
     assert learner.id is not None
-    for _ in range(4):
-        assert await _answer_the_whole_set(session, learner) == 6
+    await _four_sets(session, learner)
+    await _created(session, NOW - timedelta(hours=1))
 
     held = await build_session(session, learner.id, NOW)
 
@@ -197,44 +209,61 @@ async def test_no_new_set_starts_after_the_daily_cap_and_the_screen_says_why(
     assert len(await _conjugation_cards(session)) == 24
 
 
+@pytest.mark.parametrize(
+    ("age", "capped"),
+    [(timedelta(hours=23, minutes=59), True), (timedelta(hours=24, minutes=1), False)],
+)
+async def test_the_cap_counts_the_sets_started_in_the_last_twenty_four_hours(
+    session: AsyncSession,
+    learner: Learner,
+    verb_lexemes: list[Lexeme],
+    age: timedelta,
+    capped: bool,
+) -> None:
+    assert learner.id is not None
+    await _four_sets(session, learner)
+    await _created(session, NOW - age)
+
+    study = await build_session(session, learner.id, NOW)
+
+    assert study.capped is capped
+    assert (len(study.items) == 6) is not capped
+    if not capped:
+        assert [(item.verb, item.tense) for item in study.items] == [("tener", Tense.PRESENT)] * 6
+
+
+@pytest.mark.parametrize(
+    ("cap", "started_sets", "capped"), [(1, 1, True), (2, 1, False), (0, 0, True)]
+)
 async def test_the_cap_follows_the_setting(
     session: AsyncSession,
     learner: Learner,
     verb_lexemes: list[Lexeme],
     monkeypatch: pytest.MonkeyPatch,
+    cap: int,
+    started_sets: int,
+    capped: bool,
 ) -> None:
     assert learner.id is not None
-    monkeypatch.setattr(settings.conjugation, "new_sets_per_day", 1)
-    await _answer_the_whole_set(session, learner)
-
-    assert (await build_session(session, learner.id, NOW)).capped is True
-
-
-async def test_a_new_set_starts_again_a_day_after_the_first(
-    session: AsyncSession, learner: Learner, verb_lexemes: list[Lexeme]
-) -> None:
-    assert learner.id is not None
-    for _ in range(4):
+    monkeypatch.setattr(settings.conjugation, "new_sets_per_day", cap)
+    for _ in range(started_sets):
         await _answer_the_whole_set(session, learner)
-    for card in await _conjugation_cards(session):
-        card.created_at = NOW - timedelta(hours=25)
-    await session.flush()
+    await _created(session, NOW - timedelta(hours=1))
 
     study = await build_session(session, learner.id, NOW)
 
-    assert study.capped is False
-    assert [(item.verb, item.tense) for item in study.items] == [("tener", Tense.PRESENT)] * 6
+    assert study.capped is capped
 
 
 async def test_cards_due_for_review_are_still_offered_when_the_cap_holds(
     session: AsyncSession, learner: Learner, verb_lexemes: list[Lexeme]
 ) -> None:
     assert learner.id is not None
-    for _ in range(4):
-        await _answer_the_whole_set(session, learner)
-
-    # The first moment every answered card is due; the sets were started inside the day before it.
+    await _four_sets(session, learner)
+    # The first moment every answered card is due, an hour after the sets were started.
     later = max(card.due for card in await _conjugation_cards(session))
+    await _created(session, later - timedelta(hours=1))
+
     study = await build_session(session, learner.id, later)
 
     assert study.capped is True
@@ -247,8 +276,46 @@ async def test_another_learners_sets_do_not_count_toward_the_cap(
     assert learner.id is not None and other_learner.id is not None
     for _ in range(4):
         await _answer_the_whole_set(session, other_learner)
+    await _created(session, NOW - timedelta(hours=1))
 
     study = await build_session(session, learner.id, NOW)
 
     assert study.capped is False
     assert len(study.items) == 6
+
+
+async def test_a_partly_created_set_does_not_count_as_a_set(
+    session: AsyncSession,
+    learner: Learner,
+    verb_lexemes: list[Lexeme],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert learner.id is not None
+    monkeypatch.setattr(settings.conjugation, "new_sets_per_day", 1)
+    keys = [f"zzz|present|{person}" for person in ("yo", "tu", "el", "nosotros", "vosotros")]
+    await schedule_units(session, learner.id, UnitKind.CONJUGATION, keys, KnowledgeType.RECALL, NOW)
+    for card in await _conjugation_cards(session):
+        card.last_review = NOW
+    await _created(session, NOW - timedelta(hours=1))
+
+    study = await build_session(session, learner.id, NOW)
+
+    assert study.capped is False
+
+
+async def test_a_learner_who_has_every_set_is_not_told_the_cap_holds(
+    session: AsyncSession,
+    learner: Learner,
+    verb_lexemes: list[Lexeme],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert learner.id is not None
+    monkeypatch.setattr(settings.conjugation, "new_sets_per_day", 100)
+    for _ in range(8):
+        await _answer_the_whole_set(session, learner)
+    await _created(session, NOW - timedelta(hours=1))
+    monkeypatch.setattr(settings.conjugation, "new_sets_per_day", 1)
+
+    study = await build_session(session, learner.id, NOW)
+
+    assert (study.items, study.capped) == ([], False)

@@ -17,7 +17,13 @@ from soltura.conjugation.views import (
 from soltura.db import get_session
 from soltura.learner.dependencies import LearnerIdDep
 from soltura.templating import templates
-from soltura.use_cases.conjugation import answer_item, build_session, endings_table, verb_table
+from soltura.use_cases.conjugation import (
+    answer_item,
+    build_session,
+    endings_table,
+    new_sets_held_back,
+    verb_table,
+)
 from soltura.web import answer_duration_ms, now_ms, parse_state
 
 router = APIRouter(prefix="/conjugation")
@@ -80,10 +86,16 @@ async def answer(
 
 
 @router.post("/next", response_class=HTMLResponse)
-async def next_card(request: Request, queue: Annotated[str, Form()]) -> HTMLResponse:
+async def next_card(
+    request: Request,
+    session: SessionDep,
+    learner_id: LearnerIdDep,
+    queue: Annotated[str, Form()],
+) -> HTMLResponse:
     items = parse_state(QUEUE, queue, STATE_ERROR)
     if not items:
-        return templates.TemplateResponse(request, "conjugation/done.html")
+        capped = await new_sets_held_back(session, learner_id, datetime.now(UTC))
+        return templates.TemplateResponse(request, "conjugation/done.html", {"capped": capped})
     first, *rest = items
     return templates.TemplateResponse(request, "conjugation/card.html", _card_context(first, rest))
 

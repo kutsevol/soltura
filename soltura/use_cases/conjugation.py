@@ -16,6 +16,7 @@ from soltura.conjugation.service import (
     verb_forms,
 )
 from soltura.conjugation.units import (
+    UnitSet,
     introduced_sets,
     next_unit_set,
     parse_unit_key,
@@ -52,6 +53,28 @@ def endings_table() -> dict[Tense, dict[str, list[str]]]:
     return regular_endings()
 
 
+async def _next_set(
+    session: AsyncSession, learner_id: int, now: datetime
+) -> tuple[UnitSet | None, bool]:
+    # The next set of the teaching order, and whether the daily cap holds it back. The cap
+    # counts cards created in the window, six to a set.
+    keys = await get_unit_keys(session, learner_id, UnitKind.CONJUGATION)
+    next_set = next_unit_set(await get_verb_lemmas(session), introduced_sets(keys))
+    started = await count_cards_created_since(
+        session, learner_id, UnitKind.CONJUGATION, now - NEW_SETS_WINDOW
+    )
+    held_back = (
+        next_set is not None and started // len(Person) >= settings.conjugation.new_sets_per_day
+    )
+    return next_set, held_back
+
+
+async def new_sets_held_back(session: AsyncSession, learner_id: int, now: datetime) -> bool:
+    if await count_unreviewed_cards(session, learner_id, UnitKind.CONJUGATION) > 0:
+        return False
+    return (await _next_set(session, learner_id, now))[1]
+
+
 async def build_session(
     session: AsyncSession, learner_id: int, now: datetime
 ) -> ConjugationSession:
@@ -60,22 +83,16 @@ async def build_session(
     # And no more than a few in a day, however fast they answer.
     capped = False
     if await count_unreviewed_cards(session, learner_id, UnitKind.CONJUGATION) == 0:
-        started = await count_cards_created_since(
-            session, learner_id, UnitKind.CONJUGATION, now - NEW_SETS_WINDOW
-        )
-        capped = started // len(Person) >= settings.conjugation.new_sets_per_day
-        if not capped:
-            keys = await get_unit_keys(session, learner_id, UnitKind.CONJUGATION)
-            next_set = next_unit_set(await get_verb_lemmas(session), introduced_sets(keys))
-            if next_set is not None:
-                await schedule_units(
-                    session,
-                    learner_id,
-                    UnitKind.CONJUGATION,
-                    unit_keys(next_set),
-                    KnowledgeType.RECALL,
-                    now,
-                )
+        next_set, capped = await _next_set(session, learner_id, now)
+        if next_set is not None and not capped:
+            await schedule_units(
+                session,
+                learner_id,
+                UnitKind.CONJUGATION,
+                unit_keys(next_set),
+                KnowledgeType.RECALL,
+                now,
+            )
 
     cards = await due_queue(
         session, learner_id, now=now, limit=SESSION_SIZE, unit_kind=UnitKind.CONJUGATION
