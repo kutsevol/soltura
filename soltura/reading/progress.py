@@ -1,3 +1,4 @@
+import math
 from collections.abc import Sequence
 from dataclasses import dataclass
 
@@ -17,15 +18,13 @@ class ReadingScore:
     needed: int
 
 
-def reading_score(texts: Sequence[ReadingText]) -> ReadingScore:
-    # A text prepared below the coverage target was too hard for anyone at this vocabulary,
-    # so a missed gist on it measures the text, not the learner.
-    credits = [GIST_CREDIT[text.gist] for text in texts if text.gist and not text.below_target]
+def reading_score(counted: Sequence[ReadingText]) -> ReadingScore:
+    credits = [GIST_CREDIT[text.gist] for text in counted if text.gist]
     if len(credits) < MIN_TEXTS:
         return ReadingScore(percent=None, counted=len(credits), needed=MIN_TEXTS)
-    return ReadingScore(
-        percent=round(100 * sum(credits) / len(credits)), counted=len(credits), needed=MIN_TEXTS
-    )
+    # Rounded half up: round() would give 12 for 12.5 and 38 for 37.5.
+    percent = math.floor(100 * sum(credits) / len(credits) + 0.5)
+    return ReadingScore(percent=percent, counted=len(credits), needed=MIN_TEXTS)
 
 
 @dataclass(frozen=True)

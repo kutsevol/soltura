@@ -178,6 +178,8 @@ async def check_gist(
     text: str,
     answer: str,
 ) -> GistVerdict:
+    # The text comes back from the page, not from storage, so the id says whose answer this
+    # is, not that the text is the one that was shown; only the learner could gain from that.
     await _require_own_text(session, learner_id, text_id)
     verdict = await llm(
         GistVerdict,
@@ -192,5 +194,6 @@ async def check_gist(
 
 
 async def reading_progress(session: AsyncSession, learner_id: int) -> ReadingProgress:
+    counted = await get_recent_answered_texts(session, learner_id, RECENT_TEXTS, counted_only=True)
     texts = await get_recent_answered_texts(session, learner_id, RECENT_TEXTS)
-    return ReadingProgress(score=reading_score(texts), texts=texts)
+    return ReadingProgress(score=reading_score(counted), texts=texts)

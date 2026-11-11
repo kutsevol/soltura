@@ -21,17 +21,12 @@ def test_the_score_averages_the_credit_of_each_verdict() -> None:
     assert reading_score(texts).percent == 50
 
 
-def test_a_text_below_the_coverage_target_is_left_out() -> None:
-    texts = [
-        ReadingTextFactory.build(gist=GistResult.UNDERSTOOD),
-        ReadingTextFactory.build(gist=GistResult.UNDERSTOOD),
-        ReadingTextFactory.build(gist=GistResult.UNDERSTOOD),
-        ReadingTextFactory.build(gist=GistResult.MISSED, below_target=True),
+def test_the_score_rounds_half_up() -> None:
+    texts = [ReadingTextFactory.build(gist=GistResult.PARTLY) for _ in range(2)] + [
+        ReadingTextFactory.build(gist=GistResult.MISSED) for _ in range(6)
     ]
 
-    score = reading_score(texts)
-
-    assert (score.percent, score.counted) == (100, 3)
+    assert reading_score(texts).percent == 13
 
 
 def test_a_text_without_an_answer_is_not_counted() -> None:

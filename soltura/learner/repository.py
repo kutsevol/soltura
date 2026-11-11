@@ -265,14 +265,17 @@ async def save_gist(session: AsyncSession, text_id: int, gist: GistResult) -> No
 
 
 async def get_recent_answered_texts(
-    session: AsyncSession, learner_id: int, limit: int
+    session: AsyncSession, learner_id: int, limit: int, counted_only: bool = False
 ) -> list[ReadingText]:
-    result = await session.execute(
-        select(ReadingText)
-        .where(col(ReadingText.learner_id) == learner_id, col(ReadingText.gist).is_not(None))
-        .order_by(col(ReadingText.id).desc())
-        .limit(limit)
+    # A text prepared below the coverage target was too hard for anyone at this vocabulary,
+    # so the score leaves it out; the window is taken after that, so a run of such texts
+    # does not push the counted ones out of it.
+    query = select(ReadingText).where(
+        col(ReadingText.learner_id) == learner_id, col(ReadingText.gist).is_not(None)
     )
+    if counted_only:
+        query = query.where(col(ReadingText.below_target).is_(False))
+    result = await session.execute(query.order_by(col(ReadingText.id).desc()).limit(limit))
     return list(result.scalars())
 
 
