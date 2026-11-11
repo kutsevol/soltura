@@ -467,6 +467,37 @@ button.word:focus-visible {
   box-shadow: none;
 }
 
+/* The wait shows on the button that started it; the title bar is sticky, so the new text stops below it. */
+
+.topics button.htmx-request,
+form.htmx-request button[type="submit"] {
+  opacity: 1;
+}
+
+.topics button.htmx-request::before,
+form.htmx-request button[type="submit"]::before {
+  content: "";
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-right: 0.5em;
+  vertical-align: -0.15em;
+  border: 0.15em solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: button-spin 0.7s linear infinite;
+}
+
+@keyframes button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+#text {
+  scroll-margin-top: 4.5rem;
+}
+
 /* Warm-up verdicts */
 
 .verdict-good,
