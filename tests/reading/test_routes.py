@@ -44,6 +44,7 @@ async def test_a_topic_label_in_the_address_starts_the_text_for_that_topic(
     response = await reading_client.get("/reading", params={"topic": TOPICS[1].label})
 
     assert 'hx-trigger="load"' in response.text
+    assert "Готую текст…" in response.text
     assert json.dumps({"topic": TOPICS[1].prompt}) in response.text.replace("&#34;", '"')
 
 
@@ -54,6 +55,7 @@ async def test_without_a_known_topic_in_the_address_no_text_starts_by_itself(
     response = await reading_client.get("/reading", params=params)
 
     assert 'hx-trigger="load"' not in response.text
+    assert "Готую текст…" not in response.text
 
 
 async def test_a_new_text_comes_back_with_every_word_tappable(

@@ -4,16 +4,16 @@
 {% block heading %}Читання{% endblock %}
 
 {% block content %}
-  <article>
+  <article id="picker" hx-target="#text" hx-swap="innerHTML show:top" hx-disabled-elt="#picker button">
     <p class="note">Оберіть тему одним дотиком:</p>
     <div class="topics">
       {% for topic in topics %}
         <button type="button" class="outline secondary"
-                hx-post="/reading/text" hx-target="#text" hx-indicator="#loading"
+                hx-post="/reading/text"
                 hx-vals='{{ {"topic": topic.prompt} | tojson }}'>{{ topic.label }}</button>
       {% endfor %}
     </div>
-    <form hx-post="/reading/text" hx-target="#text" hx-indicator="#loading">
+    <form hx-post="/reading/text">
       <label>
         Тема
         <input name="topic" placeholder="напр. en el mercado, alquilar un piso">
@@ -23,16 +23,17 @@
         <textarea name="source_text" rows="4"></textarea>
       </label>
       <button type="submit">Дати текст</button>
-      <span id="loading" class="htmx-indicator" aria-busy="true">Готую текст…</span>
     </form>
   </article>
 
   {% if auto_topic %}
-    <span hx-post="/reading/text" hx-trigger="load" hx-target="#text" hx-indicator="#loading"
-          hx-vals='{{ {"topic": auto_topic} | tojson }}'></span>
+    <span hx-post="/reading/text" hx-trigger="load" hx-target="#text" hx-swap="innerHTML show:top"
+          hx-indicator="#loading" hx-vals='{{ {"topic": auto_topic} | tojson }}'></span>
   {% endif %}
 
-  <article id="text" aria-live="polite"></article>
+  <article id="text" aria-live="polite">
+    {%- if auto_topic %}<span id="loading" class="htmx-indicator" aria-busy="true">Готую текст…</span>{% endif -%}
+  </article>
   <article id="gloss" aria-live="polite"></article>
   <p class="note"><a href="/reading/progress">Прогрес у читанні</a></p>
 {% endblock %}
