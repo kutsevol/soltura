@@ -13,6 +13,7 @@ from sqlmodel import SQLModel, col, select
 from soltura.learner.models import (
     ErrorKind,
     ErrorLog,
+    GistResult,
     JournalEntry,
     KnowledgeType,
     Learner,
@@ -222,12 +223,57 @@ async def get_latest_placement_run(session: AsyncSession, learner_id: int) -> Pl
 
 
 async def save_reading_text(
-    session: AsyncSession, learner_id: int, topic: str | None, title: str
+    session: AsyncSession,
+    learner_id: int,
+    topic: str | None,
+    title: str,
+    below_target: bool = False,
 ) -> ReadingText:
-    text = ReadingText(learner_id=learner_id, topic=topic, title=title)
+    text = ReadingText(learner_id=learner_id, topic=topic, title=title, below_target=below_target)
     session.add(text)
     await session.flush()
     return text
+
+
+async def get_reading_text(
+    session: AsyncSession, learner_id: int, text_id: int
+) -> ReadingText | None:
+    result = await session.execute(
+        select(ReadingText).where(
+            col(ReadingText.id) == text_id, col(ReadingText.learner_id) == learner_id
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def add_tap(session: AsyncSession, text_id: int) -> None:
+    await session.execute(
+        update(ReadingText)
+        .where(col(ReadingText.id) == text_id)
+        .values(taps=col(ReadingText.taps) + 1)
+    )
+
+
+async def save_gist(session: AsyncSession, text_id: int, gist: GistResult) -> None:
+    # Only the first answer counts: a second one, written after reading the reason, would
+    # show that the learner can copy a hint, not that they followed the text.
+    await session.execute(
+        update(ReadingText)
+        .where(col(ReadingText.id) == text_id, col(ReadingText.gist).is_(None))
+        .values(gist=gist)
+    )
+
+
+async def get_recent_answered_texts(
+    session: AsyncSession, learner_id: int, limit: int
+) -> list[ReadingText]:
+    result = await session.execute(
+        select(ReadingText)
+        .where(col(ReadingText.learner_id) == learner_id, col(ReadingText.gist).is_not(None))
+        .order_by(col(ReadingText.id).desc())
+        .limit(limit)
+    )
+    return list(result.scalars())
 
 
 @dataclass(frozen=True)

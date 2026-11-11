@@ -82,6 +82,7 @@ class Gloss(BaseModel):
 
 @dataclass(frozen=True)
 class PreparedText:
+    text_id: int
     title: str
     text: str
     coverage: float

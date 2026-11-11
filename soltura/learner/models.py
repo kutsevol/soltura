@@ -6,6 +6,7 @@ from sqlalchemy import (
     JSON,
     TIMESTAMP,
     BigInteger,
+    Boolean,
     Column,
     Enum,
     ForeignKey,
@@ -39,6 +40,12 @@ class LexemeStatus(StrEnum):
 class LexemeOrigin(StrEnum):
     ONBOARDING = "onboarding"
     READING = "reading"
+
+
+class GistResult(StrEnum):
+    UNDERSTOOD = "understood"
+    PARTLY = "partly"
+    MISSED = "missed"
 
 
 class KnowledgeType(StrEnum):
@@ -324,6 +331,24 @@ class ReadingText(SQLModel, table=True):
     title: str = Field(
         sa_column=Column(Text, nullable=False),
         description="Title of the prepared text",
+    )
+    gist: GistResult | None = Field(
+        default=None,
+        sa_column=Column(
+            Enum(GistResult, name="gist_result", values_callable=lambda x: [e.value for e in x]),
+            nullable=True,
+        ),
+        description="Verdict on the learner's first answer to what the text is about; unset until answered",
+    )
+    taps: int = Field(
+        default=0,
+        sa_column=Column(Integer, server_default=text("0"), nullable=False),
+        description="How many words the learner looked up in the text",
+    )
+    below_target: bool = Field(
+        default=False,
+        sa_column=Column(Boolean, server_default=text("false"), nullable=False),
+        description="Whether the text stayed under the known-word coverage target",
     )
     created_at: datetime = _created_at()
 

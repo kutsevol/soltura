@@ -7,15 +7,27 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from soltura.language.coverage import measure_coverage, words_to_replace
 from soltura.language.frequency import UNRANKED
 from soltura.language.nlp import analyze
-from soltura.learner.models import KnowledgeType, Learner, MemoryCard, Rating, ReviewSource
+from soltura.learner.models import (
+    GistResult,
+    KnowledgeType,
+    Learner,
+    MemoryCard,
+    Rating,
+    ReviewSource,
+)
 from soltura.learner.models import Lexeme as LexemeRow
 from soltura.learner.repository import (
+    add_tap,
     get_due_card,
     get_lexemes_by_lemmas,
+    get_reading_text,
+    get_recent_answered_texts,
     get_recent_titles,
+    save_gist,
     save_reading_text,
 )
 from soltura.llm.client import LLMClient
+from soltura.reading.progress import RECENT_TEXTS, ReadingProgress, reading_score
 from soltura.reading.service import (
     GIST_SYSTEM,
     GLOSS_SYSTEM,
@@ -84,26 +96,37 @@ async def prepare_text(
         attempts += 1
         coverage = measure_coverage(analyze(f"{draft.title}. {draft.text}"), known)
 
-    await save_reading_text(session, learner.id, topic or None, draft.title)
+    below_target = coverage.ratio < TARGET_COVERAGE
+    saved = await save_reading_text(session, learner.id, topic or None, draft.title, below_target)
     await session.commit()
+    if saved.id is None:
+        raise ValueError("The saved reading text has no id")
     return PreparedText(
+        text_id=saved.id,
         title=draft.title,
         text=draft.text,
         coverage=coverage.ratio,
         attempts=attempts,
-        below_target=coverage.ratio < TARGET_COVERAGE,
+        below_target=below_target,
         unknown_lemmas=coverage.unknown_lemmas,
     )
+
+
+async def _require_own_text(session: AsyncSession, learner_id: int, text_id: int) -> None:
+    if await get_reading_text(session, learner_id, text_id) is None:
+        raise PermissionError("This text does not belong to the learner")
 
 
 async def tap_word(
     session: AsyncSession,
     llm: LLMClient,
     learner_id: int,
+    text_id: int,
     word: str,
     sentence: str,
     now: datetime,
 ) -> TapResult:
+    await _require_own_text(session, learner_id, text_id)
     gloss = await llm(
         Gloss,
         system=GLOSS_SYSTEM,
@@ -120,6 +143,8 @@ async def tap_word(
         if card is not None:
             await review(session, card, Rating.AGAIN, ReviewSource.READING_TAP, now)
             reviewed = True
+    await add_tap(session, text_id)
+    await session.commit()
     return TapResult(word=word, lemma=lemma, translation=gloss.translation, reviewed=reviewed)
 
 
@@ -145,11 +170,27 @@ async def save_tapped_word(
     return await save_word(session, learner_id, lexeme.id, sentence, now, topic)
 
 
-async def check_gist(llm: LLMClient, text: str, answer: str) -> GistVerdict:
-    return await llm(
+async def check_gist(
+    session: AsyncSession,
+    llm: LLMClient,
+    learner_id: int,
+    text_id: int,
+    text: str,
+    answer: str,
+) -> GistVerdict:
+    await _require_own_text(session, learner_id, text_id)
+    verdict = await llm(
         GistVerdict,
         system=GIST_SYSTEM,
         prompt=f"<text>\n{text}\n</text>\n\n<answer>\n{answer}\n</answer>",
         effort="low",
         max_tokens=4_000,
     )
+    await save_gist(session, text_id, GistResult(verdict.verdict))
+    await session.commit()
+    return verdict
+
+
+async def reading_progress(session: AsyncSession, learner_id: int) -> ReadingProgress:
+    texts = await get_recent_answered_texts(session, learner_id, RECENT_TEXTS)
+    return ReadingProgress(score=reading_score(texts), texts=texts)

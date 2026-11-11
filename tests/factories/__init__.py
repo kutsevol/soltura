@@ -3,6 +3,13 @@ from tests.factories.learner import (
     LearnerLexemeFactory,
     LexemeFactory,
     MemoryCardFactory,
+    ReadingTextFactory,
 )
 
-__all__ = ["LearnerFactory", "LearnerLexemeFactory", "LexemeFactory", "MemoryCardFactory"]
+__all__ = [
+    "LearnerFactory",
+    "LearnerLexemeFactory",
+    "LexemeFactory",
+    "MemoryCardFactory",
+    "ReadingTextFactory",
+]
