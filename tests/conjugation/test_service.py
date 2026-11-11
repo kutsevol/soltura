@@ -1,7 +1,8 @@
 import pytest
 
 from soltura.conjugation.forms import Person, Tense
-from soltura.conjugation.service import regular_endings, verb_forms
+from soltura.conjugation.service import TenseAccuracy, regular_endings, tense_accuracy, verb_forms
+from soltura.learner.models import Rating
 
 
 def test_a_verbs_table_has_every_tense_in_the_persons_order() -> None:
@@ -50,3 +51,29 @@ def test_the_regular_endings_are_the_whole_table_of_the_three_conjugations() -> 
             "ir": ["é", "ás", "á", "emos", "éis", "án"],
         },
     }
+
+
+def test_the_accuracy_of_a_tense_counts_good_and_easy_answers_as_right() -> None:
+    answers = [
+        (Rating.GOOD, "ser|present|yo"),
+        (Rating.EASY, "ser|present|tu"),
+        (Rating.HARD, "ser|present|el"),
+        (Rating.AGAIN, "ser|present|nosotros"),
+        (Rating.GOOD, "ser|future|yo"),
+    ]
+
+    assert tense_accuracy(answers) == [
+        TenseAccuracy(Tense.PRESENT, answers=4, right=2),
+        TenseAccuracy(Tense.FUTURE, answers=1, right=1),
+    ]
+
+
+def test_a_tense_with_no_answers_is_left_out_and_the_rest_follow_the_order_of_tenses() -> None:
+    answers = [(Rating.GOOD, "ser|imperfect|yo"), (Rating.GOOD, "ser|preterite|yo")]
+
+    assert [item.tense for item in tense_accuracy(answers)] == [Tense.PRETERITE, Tense.IMPERFECT]
+
+
+@pytest.mark.parametrize("key", [None, "", "ser", "ser|conditional|yo", "ser|present|you"])
+def test_an_answer_whose_card_names_no_form_is_not_counted(key: str | None) -> None:
+    assert tense_accuracy([(Rating.GOOD, key)]) == []

@@ -1,9 +1,11 @@
 import re
+from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import timedelta
 
 from soltura.conjugation.forms import Person, Tense, conjugate
-from soltura.conjugation.units import IMPERSONAL_VERBS
+from soltura.conjugation.units import IMPERSONAL_VERBS, parse_unit_key
 from soltura.learner.models import Rating
 from soltura.practice.checking import SpanishCheck
 
@@ -42,6 +44,32 @@ class ConjugationResult:
     check: SpanishCheck
     expected: str
     verb: str
+
+
+RECENT_ANSWERS = 200
+MIN_ANSWERS = 10
+
+
+@dataclass(frozen=True)
+class TenseAccuracy:
+    tense: Tense
+    answers: int
+    right: int
+
+
+def tense_accuracy(answers: Iterable[tuple[Rating, str | None]]) -> list[TenseAccuracy]:
+    answered = Counter[Tense]()
+    right = Counter[Tense]()
+    for rating, key in answers:
+        parsed = parse_unit_key(key)
+        if parsed is None:
+            continue
+        answered[parsed[1]] += 1
+        if rating in (Rating.GOOD, Rating.EASY):
+            right[parsed[1]] += 1
+    return [
+        TenseAccuracy(tense, answered[tense], right[tense]) for tense in Tense if answered[tense]
+    ]
 
 
 # The regular verb of each ending: its endings, taken off the forms the trainer accepts,

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Прогрес у відмінюванні · Soltura{% endblock %}
+{% block heading %}Прогрес у відмінюванні{% endblock %}
+
+{% block content %}
+  {% for row in rows %}
+    <article>
+      <h3>{{ row.tense }}</h3>
+      <p>{{ row.answers_text }}</p>
+      {% if row.note %}<p class="note">{{ row.note }}</p>{% endif %}
+    </article>
+  {% else %}
+    <article>
+      <p>Ще немає відповідей з відмінювання.</p>
+      <a href="/conjugation" role="button">До вправ</a>
+    </article>
+  {% endfor %}
+  {% if rows %}
+    <p class="note">Правильною вважається відповідь без помилок; пропущений наголос рахується як неправильна. Беремо останні 200 відповідей.</p>
+    <p><a href="/conjugation">До вправ</a></p>
+  {% endif %}
+{% endblock %}

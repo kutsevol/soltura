@@ -1,7 +1,12 @@
 from dataclasses import dataclass
 
 from soltura.conjugation.forms import Person, Tense
-from soltura.conjugation.service import ConjugationItem, ConjugationResult
+from soltura.conjugation.service import (
+    MIN_ANSWERS,
+    ConjugationItem,
+    ConjugationResult,
+    TenseAccuracy,
+)
 from soltura.learner.models import Rating
 from soltura.practice.checking import SpanishCheck
 from soltura.practice.views import RATING_LABEL
@@ -108,3 +113,27 @@ def endings_view(endings: dict[Tense, dict[str, list[str]]]) -> list[TenseTable]
         )
         for tense, by_ending in endings.items()
     ]
+
+
+@dataclass(frozen=True)
+class AccuracyRow:
+    tense: str
+    answers_text: str
+    note: str | None
+
+
+def progress_view(accuracy: list[TenseAccuracy]) -> list[AccuracyRow]:
+    rows = []
+    for item in accuracy:
+        if item.answers >= MIN_ANSWERS:
+            answers_text = (
+                f"Відповідей: {item.answers}, правильних: {round(100 * item.right / item.answers)}%"
+            )
+            note = None
+        else:
+            answers_text = f"Відповідей: {item.answers}"
+            note = f"Ще мало відповідей для відсотка: потрібно {MIN_ANSWERS}."
+        rows.append(
+            AccuracyRow(tense=TENSE_LABEL[item.tense], answers_text=answers_text, note=note)
+        )
+    return rows

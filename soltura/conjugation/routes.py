@@ -11,6 +11,7 @@ from soltura.conjugation.views import (
     ENDINGS_HEADER,
     card_view,
     endings_view,
+    progress_view,
     result_view,
     verb_view,
 )
@@ -20,6 +21,7 @@ from soltura.templating import templates
 from soltura.use_cases.conjugation import (
     answer_item,
     build_session,
+    conjugation_progress,
     endings_table,
     new_sets_held_back,
     verb_table,
@@ -117,4 +119,14 @@ def endings_page(request: Request, learner_id: LearnerIdDep) -> HTMLResponse:
         request,
         "conjugation/endings.html",
         {"header": ENDINGS_HEADER, "tenses": endings_view(endings_table())},
+    )
+
+
+@router.get("/progress", response_class=HTMLResponse)
+async def progress_page(
+    request: Request, session: SessionDep, learner_id: LearnerIdDep
+) -> HTMLResponse:
+    accuracy = await conjugation_progress(session, learner_id)
+    return templates.TemplateResponse(
+        request, "conjugation/progress.html", {"rows": progress_view(accuracy)}
     )
