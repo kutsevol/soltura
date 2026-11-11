@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.50.0 (2026-11-11)
+
+### Features
+
+- **reading**: Show the wait on the button and scroll to the new text
+  ([#84](https://github.com/kutsevol/soltura/pull/84),
+  [`01d97ce`](https://github.com/kutsevol/soltura/commit/01d97cea10fd7a021ad94e75faf298c08775b66a))
+
+
 ## v0.49.0 (2026-11-11)
 
 ### Documentation
