@@ -194,6 +194,5 @@ async def check_gist(
 
 
 async def reading_progress(session: AsyncSession, learner_id: int) -> ReadingProgress:
-    counted = await get_recent_answered_texts(session, learner_id, RECENT_TEXTS, counted_only=True)
     texts = await get_recent_answered_texts(session, learner_id, RECENT_TEXTS)
-    return ReadingProgress(score=reading_score(counted), texts=texts)
+    return ReadingProgress(score=reading_score(texts), texts=texts)

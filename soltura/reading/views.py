@@ -53,10 +53,7 @@ def progress_view(progress: ReadingProgress) -> ProgressView:
     score = progress.score
     if score.percent is None:
         score_text = "Ще замало текстів для оцінки"
-        basis_text = (
-            f"Потрібно текстів із відповіддю на «Про що текст?»: {score.needed}, "
-            f"зараз: {score.counted}."
-        )
+        basis_text = f"Відповідей на «Про що текст?»: {score.counted} із {score.needed} потрібних."
     else:
         score_text = f"Розуміння текстів: {score.percent}%"
         basis_text = f"За останніми текстами з відповіддю: {score.counted}."

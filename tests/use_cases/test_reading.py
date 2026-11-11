@@ -420,19 +420,15 @@ async def test_reading_progress_scores_the_answered_texts_and_lists_them(
     ]
 
 
-async def test_a_run_of_too_hard_texts_does_not_push_counted_ones_out_of_the_score(
+async def test_a_beginner_whose_texts_all_miss_the_coverage_target_still_gets_a_score(
     session: AsyncSession, learner: Learner
 ) -> None:
     assert learner.id is not None
-    for _ in range(3):
-        text = await save_reading_text(session, learner.id, None, "Bueno")
-        text.gist = GistResult.UNDERSTOOD
-    for _ in range(12):
+    for gist in (GistResult.UNDERSTOOD, GistResult.PARTLY, GistResult.MISSED):
         text = await save_reading_text(session, learner.id, None, "Difícil", below_target=True)
-        text.gist = GistResult.MISSED
+        text.gist = gist
 
     progress = await reading_progress(session, learner.id)
 
-    assert (progress.score.percent, progress.score.counted) == (100, 3)
-    assert len(progress.texts) == 10
+    assert (progress.score.percent, progress.score.counted) == (50, 3)
     assert all(text.below_target for text in progress.texts)

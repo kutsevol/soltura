@@ -325,11 +325,11 @@ async def test_the_progress_page_asks_for_more_texts_before_it_shows_a_score(
     response = await reading_client.get("/reading/progress")
 
     assert response.status_code == 200
-    assert "зараз: 2" in response.text
+    assert "Відповідей на «Про що текст?»: 2 із 3 потрібних." in response.text
     assert "%" not in response.text
 
 
-async def test_the_progress_page_shows_the_score_and_marks_a_text_that_was_too_hard(
+async def test_the_progress_page_shows_the_score_and_counts_and_marks_a_text_that_was_too_hard(
     reading_client: AsyncClient, session: AsyncSession, learner: Learner
 ) -> None:
     session.add_all(
@@ -347,6 +347,6 @@ async def test_the_progress_page_shows_the_score_and_marks_a_text_that_was_too_h
 
     response = await reading_client.get("/reading/progress")
 
-    assert "Розуміння текстів: 100%" in response.text
+    assert "Розуміння текстів: 75%" in response.text
     assert "Перевірено слів: 7" in response.text
-    assert "не враховано" in response.text
+    assert "текст був занадто складним для вашого рівня" in response.text
