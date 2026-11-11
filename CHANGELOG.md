@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.51.0 (2026-11-11)
+
+### Features
+
+- **conjugation**: Show conjugation accuracy per tense
+  ([#85](https://github.com/kutsevol/soltura/pull/85),
+  [`4057026`](https://github.com/kutsevol/soltura/commit/4057026bfa58e86c39b2fff53013b12c9cfe4ceb))
+
+
 ## v0.50.0 (2026-11-11)
 
 ### Features
