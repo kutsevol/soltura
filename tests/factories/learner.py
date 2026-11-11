@@ -1,7 +1,14 @@
 from polyfactory.decorators import post_generated
 from polyfactory.factories.sqlalchemy_factory import SQLAlchemyFactory
 
-from soltura.learner.models import Learner, LearnerLexeme, Lexeme, MemoryCard, UnitKind
+from soltura.learner.models import (
+    Learner,
+    LearnerLexeme,
+    Lexeme,
+    MemoryCard,
+    ReadingText,
+    UnitKind,
+)
 
 
 class LearnerFactory(SQLAlchemyFactory[Learner]):
@@ -30,3 +37,13 @@ class MemoryCardFactory(SQLAlchemyFactory[MemoryCard]):
     @classmethod
     def unit_key(cls, lexeme_id: int | None) -> str | None:
         return None if lexeme_id is None else str(lexeme_id)
+
+
+class ReadingTextFactory(SQLAlchemyFactory[ReadingText]):
+    __model__ = ReadingText
+    __set_primary_key__ = False
+
+    topic = None
+    gist = None
+    taps = 0
+    below_target = False

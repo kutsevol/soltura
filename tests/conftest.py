@@ -25,6 +25,7 @@ from soltura.learner.models import (
     LexemeStatus,
     MemoryCard,
     PlacementRun,
+    ReadingText,
     UnitKind,
 )
 from soltura.learner.repository import save_placement_run
@@ -38,6 +39,7 @@ from tests.factories import (
     LearnerLexemeFactory,
     LexemeFactory,
     MemoryCardFactory,
+    ReadingTextFactory,
 )
 from tests.fakes import FakeLLM
 
@@ -97,6 +99,22 @@ async def learner(session: AsyncSession) -> Learner:
     session.add(learner)
     await session.flush()
     return learner
+
+
+@pytest.fixture
+async def reading_text(session: AsyncSession, learner: Learner) -> ReadingText:
+    text = ReadingTextFactory.build(learner_id=learner.id, title="En la playa")
+    session.add(text)
+    await session.flush()
+    return text
+
+
+@pytest.fixture
+async def other_reading_text(session: AsyncSession, other_learner: Learner) -> ReadingText:
+    text = ReadingTextFactory.build(learner_id=other_learner.id, title="En el mercado")
+    session.add(text)
+    await session.flush()
+    return text
 
 
 @pytest.fixture

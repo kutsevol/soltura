@@ -11,7 +11,7 @@
         {%- if segment.is_word -%}
           <button type="button" class="word"
                   hx-post="/reading/tap" hx-target="#gloss"
-                  hx-vals='{{ {"word": segment.text, "sentence": sentence_text, "topic": topic} | tojson }}'>{{ segment.text }}</button>
+                  hx-vals='{{ {"word": segment.text, "sentence": sentence_text, "topic": topic, "text_id": text_id} | tojson }}'>{{ segment.text }}</button>
         {%- else -%}
           {{ segment.text }}
         {%- endif -%}
@@ -21,6 +21,7 @@
 {% endfor %}
 
 <form class="gist" hx-post="/reading/gist" hx-target="#gist" hx-indicator="#gist-loading">
+  <input type="hidden" name="text_id" value="{{ text_id }}">
   <input type="hidden" name="text" value="{{ prepared.text }}">
   <label>
     Про що цей текст? Напишіть коротко українською

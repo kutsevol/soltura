@@ -1,17 +1,20 @@
 import random
 from datetime import UTC, datetime
 
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
 from soltura.language.frequency import UNRANKED
 from soltura.language.nlp import analyze
 from soltura.learner.models import (
+    GistResult,
     KnowledgeType,
     Learner,
     Lexeme,
     MemoryCard,
     Rating,
+    ReadingText,
     ReviewLog,
     ReviewSource,
 )
@@ -20,7 +23,13 @@ from soltura.reading.service import GeneratedText, GistVerdict, Gloss
 from soltura.reading.topics import TOPICS
 from soltura.reading.variation import FORMS, NAMES
 from soltura.srs.service import save_word
-from soltura.use_cases.reading import check_gist, prepare_text, save_tapped_word, tap_word
+from soltura.use_cases.reading import (
+    check_gist,
+    prepare_text,
+    reading_progress,
+    save_tapped_word,
+    tap_word,
+)
 from tests.conftest import EASY_TEXT, HARD_TEXT, KnowFn, RankFn
 from tests.factories import LexemeFactory
 from tests.fakes import FakeLLM
@@ -231,13 +240,19 @@ async def test_adapting_a_pasted_text_sends_it_as_the_source(
 
 
 async def test_tapping_a_due_word_records_a_failed_recognition(
-    session: AsyncSession, learner: Learner, lexemes: list[Lexeme], llm: FakeLLM
+    session: AsyncSession,
+    learner: Learner,
+    lexemes: list[Lexeme],
+    llm: FakeLLM,
+    reading_text: ReadingText,
 ) -> None:
-    assert learner.id is not None and lexemes[2].id is not None
+    assert learner.id is not None and lexemes[2].id is not None and reading_text.id is not None
     await save_word(session, learner.id, lexemes[2].id, "Aunque llueve, salimos.", NOW)
     llm.answer(Gloss(lemma="Aunque", translation="хоча"))
 
-    result = await tap_word(session, llm, learner.id, "Aunque", "Aunque es tarde, sigo.", NOW)
+    result = await tap_word(
+        session, llm, learner.id, reading_text.id, "Aunque", "Aunque es tarde, sigo.", NOW
+    )
 
     assert (result.lemma, result.translation, result.reviewed) == ("aunque", "хоча", True)
     logs = (await session.execute(select(ReviewLog))).scalars().all()
@@ -247,12 +262,18 @@ async def test_tapping_a_due_word_records_a_failed_recognition(
 
 
 async def test_tapping_a_word_that_is_not_due_writes_no_review(
-    session: AsyncSession, learner: Learner, lexemes: list[Lexeme], llm: FakeLLM
+    session: AsyncSession,
+    learner: Learner,
+    lexemes: list[Lexeme],
+    llm: FakeLLM,
+    reading_text: ReadingText,
 ) -> None:
-    assert learner.id is not None
+    assert learner.id is not None and reading_text.id is not None
     llm.answer(Gloss(lemma="estar", translation="бути, перебувати"))
 
-    result = await tap_word(session, llm, learner.id, "estoy", "Estoy en casa.", NOW)
+    result = await tap_word(
+        session, llm, learner.id, reading_text.id, "estoy", "Estoy en casa.", NOW
+    )
 
     assert result.reviewed is False
     assert (await session.execute(select(ReviewLog))).scalars().all() == []
@@ -309,12 +330,105 @@ async def test_simplification_names_only_the_rarest_words_over_the_budget(
 
 
 async def test_the_gist_check_sends_the_text_and_the_answer_and_returns_the_verdict(
-    llm: FakeLLM,
+    session: AsyncSession, learner: Learner, llm: FakeLLM, reading_text: ReadingText
 ) -> None:
+    assert learner.id is not None and reading_text.id is not None
     llm.answer(GistVerdict(verdict="partly", reason="Текст про пляж."))
 
-    verdict = await check_gist(llm, EASY_TEXT.text, "Про сонце")
+    verdict = await check_gist(
+        session, llm, learner.id, reading_text.id, EASY_TEXT.text, "Про сонце"
+    )
 
     assert (verdict.verdict, verdict.reason) == ("partly", "Текст про пляж.")
     assert f"<text>\n{EASY_TEXT.text}\n</text>" in llm.prompts[0]
     assert "<answer>\nПро сонце\n</answer>" in llm.prompts[0]
+
+
+async def test_a_text_keeps_the_verdict_of_the_first_answer(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, reading_text: ReadingText
+) -> None:
+    assert learner.id is not None and reading_text.id is not None
+    llm.answer(
+        GistVerdict(verdict="missed", reason="Текст про пляж."),
+        GistVerdict(verdict="understood", reason="Текст про пляж."),
+    )
+
+    await check_gist(session, llm, learner.id, reading_text.id, EASY_TEXT.text, "Про ліс")
+    second = await check_gist(
+        session, llm, learner.id, reading_text.id, EASY_TEXT.text, "Про день на пляжі"
+    )
+
+    await session.refresh(reading_text)
+    assert second.verdict == "understood"
+    assert reading_text.gist == GistResult.MISSED
+
+
+async def test_every_tap_on_a_text_is_counted(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, reading_text: ReadingText
+) -> None:
+    assert learner.id is not None and reading_text.id is not None
+    llm.answer(*[Gloss(lemma="estar", translation="бути")] * 3)
+
+    for _ in range(3):
+        await tap_word(session, llm, learner.id, reading_text.id, "estoy", "Estoy aquí.", NOW)
+
+    await session.refresh(reading_text)
+    assert reading_text.taps == 3
+
+
+async def test_another_learners_text_is_refused_before_the_model_is_asked(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, other_reading_text: ReadingText
+) -> None:
+    assert learner.id is not None and other_reading_text.id is not None
+
+    with pytest.raises(PermissionError):
+        await tap_word(session, llm, learner.id, other_reading_text.id, "estoy", "Estoy.", NOW)
+    with pytest.raises(PermissionError):
+        await check_gist(session, llm, learner.id, other_reading_text.id, "Texto", "Про щось")
+
+    assert llm.prompts == []
+
+
+async def test_a_text_prepared_below_the_target_is_saved_as_such(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, know: KnowFn
+) -> None:
+    await know(f"{EASY_TEXT.title}. {EASY_TEXT.text}")
+    llm.answer(HARD_TEXT, HARD_TEXT, HARD_TEXT)
+
+    prepared = await prepare_text(session, llm, learner, NOW, topic="la playa")
+
+    saved = await session.get(ReadingText, prepared.text_id)
+    assert saved is not None and saved.below_target is True
+
+
+async def test_reading_progress_scores_the_answered_texts_and_lists_them(
+    session: AsyncSession, learner: Learner
+) -> None:
+    assert learner.id is not None
+    for gist in (GistResult.UNDERSTOOD, GistResult.PARTLY, GistResult.MISSED):
+        text = await save_reading_text(session, learner.id, None, "Un texto")
+        text.gist = gist
+    await save_reading_text(session, learner.id, None, "Sin respuesta")
+
+    progress = await reading_progress(session, learner.id)
+
+    assert progress.score.percent == 50
+    assert [text.gist for text in progress.texts] == [
+        GistResult.MISSED,
+        GistResult.PARTLY,
+        GistResult.UNDERSTOOD,
+    ]
+
+
+async def test_a_beginner_whose_texts_all_miss_the_coverage_target_still_gets_a_score(
+    session: AsyncSession, learner: Learner
+) -> None:
+    assert learner.id is not None
+    for gist in (GistResult.UNDERSTOOD, GistResult.PARTLY, GistResult.MISSED):
+        text = await save_reading_text(session, learner.id, None, "Difícil", below_target=True)
+        text.gist = gist
+
+    progress = await reading_progress(session, learner.id)
+
+    assert (progress.score.percent, progress.score.counted) == (50, 3)
+    assert all(text.below_target for text in progress.texts)
