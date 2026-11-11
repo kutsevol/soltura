@@ -8,11 +8,14 @@ from soltura.conjugation.forms import Person, Tense, conjugate
 from soltura.conjugation.service import (
     CONJUGATION_RATING,
     NEW_SETS_WINDOW,
+    RECENT_ANSWERS,
     SESSION_SIZE,
     ConjugationItem,
     ConjugationResult,
     ConjugationSession,
+    TenseAccuracy,
     regular_endings,
+    tense_accuracy,
     verb_forms,
 )
 from soltura.conjugation.units import (
@@ -31,6 +34,7 @@ from soltura.learner.models import (
 from soltura.learner.repository import (
     count_cards_created_since,
     count_unreviewed_cards,
+    get_recent_conjugation_answers,
     get_unit_keys,
     get_verb_lemmas,
 )
@@ -133,3 +137,8 @@ async def answer_item(
         duration_ms=duration_ms,
     )
     return ConjugationResult(rating=rating, check=check, expected=expected, verb=parsed[0])
+
+
+async def conjugation_progress(session: AsyncSession, learner_id: int) -> list[TenseAccuracy]:
+    answers = await get_recent_conjugation_answers(session, learner_id, RECENT_ANSWERS)
+    return tense_accuracy(answers)

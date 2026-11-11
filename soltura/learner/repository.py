@@ -129,6 +129,22 @@ class CardProgress:
     right: int
 
 
+async def get_recent_conjugation_answers(
+    session: AsyncSession, learner_id: int, limit: int
+) -> list[tuple[Rating, str | None]]:
+    result = await session.execute(
+        select(col(ReviewLog.rating), col(MemoryCard.unit_key))
+        .join(MemoryCard, col(MemoryCard.id) == col(ReviewLog.card_id))
+        .where(
+            col(MemoryCard.learner_id) == learner_id,
+            col(MemoryCard.unit_kind) == UnitKind.CONJUGATION,
+        )
+        .order_by(col(ReviewLog.id).desc())
+        .limit(limit)
+    )
+    return [(rating, unit_key) for rating, unit_key in result.all()]
+
+
 async def get_card_progress(
     session: AsyncSession, learner_id: int, unit_kind: UnitKind
 ) -> list[CardProgress]:

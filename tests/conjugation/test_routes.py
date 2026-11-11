@@ -1,12 +1,23 @@
 import re
+from datetime import UTC, datetime
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import col, select
 
 from soltura.config import settings
-from soltura.learner.models import Lexeme, ReviewLog, ReviewSource
+from soltura.learner.models import (
+    KnowledgeType,
+    Learner,
+    Lexeme,
+    MemoryCard,
+    ReviewLog,
+    ReviewSource,
+    UnitKind,
+)
+from soltura.srs.service import schedule_units
+from soltura.use_cases.conjugation import answer_item
 
 SER_PRESENT = ["soy", "eres", "es", "somos", "sois", "son"]
 
@@ -194,3 +205,61 @@ async def test_the_last_card_before_the_cap_ends_on_the_plain_message(
         page = await _next(learner_client, await _answer(learner_client, page, form))
 
     assert "Сесію завершено" in page
+
+
+async def _answer_all(
+    session: AsyncSession, learner: Learner, key: str, answers: list[str]
+) -> None:
+    assert learner.id is not None
+    now = datetime(2026, 11, 3, 12, 0, tzinfo=UTC)
+    await schedule_units(
+        session, learner.id, UnitKind.CONJUGATION, [key], KnowledgeType.RECALL, now
+    )
+    card = await session.scalar(select(MemoryCard).where(col(MemoryCard.unit_key) == key))
+    assert card is not None and card.id is not None
+    for answer in answers:
+        await answer_item(session, learner.id, card.id, answer, 1000, now)
+
+
+async def test_the_progress_page_of_a_learner_without_answers_links_to_the_trainer(
+    learner_client: AsyncClient,
+) -> None:
+    page = await learner_client.get("/conjugation/progress")
+
+    assert page.status_code == 200
+    assert "Ще немає відповідей з відмінювання." in page.text
+    assert 'href="/conjugation" role="button"' in page.text
+    assert "%" not in page.text
+
+
+async def test_a_tense_with_few_answers_shows_the_count_and_no_percentage(
+    learner_client: AsyncClient, session: AsyncSession, learner: Learner
+) -> None:
+    await _answer_all(session, learner, "ser|present|yo", ["soy"] * 3)
+
+    page = await learner_client.get("/conjugation/progress")
+
+    assert "Відповідей: 3" in page.text
+    assert "Ще мало відповідей для відсотка" in page.text
+    assert "правильних" not in page.text
+
+
+async def test_an_accent_slip_lowers_the_percentage_and_a_correct_answer_raises_it(
+    learner_client: AsyncClient, session: AsyncSession, learner: Learner
+) -> None:
+    await _answer_all(session, learner, "tener|present|vosotros", ["tenéis"] * 10)
+    full = await learner_client.get("/conjugation/progress")
+    await _answer_all(session, learner, "tener|present|vosotros", ["teneis"])
+    slipped = await learner_client.get("/conjugation/progress")
+    await _answer_all(session, learner, "tener|present|vosotros", ["tenéis"])
+    recovered = await learner_client.get("/conjugation/progress")
+
+    assert "Відповідей: 10, правильних: 100%" in full.text
+    assert "Відповідей: 11, правильних: 91%" in slipped.text
+    assert "Відповідей: 12, правильних: 92%" in recovered.text
+
+
+async def test_the_trainer_page_links_to_the_progress_page(learner_client: AsyncClient) -> None:
+    page = await learner_client.get("/conjugation")
+
+    assert 'href="/conjugation/progress"' in page.text

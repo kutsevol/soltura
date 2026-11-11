@@ -6,6 +6,7 @@ from sqlmodel import col, select
 
 from soltura.config import settings
 from soltura.conjugation.forms import Person, Tense
+from soltura.conjugation.service import TenseAccuracy
 from soltura.learner.models import (
     KnowledgeType,
     Learner,
@@ -16,8 +17,9 @@ from soltura.learner.models import (
     ReviewSource,
     UnitKind,
 )
+from soltura.learner.repository import get_recent_conjugation_answers
 from soltura.srs.service import save_word, schedule_units
-from soltura.use_cases.conjugation import answer_item, build_session
+from soltura.use_cases.conjugation import answer_item, build_session, conjugation_progress
 
 NOW = datetime(2026, 11, 3, 12, 0, tzinfo=UTC)
 
@@ -319,3 +321,47 @@ async def test_a_learner_who_has_every_set_is_not_told_the_cap_holds(
     study = await build_session(session, learner.id, NOW)
 
     assert (study.items, study.capped) == ([], False)
+
+
+async def _answer_all(
+    session: AsyncSession, learner: Learner, key: str, answers: list[str]
+) -> None:
+    assert learner.id is not None
+    await schedule_units(
+        session, learner.id, UnitKind.CONJUGATION, [key], KnowledgeType.RECALL, NOW
+    )
+    card = await session.scalar(
+        select(MemoryCard).where(
+            col(MemoryCard.learner_id) == learner.id, col(MemoryCard.unit_key) == key
+        )
+    )
+    assert card is not None and card.id is not None
+    for answer in answers:
+        await answer_item(session, learner.id, card.id, answer, 1000, NOW)
+
+
+async def test_the_progress_counts_the_right_answers_of_each_tense(
+    session: AsyncSession, learner: Learner
+) -> None:
+    assert learner.id is not None
+    await _answer_all(session, learner, "ser|present|yo", ["soy", "soy", "x"])
+    await _answer_all(session, learner, "ser|preterite|yo", ["fui"])
+
+    progress = await conjugation_progress(session, learner.id)
+
+    assert progress == [
+        TenseAccuracy(Tense.PRESENT, answers=3, right=2),
+        TenseAccuracy(Tense.PRETERITE, answers=1, right=1),
+    ]
+
+
+async def test_the_answers_come_newest_first_and_only_from_the_learner(
+    session: AsyncSession, learner: Learner, other_learner: Learner
+) -> None:
+    assert learner.id is not None
+    await _answer_all(session, learner, "ser|present|yo", ["x", "soy", "soy"])
+    await _answer_all(session, other_learner, "ser|present|yo", ["soy"])
+
+    answers = await get_recent_conjugation_answers(session, learner.id, 2)
+
+    assert answers == [(Rating.GOOD, "ser|present|yo")] * 2
