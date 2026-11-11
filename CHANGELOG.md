@@ -2,6 +2,21 @@
 
 <!-- version list -->
 
+## v0.49.0 (2026-11-11)
+
+### Documentation
+
+- Note the gist check and the verb tables in the README
+  ([#82](https://github.com/kutsevol/soltura/pull/82),
+  [`1488b69`](https://github.com/kutsevol/soltura/commit/1488b69cec305266610a04c0bd0e0dfcadf95779))
+
+### Features
+
+- **reading**: Keep each text's gist verdict and taps and show a reading score
+  ([#83](https://github.com/kutsevol/soltura/pull/83),
+  [`288d552`](https://github.com/kutsevol/soltura/commit/288d5522b50454471651658844697cd04981eed7))
+
+
 ## v0.48.0 (2026-11-10)
 
 ### Features
