@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.53.0 (2026-11-12)
+
+### Features
+
+- **reading**: Ask for shorter texts when the learner is at the first band
+  ([#87](https://github.com/kutsevol/soltura/pull/87),
+  [`068b6c8`](https://github.com/kutsevol/soltura/commit/068b6c8638da0b97a0185703b127ab308bd0ee5e))
+
+
 ## v0.52.0 (2026-11-12)
 
 ### Features
