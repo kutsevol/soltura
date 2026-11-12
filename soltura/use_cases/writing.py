@@ -4,6 +4,7 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.grammar.units import all_units
+from soltura.language.range import vocabulary_range
 from soltura.learner.models import Rating, ReviewSource
 from soltura.learner.repository import (
     JournalError,
@@ -56,7 +57,7 @@ async def submit_entry(
     body = text.replace("\r\n", "\n").strip()
     check_length(body)
     units = {unit.id: unit.title for unit in all_units()}
-    result = await correct_text(llm, body, units)
+    result = await correct_text(llm, body, units, await vocabulary_range(session, learner_id))
     prompt = prompt if prompt in KNOWN_PROMPTS else None
     entry = await save_journal_entry(
         session, learner_id, prompt, body, result.corrected, result.errors

@@ -5,6 +5,7 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.language.frequency import BANDS
+from soltura.language.range import vocabulary_range
 from soltura.learner.repository import sample_lexemes
 from soltura.llm.client import LLMClient
 from soltura.onboarding.service import (
@@ -30,7 +31,6 @@ from soltura.onboarding.service import (
     should_stop,
 )
 from soltura.practice.text import split_around
-from soltura.reading.service import vocabulary_range
 from soltura.words.vocabulary import VocabularyMap, build_vocabulary_map
 
 logger = logging.getLogger(__name__)

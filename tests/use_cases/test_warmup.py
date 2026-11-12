@@ -12,6 +12,7 @@ from soltura.learner.models import (
     ReviewLog,
     ReviewSource,
 )
+from soltura.learner.repository import save_placement_run
 from soltura.llm.client import LLMUnavailableError
 from soltura.practice.checking import TranslationVerdict
 from soltura.use_cases.warmup import answer_item, build_warmup
@@ -41,6 +42,21 @@ async def test_the_warmup_shows_each_due_card_in_a_fresh_sentence(
     assert all(item.sentence != "Aunque llueve, salimos." for item in items)
     assert items[0].translation == RECALL_CONTEXT.translation
     assert "Aunque llueve, salimos." in llm.prompts[0]
+
+
+async def test_the_sentence_prompt_names_the_range_of_a_learner_who_passed_no_band(
+    session: AsyncSession,
+    learner: Learner,
+    saved_aunque: dict[KnowledgeType, MemoryCard],
+    llm: FakeLLM,
+) -> None:
+    assert learner.id is not None
+    await save_placement_run(session, learner.id, 0, [])
+    llm.answer(RECOGNIZE_CONTEXT, RECALL_CONTEXT)
+
+    await build_warmup(session, llm, learner.id, NOW)
+
+    assert all("knows about the 250 most frequent Spanish words" in p for p in llm.prompts)
 
 
 async def test_the_warmup_ignores_cards_of_other_units(

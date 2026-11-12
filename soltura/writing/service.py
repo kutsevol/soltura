@@ -7,6 +7,7 @@ from enum import StrEnum
 from pydantic import BaseModel, Field
 
 from soltura.language.nlp import analyze
+from soltura.language.range import knows_sentence
 from soltura.learner.models import ErrorKind
 from soltura.learner.repository import JournalError
 from soltura.llm.client import LLMClient
@@ -22,15 +23,16 @@ OTHER_KINDS = {kind.value: kind for kind in ErrorKind if kind != ErrorKind.GRAMM
 TOKEN = re.compile(r"\w+|\s+|[^\w\s]")
 
 CORRECTION_SYSTEM = (
-    "You correct a short Spanish text written by a Ukrainian-speaking learner at level A2 to B1 "
-    "who lives in Spain. Fix only what is wrong and keep the learner's meaning, words and style "
-    "wherever they are acceptable Spanish. Return the whole corrected text and the list of errors "
-    "you fixed. For each error, 'original' is the smallest fragment copied exactly, character for "
-    "character, from the learner's text; 'corrected' is that fragment after the fix, empty when "
-    "the fragment should be removed; 'category' is one of the ids you are given; 'note' is one "
-    "short sentence in Ukrainian saying why the original is wrong. Choose a grammar unit id only "
-    "when that unit's rule explains the error. If the text has no errors, return it unchanged "
-    "with an empty list."
+    "You correct a short Spanish text written by a Ukrainian-speaking learner who lives in "
+    "Spain; you are told how many of the most frequent Spanish words the learner knows, so "
+    "keep each note simple enough for them. Fix only what is wrong and keep the learner's "
+    "meaning, words and style wherever they are acceptable Spanish. Return the whole corrected "
+    "text and the list of errors you fixed. For each error, 'original' is the smallest "
+    "fragment copied exactly, character for character, from the learner's text; 'corrected' is "
+    "that fragment after the fix, empty when the fragment should be removed; 'category' is one "
+    "of the ids you are given; 'note' is one short sentence in Ukrainian saying why the "
+    "original is wrong. Choose a grammar unit id only when that unit's rule explains the "
+    "error. If the text has no errors, return it unchanged with an empty list."
 )
 
 
@@ -83,14 +85,18 @@ def check_length(text: str) -> None:
         raise InvalidText(TextProblem.TOO_LONG)
 
 
-def correction_prompt(text: str, units: Mapping[str, str]) -> str:
+def correction_prompt(text: str, units: Mapping[str, str], vocabulary: int) -> str:
     categories = [f"- {unit_id}: {title}" for unit_id, title in units.items()]
     categories += [
         "- vocabulary: a wrong or missing word",
         "- spelling: accents and letters",
         "- other: anything else",
     ]
-    return "Categories:\n" + "\n".join(categories) + f"\n\nThe learner's text:\n{text}"
+    return (
+        f"{knows_sentence(vocabulary)}\n\nCategories:\n"
+        + "\n".join(categories)
+        + f"\n\nThe learner's text:\n{text}"
+    )
 
 
 def _category(category: str, units: Mapping[str, str]) -> tuple[ErrorKind, str | None]:
@@ -138,11 +144,13 @@ def diff_segments(before: str, after: str) -> list[Segment]:
     return segments
 
 
-async def correct_text(llm: LLMClient, text: str, units: Mapping[str, str]) -> CorrectedText:
+async def correct_text(
+    llm: LLMClient, text: str, units: Mapping[str, str], vocabulary: int
+) -> CorrectedText:
     correction = await llm(
         Correction,
         system=CORRECTION_SYSTEM,
-        prompt=correction_prompt(text, units),
+        prompt=correction_prompt(text, units, vocabulary),
         effort="medium",
         max_tokens=8_000,
     )

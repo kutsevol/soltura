@@ -4,6 +4,7 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
+from soltura.language.range import vocabulary_range
 from soltura.learner.models import (
     KnowledgeType,
     MemoryCard,
@@ -57,9 +58,13 @@ async def build_warmup(
     for lexeme_id, sentence in saved.all():
         seen.setdefault(lexeme_id, []).append(sentence)
 
+    vocabulary = await vocabulary_range(session, learner_id)
     # One concurrent batch: a warm-up of 15 cards should not wait for 15 calls in a row.
     contexts = await asyncio.gather(
-        *(fresh_context(llm, lemmas[lexeme_id], seen.get(lexeme_id, [])) for _, lexeme_id in cards)
+        *(
+            fresh_context(llm, lemmas[lexeme_id], seen.get(lexeme_id, []), vocabulary)
+            for _, lexeme_id in cards
+        )
     )
 
     items: list[WarmupItem] = []
