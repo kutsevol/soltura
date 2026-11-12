@@ -3,8 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from soltura.language.frequency import BANDS
 from soltura.learner.repository import get_latest_placement_run
 
-# Until onboarding measures the learner, the most frequent lemmas stand in for what an
-# A2 learner knows. wordfreq ranks web text, so everyday words like "cocina", "beber"
+# Until onboarding measures the learner, the most frequent lemmas stand in for what a
+# learner at A2 knows. wordfreq ranks web text, so everyday words like "cocina", "beber"
 # or "cansado" sit between 1,500 and 3,000; at 1,500 live texts on family or sport
 # came out at 83-88% and were stripped of exactly those words.
 BASELINE_KNOWN_RANK = 3000

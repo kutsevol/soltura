@@ -27,13 +27,12 @@ CORRECTION_SYSTEM = (
     "Spain; you are told how many of the most frequent Spanish words the learner knows, so "
     "keep each note simple enough for them. Fix only what is wrong and keep the learner's "
     "meaning, words and style wherever they are acceptable Spanish. Return the whole corrected "
-    "text and the list of errors "
-    "you fixed. For each error, 'original' is the smallest fragment copied exactly, character for "
-    "character, from the learner's text; 'corrected' is that fragment after the fix, empty when "
-    "the fragment should be removed; 'category' is one of the ids you are given; 'note' is one "
-    "short sentence in Ukrainian saying why the original is wrong. Choose a grammar unit id only "
-    "when that unit's rule explains the error. If the text has no errors, return it unchanged "
-    "with an empty list."
+    "text and the list of errors you fixed. For each error, 'original' is the smallest "
+    "fragment copied exactly, character for character, from the learner's text; 'corrected' is "
+    "that fragment after the fix, empty when the fragment should be removed; 'category' is one "
+    "of the ids you are given; 'note' is one short sentence in Ukrainian saying why the "
+    "original is wrong. Choose a grammar unit id only when that unit's rule explains the "
+    "error. If the text has no errors, return it unchanged with an empty list."
 )
 
 
