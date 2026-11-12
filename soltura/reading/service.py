@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from soltura.language.range import knows_sentence, vocabulary_range
+from soltura.language.range import FIRST_BAND_RANK, knows_sentence, vocabulary_range
 from soltura.learner.models import (
     LexemeStatus,
     UnitKind,
@@ -50,7 +50,7 @@ GIST_SYSTEM = (
 )
 
 # The page sends the text back with the answer; both are bounded before the model is called.
-# The writer aims at 120 to 200 words, so the text limit sits far above what it produces.
+# The writer aims at 50 to 200 words, so the text limit sits far above what it produces.
 MAX_GIST_TEXT = 4_000
 MAX_GIST_ANSWER = 500
 
@@ -111,6 +111,12 @@ async def due_lemmas(session: AsyncSession, learner_id: int, now: datetime) -> l
     return [by_id[lexeme_id] for lexeme_id in lexeme_ids if lexeme_id in by_id]
 
 
+def text_length(vocabulary: int) -> str:
+    # A learner of the first band knows about 250 words: 120 words built from them leave no
+    # room for the 5% of unknown words the coverage target allows.
+    return "About 50 words" if vocabulary <= FIRST_BAND_RANK else "About 120 to 180 words"
+
+
 def first_draft_prompt(
     vocabulary: int, topic: str, due: list[str], source_text: str | None, variation: str
 ) -> str:
@@ -124,9 +130,7 @@ def first_draft_prompt(
             f"Rewrite the text below for a learner. {knows_sentence(vocabulary)} Keep its meaning and "
             f"facts. About 120 to 200 words.{wanted}\n\n<source>\n{source_text}\n</source>"
         )
-    return (
-        f"{knows_sentence(vocabulary)} Topic: {topic}. About 120 to 180 words.{wanted}{variation}"
-    )
+    return f"{knows_sentence(vocabulary)} Topic: {topic}. {text_length(vocabulary)}.{wanted}{variation}"
 
 
 def simplify_prompt(vocabulary: int, draft: GeneratedText, rare: list[str], due: list[str]) -> str:
