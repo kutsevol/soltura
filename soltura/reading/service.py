@@ -50,7 +50,7 @@ GIST_SYSTEM = (
 )
 
 # The page sends the text back with the answer; both are bounded before the model is called.
-# The writer aims at 120 to 200 words, so the text limit sits far above what it produces.
+# The writer aims at 50 to 200 words, so the text limit sits far above what it produces.
 MAX_GIST_TEXT = 4_000
 MAX_GIST_ANSWER = 500
 
