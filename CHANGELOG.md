@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.52.0 (2026-11-12)
+
+### Features
+
+- Write the word, warm-up and correction prompts for the learner's vocabulary range
+  ([#86](https://github.com/kutsevol/soltura/pull/86),
+  [`e34fbab`](https://github.com/kutsevol/soltura/commit/e34fbab8b027e95e1e472b5e5cd3a4d812edc72a))
+
+
 ## v0.51.0 (2026-11-11)
 
 ### Features
