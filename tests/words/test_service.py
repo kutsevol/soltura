@@ -4,6 +4,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.learner.models import Learner
+from soltura.learner.repository import save_placement_run
 from soltura.llm.client import LLMNotConfiguredError, LLMUnavailableError
 from soltura.words.service import (
     Problem,
@@ -31,6 +32,18 @@ NOW = datetime(2026, 10, 31, 12, 0, tzinfo=UTC)
 
 def test_parsing_drops_blank_lines_and_repeats_and_keeps_the_order() -> None:
     assert parse_words(" Nieto \n\nsuegra\nNIETO\n  \nvecino") == ["nieto", "suegra", "vecino"]
+
+
+async def test_the_prompt_names_the_range_of_a_learner_who_passed_no_band(
+    session: AsyncSession, learner: Learner, llm: FakeLLM
+) -> None:
+    assert learner.id is not None
+    await save_placement_run(session, learner.id, 0, [])
+    llm.answer(NIETO)
+
+    await look_up_words(session, llm, learner.id, ["nieto"])
+
+    assert "knows about the 250 most frequent Spanish words" in llm.prompts[0]
 
 
 async def test_a_typed_word_comes_back_with_a_sentence_that_contains_it(

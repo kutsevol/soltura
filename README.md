@@ -2,7 +2,7 @@
 
 A personal Spanish tutor that trains **all four skills** (reading, writing, listening, speaking) together with grammar and verb conjugation. It is not a Duolingo clone: less tapping, more real use of the language.
 
-**Target user (v1):** an adult Ukrainian-speaking learner at A2 level who lives in Spain and wants to reach B1 and beyond.
+**Target user (v1):** an adult Ukrainian-speaking learner at A1 or A2 level who lives in Spain and wants to reach B1 and beyond. A learner at A1 knows fewer than 250 words, the first band of the placement test,: the texts, example sentences and corrections are written for the vocabulary range that test measures, not for a fixed level.
 
 **Core idea:** one shared **learner model** (words, grammar, mistakes, memory state) feeds every module. A word met in a text comes back in audio, writing and dialogue.
 

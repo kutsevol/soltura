@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pydantic import BaseModel, Field
 
 from soltura.language.nlp import analyze
+from soltura.language.range import knows_sentence
 from soltura.learner.models import (
     KnowledgeType,
     Rating,
@@ -19,11 +20,12 @@ logger = logging.getLogger(__name__)
 WARMUP_SIZE = 15
 
 CONTEXT_SYSTEM = (
-    "You write one short, natural Spanish sentence from everyday life in Spain, at CEFR level "
-    "A2, for a vocabulary review card. The sentence must use the given word, in any form that "
-    "fits, and must differ from the sentences the learner has already seen. Give the exact form "
-    "of the word as it appears in your sentence, and a natural Ukrainian translation of the "
-    "whole sentence."
+    "You write one short, natural Spanish sentence from everyday life in Spain for a "
+    "vocabulary review card. You are told how many of the most frequent Spanish words the "
+    "learner knows: build the sentence from those words, apart from the given word. The "
+    "sentence must use the given word, in any form that fits, and must differ from the "
+    "sentences the learner has already seen. Give the exact form of the word as it appears in "
+    "your sentence, and a natural Ukrainian translation of the whole sentence."
 )
 
 
@@ -62,13 +64,18 @@ def form_in_saved_sentence(sentence: str, lemma: str) -> str | None:
     return lemma if _find_form(sentence, lemma) else None
 
 
-async def fresh_context(llm: LLMClient, lemma: str, seen: list[str]) -> ContextSentence | None:
+async def fresh_context(
+    llm: LLMClient, lemma: str, seen: list[str], vocabulary: int
+) -> ContextSentence | None:
     seen_block = "\n".join(f"- {sentence}" for sentence in seen) or "- (none)"
     try:
         context = await llm(
             ContextSentence,
             system=CONTEXT_SYSTEM,
-            prompt=f"Word: {lemma}\nSentences already seen:\n{seen_block}",
+            prompt=(
+                f"{knows_sentence(vocabulary)}\nWord: {lemma}\n"
+                f"Sentences already seen:\n{seen_block}"
+            ),
             effort="low",
             max_tokens=4_000,
         )

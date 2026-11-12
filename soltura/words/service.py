@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.language.nlp import analyze
+from soltura.language.range import knows_sentence, vocabulary_range
 from soltura.learner.models import LexemeStatus
 from soltura.learner.repository import get_learner_lemmas
 from soltura.llm.client import LLMClient, LLMNotConfiguredError, LLMUnavailableError
@@ -20,12 +21,12 @@ MAX_LEMMA_LENGTH = 64
 MAX_SENTENCE_LENGTH = 500
 
 ENTRY_SYSTEM = (
-    "You are a Spanish dictionary for an adult Ukrainian speaker who lives in Spain and is at "
-    "CEFR level A2. You get one word as the learner typed it, in any form and possibly with a "
-    "typo. Give its dictionary form (lemma, lowercase), its meaning in Ukrainian in a few words, "
-    "and one short natural sentence from everyday life in Spain, at level A2, that uses the "
-    "word in any form that fits. If the input is not a Spanish word even allowing for typos, "
-    "say so."
+    "You are a Spanish dictionary for an adult Ukrainian speaker who lives in Spain. You get "
+    "one word as the learner typed it, in any form and possibly with a typo, and how many of "
+    "the most frequent Spanish words the learner knows. Give its dictionary form (lemma, "
+    "lowercase), its meaning in Ukrainian in a few words, and one short natural sentence from "
+    "everyday life in Spain that uses the word in any form that fits and is built from words "
+    "the learner knows. If the input is not a Spanish word even allowing for typos, say so."
 )
 
 
@@ -85,12 +86,12 @@ def _uses_word(sentence: str, typed: str, lemma: str) -> bool:
     )
 
 
-async def _ask(llm: LLMClient, word: str) -> WordEntry:
+async def _ask(llm: LLMClient, word: str, vocabulary: int) -> WordEntry:
     for attempt in range(1, ATTEMPTS + 1):
         entry = await llm(
             WordEntry,
             system=ENTRY_SYSTEM,
-            prompt=f"Word: {word}",
+            prompt=f"{knows_sentence(vocabulary)}\nWord: {word}",
             effort="low",
             max_tokens=4_000,
         )
@@ -109,11 +110,11 @@ async def _ask(llm: LLMClient, word: str) -> WordEntry:
     raise WordLookupFailedError(word)
 
 
-async def _ask_line(llm: LLMClient, word: str) -> WordEntry | Problem:
+async def _ask_line(llm: LLMClient, word: str, vocabulary: int) -> WordEntry | Problem:
     if len(word.split()) > 1:
         return Problem.MULTIPLE_WORDS
     try:
-        return await _ask(llm, word)
+        return await _ask(llm, word, vocabulary)
     except NotASpanishWordError:
         return Problem.NOT_SPANISH
     except WordLookupFailedError:
@@ -130,7 +131,8 @@ async def look_up_words(
 ) -> list[LineResult]:
     # Only the model calls run concurrently: one AsyncSession cannot serve two queries
     # at once, so the saved-word check is a single query after they finish.
-    outcomes = await asyncio.gather(*(_ask_line(llm, word) for word in words))
+    vocabulary = await vocabulary_range(session, learner_id)
+    outcomes = await asyncio.gather(*(_ask_line(llm, word, vocabulary) for word in words))
     saved = await get_learner_lemmas(session, learner_id, {LexemeStatus.LEARNING})
     results: list[LineResult] = []
     seen: set[str] = set()

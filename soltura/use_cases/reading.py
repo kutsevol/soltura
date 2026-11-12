@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from soltura.language.coverage import measure_coverage, words_to_replace
 from soltura.language.frequency import UNRANKED
 from soltura.language.nlp import analyze
+from soltura.language.range import vocabulary_range
 from soltura.learner.models import (
     GistResult,
     KnowledgeType,
@@ -44,7 +45,6 @@ from soltura.reading.service import (
     first_draft_prompt,
     lemmas_counted_as_known,
     simplify_prompt,
-    vocabulary_range,
 )
 from soltura.reading.topics import find_topic
 from soltura.reading.variation import pick_variation, variation_prompt

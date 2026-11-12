@@ -5,13 +5,12 @@ from typing import Literal
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from soltura.language.frequency import BANDS
+from soltura.language.range import knows_sentence, vocabulary_range
 from soltura.learner.models import (
     LexemeStatus,
     UnitKind,
 )
 from soltura.learner.repository import (
-    get_latest_placement_run,
     get_learner_lemmas,
     get_lexemes_by_ids,
     get_most_frequent_lemmas,
@@ -20,13 +19,6 @@ from soltura.srs.service import due_queue
 
 TARGET_COVERAGE = 0.95
 MAX_SIMPLIFICATIONS = 2
-# Until onboarding measures the learner, the most frequent lemmas stand in for what an
-# A2 learner knows. wordfreq ranks web text, so everyday words like "cocina", "beber"
-# or "cansado" sit between 1,500 and 3,000; at 1,500 live texts on family or sport
-# came out at 83-88% and were stripped of exactly those words.
-BASELINE_KNOWN_RANK = 3000
-# A learner who passed no band of the placement test knows less than the first band.
-FIRST_BAND_RANK = BANDS[0][1]
 MAX_DUE_LEMMAS = 10
 RECENT_TITLES = 5
 
@@ -99,15 +91,6 @@ class TapResult:
     reviewed: bool
 
 
-async def vocabulary_range(session: AsyncSession, learner_id: int) -> int:
-    # The placement test is the only measure of the learner's vocabulary; without it the
-    # baseline stands in. A run that passed no band still means "less than the baseline".
-    run = await get_latest_placement_run(session, learner_id)
-    if run is None:
-        return BASELINE_KNOWN_RANK
-    return max(run.known_rank, FIRST_BAND_RANK)
-
-
 async def lemmas_counted_as_known(session: AsyncSession, learner_id: int) -> set[str]:
     # Words being learned count as known: texts include due words on purpose, and
     # treating them as unknown would make simplification strip them out again.
@@ -128,10 +111,6 @@ async def due_lemmas(session: AsyncSession, learner_id: int, now: datetime) -> l
     return [by_id[lexeme_id] for lexeme_id in lexeme_ids if lexeme_id in by_id]
 
 
-def _knows(vocabulary: int) -> str:
-    return f"The learner knows about the {vocabulary:,} most frequent Spanish words."
-
-
 def first_draft_prompt(
     vocabulary: int, topic: str, due: list[str], source_text: str | None, variation: str
 ) -> str:
@@ -142,16 +121,18 @@ def first_draft_prompt(
     )
     if source_text is not None:
         return (
-            f"Rewrite the text below for a learner. {_knows(vocabulary)} Keep its meaning and "
+            f"Rewrite the text below for a learner. {knows_sentence(vocabulary)} Keep its meaning and "
             f"facts. About 120 to 200 words.{wanted}\n\n<source>\n{source_text}\n</source>"
         )
-    return f"{_knows(vocabulary)} Topic: {topic}. About 120 to 180 words.{wanted}{variation}"
+    return (
+        f"{knows_sentence(vocabulary)} Topic: {topic}. About 120 to 180 words.{wanted}{variation}"
+    )
 
 
 def simplify_prompt(vocabulary: int, draft: GeneratedText, rare: list[str], due: list[str]) -> str:
     keep = f" Keep these words, the learner is reviewing them: {', '.join(due)}." if due else ""
     return (
-        f"{_knows(vocabulary)} A few words in this text are too rare for them: {', '.join(rare)}. "
+        f"{knows_sentence(vocabulary)} A few words in this text are too rare for them: {', '.join(rare)}. "
         "Replace each with a simpler word that means the same, or rewrite its sentence without "
         "it. Never describe a word with a roundabout phrase ('el hijo de mi hijo' for 'nieto'): "
         f"if no simple word fits, keep the original. Change nothing else.{keep}"

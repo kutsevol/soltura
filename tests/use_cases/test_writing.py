@@ -19,6 +19,7 @@ from soltura.learner.repository import (
     get_journal_entries,
     get_lexemes_by_lemmas,
     save_journal_entry,
+    save_placement_run,
 )
 from soltura.llm.client import LLMUnavailableError
 from soltura.reading.topics import TOPICS
@@ -65,6 +66,18 @@ async def test_a_submitted_text_is_saved_with_its_errors(
     ]
     assert result.corrected == FIXED
     assert "ser_estar" in llm.prompts[0]
+
+
+async def test_the_correction_prompt_names_the_range_of_a_learner_who_passed_no_band(
+    session: AsyncSession, learner: Learner, llm: FakeLLM
+) -> None:
+    assert learner.id is not None
+    await save_placement_run(session, learner.id, 0, [])
+    llm.answer(Correction(corrected_text=TEXT, errors=[]))
+
+    await submit_entry(session, llm, learner.id, PROMPTS[0], TEXT, NOW)
+
+    assert "knows about the 250 most frequent Spanish words" in llm.prompts[0]
 
 
 @pytest.mark.parametrize(
