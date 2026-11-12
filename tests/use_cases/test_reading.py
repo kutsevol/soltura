@@ -115,6 +115,7 @@ async def test_the_prompt_names_the_vocabulary_range_from_the_placement_run(
 
     assert "knows about the 1,000 most frequent Spanish words" in llm.prompts[0]
     assert "A2" not in llm.prompts[0]
+    assert "About 120 to 180 words" in llm.prompts[0]
 
 
 async def test_without_a_placement_run_the_prompt_names_the_baseline_range(
@@ -141,6 +142,21 @@ async def test_a_learner_who_passed_no_band_is_measured_against_the_first_band(
 
     assert (prepared.coverage, prepared.below_target) == (0.0, True)
     assert "knows about the 250 most frequent Spanish words" in llm.prompts[0]
+    assert "About 50 words" in llm.prompts[0]
+
+
+async def test_a_pasted_text_is_adapted_at_its_own_length_at_the_first_band(
+    session: AsyncSession, learner: Learner, llm: FakeLLM
+) -> None:
+    assert learner.id is not None
+    await save_placement_run(session, learner.id, 0, [])
+    llm.answer(EASY_TEXT, EASY_TEXT, EASY_TEXT)
+
+    await prepare_text(
+        session, llm, learner, NOW, topic="", source_text="El Ayuntamiento informa de que…"
+    )
+
+    assert "About 120 to 200 words" in llm.prompts[0]
 
 
 async def test_a_preset_topic_gets_a_situation_a_form_and_a_name_from_the_lists(
