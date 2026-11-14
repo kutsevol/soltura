@@ -46,6 +46,7 @@ from soltura.reading.service import (
     TapResult,
     due_lemmas,
     first_draft_prompt,
+    is_plannable,
     lemmas_counted_as_known,
     pick_new_words,
     simplify_prompt,
@@ -82,9 +83,10 @@ async def prepare_text(
         window = await get_lemmas_in_rank_window(
             session, vocabulary, vocabulary + NEW_WORD_WINDOW, NEW_WORD_PARTS_OF_SPEECH
         )
-        new_words = pick_new_words(
-            [lemma for lemma in window if lemma not in known], vocabulary, rng
-        )
+        candidates = [
+            lemma for lemma, pos in window if lemma not in known and is_plannable(lemma, pos)
+        ]
+        new_words = pick_new_words(candidates, vocabulary, rng)
 
     draft = await llm(
         GeneratedText,
@@ -100,12 +102,9 @@ async def prepare_text(
             lexeme.lemma: lexeme.frequency_rank
             for lexeme in await get_lexemes_by_lemmas(session, coverage.unknown_lemmas)
         }
-        # The planned words are what the text is for: they never go to make room.
-        rare = [
-            lemma
-            for lemma in words_to_replace(coverage, ranks, TARGET_COVERAGE)
-            if lemma not in new_words
-        ]
+        # The planned words are what the text is for: they use up the unknown-word budget
+        # and never go to make room, so the other unknown words go in their place.
+        rare = words_to_replace(coverage, ranks, TARGET_COVERAGE, exempt=set(new_words))
         if not rare:
             break
         draft = await llm(

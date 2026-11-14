@@ -30,16 +30,24 @@ def measure_coverage(tokens: list[Token], known_lemmas: Set[str]) -> Coverage:
     )
 
 
-def words_to_replace(coverage: Coverage, ranks: Mapping[str, int], target: float) -> list[str]:
+def words_to_replace(
+    coverage: Coverage,
+    ranks: Mapping[str, int],
+    target: float,
+    exempt: Set[str] = frozenset(),
+) -> list[str]:
     # A text at the target still holds a few unknown words, and those are what the
     # learner meets for the first time. Only the excess goes, rarest first; a lemma
-    # with no frequency rank counts as the rarest.
+    # with no frequency rank counts as the rarest. An exempt lemma still uses up the
+    # budget but is never chosen, so the words that stay make room at the others' cost.
     allowed = math.floor(coverage.total_words * (1 - target))
     excess = sum(coverage.unknown_counts.values()) - allowed
     if excess <= 0:
         return []
     rarest_first = sorted(
-        coverage.unknown_counts, key=lambda lemma: ranks.get(lemma, math.inf), reverse=True
+        (lemma for lemma in coverage.unknown_counts if lemma not in exempt),
+        key=lambda lemma: ranks.get(lemma, math.inf),
+        reverse=True,
     )
     chosen: list[str] = []
     for lemma in rarest_first:

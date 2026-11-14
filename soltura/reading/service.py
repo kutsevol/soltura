@@ -30,6 +30,8 @@ NEW_WORDS_ABOVE = 3
 # The places above the learner's range that a planned word is drawn from.
 NEW_WORD_WINDOW = 300
 NEW_WORD_PARTS_OF_SPEECH = ("NOUN", "VERB", "ADJ", "ADV")
+MIN_NEW_WORD_LENGTH = 4
+INFINITIVE_ENDINGS = ("ar", "er", "ir", "ír")
 
 WRITER_SYSTEM = (
     "You write short Spanish reading texts for an adult Ukrainian speaker who lives in Spain "
@@ -131,6 +133,15 @@ def new_word_count(vocabulary: int) -> int:
     return NEW_WORDS_FIRST_BAND if vocabulary <= FIRST_BAND_RANK else NEW_WORDS_ABOVE
 
 
+def is_plannable(lemma: str, pos: str) -> bool:
+    # The lexeme table comes from web text, so the window holds letters on their own ("d",
+    # "m"), inflected forms tagged as verbs ("estás") and pieces of phrases. A verb must at
+    # least look like an infinitive; names, foreign and crude words are left to the prompt.
+    if not lemma.isalpha() or len(lemma) < MIN_NEW_WORD_LENGTH:
+        return False
+    return pos != "VERB" or lemma.endswith(INFINITIVE_ENDINGS)
+
+
 def pick_new_words(candidates: Sequence[str], vocabulary: int, rng: random.Random) -> list[str]:
     # Sorted first, so the same seed draws the same words whatever order the database gives.
     ordered = sorted(candidates)
@@ -156,8 +167,9 @@ def first_draft_prompt(
             f"facts. About 120 to 200 words.{wanted}\n\n<source>\n{source_text}\n</source>"
         )
     planned = (
-        " Build the text around these new words, each used so that its meaning is clear from "
-        f"the sentence: {', '.join(new_words)}."
+        " Build the text around these new words, using each once or twice and making its meaning "
+        f"clear from the sentence: {', '.join(new_words)}. Leave out any of them that is a name, "
+        "a foreign word or a crude word."
         if new_words
         else ""
     )

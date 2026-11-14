@@ -25,6 +25,7 @@ from soltura.learner.repository import (
     get_errors_for_entries,
     get_journal_entries,
     get_latest_placement_run,
+    get_lemmas_in_rank_window,
     get_lexemes_by_lemmas,
     get_or_create_learner,
     get_recent_titles,
@@ -34,7 +35,7 @@ from soltura.learner.repository import (
     save_placement_run,
     save_reading_text,
 )
-from tests.factories import MemoryCardFactory
+from tests.factories import LexemeFactory, MemoryCardFactory
 
 NOW = datetime(2026, 10, 31, 12, 0, tzinfo=UTC)
 
@@ -322,3 +323,23 @@ async def test_journal_entries_are_limited(session: AsyncSession, learner: Learn
     entries = await get_journal_entries(session, learner.id, limit=2)
 
     assert [entry.body for entry in entries] == ["tres", "dos"]
+
+
+async def test_the_rank_window_holds_the_ranks_after_the_first_up_to_the_second_of_the_parts(
+    session: AsyncSession,
+) -> None:
+    session.add_all(
+        [
+            LexemeFactory.build(lemma="antes", frequency_rank=250, pos="NOUN"),
+            LexemeFactory.build(lemma="primera", frequency_rank=251, pos="NOUN"),
+            LexemeFactory.build(lemma="ultima", frequency_rank=550, pos="VERB"),
+            LexemeFactory.build(lemma="despues", frequency_rank=551, pos="NOUN"),
+            LexemeFactory.build(lemma="sobre", frequency_rank=300, pos="ADP"),
+        ]
+    )
+    await session.flush()
+
+    window = await get_lemmas_in_rank_window(session, 250, 550, ("NOUN", "VERB"))
+
+    assert sorted(window) == [("primera", "NOUN"), ("ultima", "VERB")]
+    assert await get_lemmas_in_rank_window(session, 5000, 5300, ("NOUN",)) == []
