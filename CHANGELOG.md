@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.55.0 (2026-11-14)
+
+### Features
+
+- **grammar**: Add the A1 level and move six units to it
+  ([#89](https://github.com/kutsevol/soltura/pull/89),
+  [`9b9b166`](https://github.com/kutsevol/soltura/commit/9b9b16663340548cf8bfd1bc98017ccc06db3d3b))
+
+
 ## v0.54.0 (2026-11-14)
 
 ### Features
