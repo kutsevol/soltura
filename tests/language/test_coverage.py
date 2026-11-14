@@ -61,3 +61,20 @@ def test_a_repeated_rare_word_counts_every_time_it_appears() -> None:
     coverage = _coverage(20, {"fianza": 3, "nieto": 1})
 
     assert words_to_replace(coverage, {"fianza": 9000, "nieto": 3000}, target=0.95) == ["fianza"]
+
+
+def test_an_exempt_word_uses_up_the_budget_but_is_never_chosen() -> None:
+    # 40 words allow 2 unknown. "caballo" is the rarest and appears 3 times, so the excess is 2:
+    # it stays, and the next rarest word goes in its place.
+    coverage = _coverage(40, {"caballo": 3, "nieto": 1, "bicicleta": 1})
+    ranks = {"caballo": 4000, "nieto": 3000, "bicicleta": 2500}
+
+    chosen = words_to_replace(coverage, ranks, target=0.95, exempt={"caballo"})
+
+    assert chosen == ["nieto", "bicicleta"]
+
+
+def test_only_exempt_words_over_the_budget_leave_nothing_to_replace() -> None:
+    coverage = _coverage(20, {"caballo": 3})
+
+    assert words_to_replace(coverage, {}, target=0.95, exempt={"caballo"}) == []

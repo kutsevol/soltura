@@ -409,6 +409,19 @@ async def get_most_frequent_lemmas(session: AsyncSession, max_rank: int) -> set[
     return set(result.scalars())
 
 
+async def get_lemmas_in_rank_window(
+    session: AsyncSession, after_rank: int, up_to_rank: int, parts_of_speech: Sequence[str]
+) -> list[tuple[str, str]]:
+    result = await session.execute(
+        select(Lexeme.lemma, Lexeme.pos).where(
+            col(Lexeme.frequency_rank) > after_rank,
+            col(Lexeme.frequency_rank) <= up_to_rank,
+            col(Lexeme.pos).in_(parts_of_speech),
+        )
+    )
+    return [(lemma, pos) for lemma, pos in result.all()]
+
+
 async def get_due_recall_cards(
     session: AsyncSession, learner_id: int, lexeme_ids: Iterable[int], now: datetime
 ) -> list[MemoryCard]:

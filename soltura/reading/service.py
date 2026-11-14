@@ -1,3 +1,5 @@
+import random
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
@@ -21,6 +23,15 @@ TARGET_COVERAGE = 0.95
 MAX_SIMPLIFICATIONS = 2
 MAX_DUE_LEMMAS = 10
 RECENT_TITLES = 5
+# A planned word counts as unknown in the coverage check, so a beginner's text of about 50
+# words, which allows two unknown ones, plans one; a longer text has room for three.
+NEW_WORDS_FIRST_BAND = 1
+NEW_WORDS_ABOVE = 3
+# The places above the learner's range that a planned word is drawn from.
+NEW_WORD_WINDOW = 300
+NEW_WORD_PARTS_OF_SPEECH = ("NOUN", "VERB", "ADJ", "ADV")
+MIN_NEW_WORD_LENGTH = 4
+INFINITIVE_ENDINGS = ("ar", "er", "ir", "ír")
 
 WRITER_SYSTEM = (
     "You write short Spanish reading texts for an adult Ukrainian speaker who lives in Spain "
@@ -81,6 +92,7 @@ class PreparedText:
     attempts: int
     below_target: bool
     unknown_lemmas: list[str]
+    new_words: list[str]
 
 
 @dataclass(frozen=True)
@@ -117,8 +129,32 @@ def text_length(vocabulary: int) -> str:
     return "About 50 words" if vocabulary <= FIRST_BAND_RANK else "About 120 to 180 words"
 
 
+def new_word_count(vocabulary: int) -> int:
+    return NEW_WORDS_FIRST_BAND if vocabulary <= FIRST_BAND_RANK else NEW_WORDS_ABOVE
+
+
+def is_plannable(lemma: str, pos: str) -> bool:
+    # The lexeme table comes from web text, so the window holds letters on their own ("d",
+    # "m"), inflected forms tagged as verbs ("estás") and pieces of phrases. A verb must at
+    # least look like an infinitive; names, foreign and crude words are left to the prompt.
+    if not lemma.isalpha() or len(lemma) < MIN_NEW_WORD_LENGTH:
+        return False
+    return pos != "VERB" or lemma.endswith(INFINITIVE_ENDINGS)
+
+
+def pick_new_words(candidates: Sequence[str], vocabulary: int, rng: random.Random) -> list[str]:
+    # Sorted first, so the same seed draws the same words whatever order the database gives.
+    ordered = sorted(candidates)
+    return rng.sample(ordered, min(new_word_count(vocabulary), len(ordered)))
+
+
 def first_draft_prompt(
-    vocabulary: int, topic: str, due: list[str], source_text: str | None, variation: str
+    vocabulary: int,
+    topic: str,
+    due: list[str],
+    source_text: str | None,
+    variation: str,
+    new_words: list[str],
 ) -> str:
     wanted = (
         f" Where it fits naturally, use these words the learner is reviewing: {', '.join(due)}."
@@ -130,11 +166,25 @@ def first_draft_prompt(
             f"Rewrite the text below for a learner. {knows_sentence(vocabulary)} Keep its meaning and "
             f"facts. About 120 to 200 words.{wanted}\n\n<source>\n{source_text}\n</source>"
         )
-    return f"{knows_sentence(vocabulary)} Topic: {topic}. {text_length(vocabulary)}.{wanted}{variation}"
+    planned = (
+        " Build the text around these new words, using each once or twice and making its meaning "
+        f"clear from the sentence: {', '.join(new_words)}. Leave out any of them that is a name, "
+        "a foreign word or a crude word."
+        if new_words
+        else ""
+    )
+    return (
+        f"{knows_sentence(vocabulary)} Topic: {topic}. {text_length(vocabulary)}."
+        f"{wanted}{planned}{variation}"
+    )
 
 
-def simplify_prompt(vocabulary: int, draft: GeneratedText, rare: list[str], due: list[str]) -> str:
+def simplify_prompt(
+    vocabulary: int, draft: GeneratedText, rare: list[str], due: list[str], new_words: list[str]
+) -> str:
     keep = f" Keep these words, the learner is reviewing them: {', '.join(due)}." if due else ""
+    if new_words:
+        keep += f" Keep these new words, the text is meant to teach them: {', '.join(new_words)}."
     return (
         f"{knows_sentence(vocabulary)} A few words in this text are too rare for them: {', '.join(rare)}. "
         "Replace each with a simpler word that means the same, or rewrite its sentence without "

@@ -20,6 +20,7 @@ from soltura.learner.models import Lexeme as LexemeRow
 from soltura.learner.repository import (
     add_tap,
     get_due_card,
+    get_lemmas_in_rank_window,
     get_lexemes_by_lemmas,
     get_reading_text,
     get_recent_answered_texts,
@@ -33,6 +34,8 @@ from soltura.reading.service import (
     GIST_SYSTEM,
     GLOSS_SYSTEM,
     MAX_SIMPLIFICATIONS,
+    NEW_WORD_PARTS_OF_SPEECH,
+    NEW_WORD_WINDOW,
     RECENT_TITLES,
     TARGET_COVERAGE,
     WRITER_SYSTEM,
@@ -43,7 +46,9 @@ from soltura.reading.service import (
     TapResult,
     due_lemmas,
     first_draft_prompt,
+    is_plannable,
     lemmas_counted_as_known,
+    pick_new_words,
     simplify_prompt,
 )
 from soltura.reading.topics import find_topic
@@ -66,35 +71,51 @@ async def prepare_text(
     known = await lemmas_counted_as_known(session, learner.id)
     due = await due_lemmas(session, learner.id, now)
     variation = ""
+    new_words: list[str] = []
     if source_text is None:
-        # A pasted text is adapted as it is; only a text written from a topic is varied.
+        # A pasted text is adapted as it is; only a text written from a topic is varied and
+        # built around planned new words.
+        rng = rng or random.Random()
         preset = find_topic(topic)
-        picked = pick_variation(preset.situations if preset else (), rng or random.Random())
+        picked = pick_variation(preset.situations if preset else (), rng)
         recent = await get_recent_titles(session, learner.id, RECENT_TITLES)
         variation = variation_prompt(picked, recent)
+        window = await get_lemmas_in_rank_window(
+            session, vocabulary, vocabulary + NEW_WORD_WINDOW, NEW_WORD_PARTS_OF_SPEECH
+        )
+        candidates = [
+            lemma for lemma, pos in window if lemma not in known and is_plannable(lemma, pos)
+        ]
+        new_words = pick_new_words(candidates, vocabulary, rng)
 
     draft = await llm(
         GeneratedText,
         system=WRITER_SYSTEM,
-        prompt=first_draft_prompt(vocabulary, topic, due, source_text, variation),
+        prompt=first_draft_prompt(vocabulary, topic, due, source_text, variation, new_words),
         effort="medium",
     )
     attempts = 1
-    coverage = measure_coverage(analyze(f"{draft.title}. {draft.text}"), known)
+    tokens = analyze(f"{draft.title}. {draft.text}")
+    coverage = measure_coverage(tokens, known)
     while coverage.ratio < TARGET_COVERAGE and attempts <= MAX_SIMPLIFICATIONS:
         ranks = {
             lexeme.lemma: lexeme.frequency_rank
             for lexeme in await get_lexemes_by_lemmas(session, coverage.unknown_lemmas)
         }
-        rare = words_to_replace(coverage, ranks, TARGET_COVERAGE)
+        # The planned words are what the text is for: they use up the unknown-word budget
+        # and never go to make room, so the other unknown words go in their place.
+        rare = words_to_replace(coverage, ranks, TARGET_COVERAGE, exempt=set(new_words))
+        if not rare:
+            break
         draft = await llm(
             GeneratedText,
             system=WRITER_SYSTEM,
-            prompt=simplify_prompt(vocabulary, draft, rare, due),
+            prompt=simplify_prompt(vocabulary, draft, rare, due, new_words),
             effort="medium",
         )
         attempts += 1
-        coverage = measure_coverage(analyze(f"{draft.title}. {draft.text}"), known)
+        tokens = analyze(f"{draft.title}. {draft.text}")
+        coverage = measure_coverage(tokens, known)
 
     below_target = coverage.ratio < TARGET_COVERAGE
     saved = await save_reading_text(session, learner.id, topic or None, draft.title, below_target)
@@ -109,6 +130,7 @@ async def prepare_text(
         attempts=attempts,
         below_target=below_target,
         unknown_lemmas=coverage.unknown_lemmas,
+        new_words=[word for word in new_words if word in {token.lemma for token in tokens}],
     )
 
 
