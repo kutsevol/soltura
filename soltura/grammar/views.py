@@ -7,7 +7,7 @@ from soltura.grammar.units import GAP, Example, GrammarUnit, get_unit
 from soltura.practice.checking import SpanishCheck
 from soltura.practice.views import RATING_LABEL
 
-LEVEL_LABEL = {"A2": "Рівень A2", "B1": "Рівень B1"}
+LEVEL_LABEL = {"A1": "Рівень A1", "A2": "Рівень A2", "B1": "Рівень B1"}
 
 
 @dataclass(frozen=True)

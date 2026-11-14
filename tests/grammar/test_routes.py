@@ -49,6 +49,7 @@ async def test_a_new_learner_sees_the_first_lesson_and_its_button_leads_to_the_f
 
     assert page.status_code == 200
     assert FIRST.title in page.text and FIRST.lesson.points[0] in page.text
+    assert f"Рівень {FIRST.level}" in page.text and FIRST.level == "A1"
     assert FIRST.lesson.examples[0].spanish in page.text
     assert f'name="unit_id" value="{FIRST.id}"' in page.text
 

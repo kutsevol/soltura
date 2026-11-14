@@ -10,7 +10,7 @@ from soltura.grammar import content
 SEPARATOR = "|"
 GAP = "___"
 
-Level = Literal["A2", "B1"]
+Level = Literal["A1", "A2", "B1"]
 
 
 class Example(BaseModel):

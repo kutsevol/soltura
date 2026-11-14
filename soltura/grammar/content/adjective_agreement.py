@@ -2,7 +2,7 @@ from soltura.grammar.units import Example, Exercise, GrammarUnit, Lesson
 
 UNIT = GrammarUnit(
     id="adjective_agreement",
-    level="A2",
+    level="A1",
     order=30,
     title="Узгодження прикметників",
     lesson=Lesson(
