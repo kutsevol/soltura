@@ -3,6 +3,9 @@
   Знайомих слів: {{ (prepared.coverage * 100) | round | int }}%{% if prepared.attempts > 1 %} · спрощень: {{ prepared.attempts - 1 }}{% endif %}
   {%- if prepared.below_target %} · текст може бути складним{% endif %}
 </p>
+{% if prepared.new_words %}
+<p class="note">Нові слова в тексті: {{ prepared.new_words | join(", ") }}</p>
+{% endif %}
 {% for paragraph in paragraphs %}
   <p>
     {%- for sentence in paragraph -%}

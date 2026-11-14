@@ -11,7 +11,10 @@ from soltura.learner.models import (
     GistResult,
     KnowledgeType,
     Learner,
+    LearnerLexeme,
     Lexeme,
+    LexemeOrigin,
+    LexemeStatus,
     MemoryCard,
     Rating,
     ReadingText,
@@ -19,7 +22,7 @@ from soltura.learner.models import (
     ReviewSource,
 )
 from soltura.learner.repository import get_recent_titles, save_placement_run, save_reading_text
-from soltura.reading.service import GeneratedText, GistVerdict, Gloss
+from soltura.reading.service import NEW_WORD_WINDOW, GeneratedText, GistVerdict, Gloss
 from soltura.reading.topics import TOPICS
 from soltura.reading.variation import FORMS, NAMES
 from soltura.srs.service import save_word
@@ -448,3 +451,113 @@ async def test_a_beginner_whose_texts_all_miss_the_coverage_target_still_gets_a_
 
     assert (progress.score.percent, progress.score.counted) == (50, 3)
     assert all(text.below_target for text in progress.texts)
+
+
+def _word(lemma: str, rank: int, pos: str = "NOUN") -> Lexeme:
+    return LexemeFactory.build(lemma=lemma, frequency_rank=rank, pos=pos)
+
+
+def _planned(prompt: str) -> list[str]:
+    return prompt.split("is clear from the sentence: ", 1)[1].split(".", 1)[0].split(", ")
+
+
+async def test_a_learner_at_the_first_band_is_asked_for_one_new_word_from_just_above_the_range(
+    session: AsyncSession, learner: Learner, llm: FakeLLM
+) -> None:
+    assert learner.id is not None
+    await save_placement_run(session, learner.id, 0, [])
+    session.add_all(_word(f"palabra{i}", 251 + i) for i in range(5))
+    session.add_all([_word("lejana", 251 + NEW_WORD_WINDOW), _word("cercana", 250)])
+    await session.flush()
+    llm.answer(EASY_TEXT, EASY_TEXT, EASY_TEXT)
+
+    await prepare_text(session, llm, learner, NOW, topic="la playa")
+
+    [word] = _planned(llm.prompts[0])
+    assert word in {f"palabra{i}" for i in range(5)}
+
+
+async def test_a_learner_above_the_first_band_is_asked_for_three_unknown_content_words(
+    session: AsyncSession, learner: Learner, llm: FakeLLM
+) -> None:
+    assert learner.id is not None
+    await save_placement_run(session, learner.id, 1000, [])
+    session.add_all(_word(f"palabra{i}", 1001 + i) for i in range(3))
+    known = _word("verano", 1001)
+    session.add_all([known, _word("sobre", 1002, "ADP")])
+    await session.flush()
+    assert known.id is not None
+    session.add(
+        LearnerLexeme(
+            learner_id=learner.id,
+            lexeme_id=known.id,
+            status=LexemeStatus.KNOWN,
+            origin=LexemeOrigin.ONBOARDING,
+        )
+    )
+    await session.flush()
+    llm.answer(EASY_TEXT, EASY_TEXT, EASY_TEXT)
+
+    await prepare_text(session, llm, learner, NOW, topic="la playa")
+
+    words = _planned(llm.prompts[0])
+    # Exactly three candidates qualify: the known word and the preposition are left out.
+    assert sorted(words) == ["palabra0", "palabra1", "palabra2"]
+
+
+async def test_a_pasted_text_plans_no_new_words(
+    session: AsyncSession, learner: Learner, llm: FakeLLM
+) -> None:
+    assert learner.id is not None
+    await save_placement_run(session, learner.id, 1000, [])
+    session.add_all(_word(f"palabra{i}", 1001 + i) for i in range(6))
+    await session.flush()
+    llm.answer(EASY_TEXT, EASY_TEXT, EASY_TEXT)
+
+    prepared = await prepare_text(
+        session, llm, learner, NOW, topic="", source_text="El Ayuntamiento informa de que…"
+    )
+
+    assert "new words" not in llm.prompts[0]
+    assert prepared.new_words == []
+
+
+async def test_the_planned_word_is_kept_and_never_named_for_replacement(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, rank_text: RankFn
+) -> None:
+    assert learner.id is not None
+    await save_placement_run(session, learner.id, 0, [])
+    await rank_text(f"{EASY_TEXT.title}. {EASY_TEXT.text}", 1)
+    session.add(_word("caballo", 300))
+    await session.flush()
+    hard = GeneratedText(
+        title=EASY_TEXT.title,
+        text="Hoy hace sol. El caballo y el arrendatario impugnaron la fianza.",
+    )
+    llm.answer(hard, EASY_TEXT)
+
+    await prepare_text(session, llm, learner, NOW, topic="la playa")
+
+    named = llm.prompts[1].split(": ", 1)[1].split(". Replace", 1)[0]
+    assert "caballo" not in named.split(", ")
+    assert "arrendatario" in named
+    assert "Keep these new words, the text is meant to teach them: caballo." in llm.prompts[1]
+
+
+async def test_only_the_planned_words_found_in_the_final_text_are_listed(
+    session: AsyncSession, learner: Learner, llm: FakeLLM, rank_text: RankFn
+) -> None:
+    assert learner.id is not None
+    await save_placement_run(session, learner.id, 0, [])
+    known_text = " ".join([EASY_TEXT.text] * 2) + " Veo un."
+    await rank_text(f"{EASY_TEXT.title}. {known_text}", 1)
+    session.add(_word("caballo", 300))
+    await session.flush()
+    with_word = GeneratedText(title=EASY_TEXT.title, text=known_text.replace("un.", "un caballo."))
+    without_word = GeneratedText(title=EASY_TEXT.title, text=known_text)
+    llm.answer(with_word, without_word)
+
+    used = await prepare_text(session, llm, learner, NOW, topic="la playa")
+    skipped = await prepare_text(session, llm, learner, NOW, topic="la playa")
+
+    assert (used.new_words, skipped.new_words) == (["caballo"], [])

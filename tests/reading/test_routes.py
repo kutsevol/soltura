@@ -27,7 +27,7 @@ from soltura.reading.service import (
 )
 from soltura.reading.topics import TOPICS
 from tests.conftest import EASY_TEXT, KnowFn
-from tests.factories import ReadingTextFactory
+from tests.factories import LexemeFactory, ReadingTextFactory
 from tests.fakes import FakeLLM
 
 
@@ -70,6 +70,23 @@ async def test_a_new_text_comes_back_with_every_word_tappable(
     assert f"<h2>{EASY_TEXT.title}</h2>" in response.text
     assert response.text.count('class="word"') == 13
     assert '"sentence": "Hoy hace sol."' in response.text
+
+
+async def test_the_new_words_of_a_text_are_listed_under_it(
+    reading_client: AsyncClient,
+    session: AsyncSession,
+    learner: Learner,
+    llm: FakeLLM,
+    know: KnowFn,
+) -> None:
+    await know(f"{EASY_TEXT.title}. {EASY_TEXT.text}")
+    session.add(LexemeFactory.build(lemma="caballo", frequency_rank=3001, pos="NOUN"))
+    await session.flush()
+    llm.answer(GeneratedText(title=EASY_TEXT.title, text=f"{EASY_TEXT.text} El caballo."))
+
+    response = await reading_client.post("/reading/text", data={"topic": "la playa"})
+
+    assert "Нові слова в тексті: caballo" in response.text
 
 
 async def test_a_request_without_topic_or_text_is_rejected(reading_client: AsyncClient) -> None:
