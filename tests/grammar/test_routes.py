@@ -159,6 +159,7 @@ async def test_the_progress_page_shows_a_started_unit_after_an_answer(
 
     assert f'<a href="/grammar/units/{FIRST.id}">{FIRST.title}</a>' in page.text
     assert "Відповідей: 1, правильних: 0%" in page.text
+    assert f"Рівень {FIRST.level}" in page.text
     assert f"У пам’яті: 0 з {len(FIRST.exercises)}" in page.text
     assert f"Ще не розпочато правил: {len(all_units()) - 1}" in page.text
 
