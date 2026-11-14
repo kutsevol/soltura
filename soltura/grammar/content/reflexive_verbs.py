@@ -2,7 +2,7 @@ from soltura.grammar.units import Example, Exercise, GrammarUnit, Lesson
 
 UNIT = GrammarUnit(
     id="reflexive_verbs",
-    level="A2",
+    level="A1",
     order=95,
     title="Зворотні дієслова: levantarse",
     lesson=Lesson(

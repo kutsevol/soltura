@@ -2,7 +2,7 @@ from soltura.grammar.units import Example, Exercise, GrammarUnit, Lesson
 
 UNIT = GrammarUnit(
     id="demonstratives",
-    level="A2",
+    level="A1",
     order=70,
     title="este, ese, aquel: цей, той, он той",
     lesson=Lesson(

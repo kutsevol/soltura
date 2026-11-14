@@ -2,7 +2,7 @@ from soltura.grammar.units import Example, Exercise, GrammarUnit, Lesson
 
 UNIT = GrammarUnit(
     id="gender_of_nouns",
-    level="A2",
+    level="A1",
     order=20,
     title="Рід іменників: el чи la",
     lesson=Lesson(

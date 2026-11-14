@@ -25,6 +25,23 @@ def test_the_registry_lists_the_units_in_teaching_order() -> None:
     assert ids.index("gender_of_nouns") < ids.index("ser_estar") < ids.index("por_para")
 
 
+def test_a_new_learner_starts_with_an_a1_unit() -> None:
+    first = next_unit(set())
+
+    assert first is not None and first.level == "A1"
+
+
+def test_a_learner_part_way_through_gets_the_unstarted_a1_units_before_the_next_a2_one() -> None:
+    started = {"articles", "gender_of_nouns", "adjective_agreement", "ser_estar"}
+
+    following: list[str] = []
+    while (unit := next_unit(started)) is not None and len(following) < 3:
+        following.append(unit.id)
+        started.add(unit.id)
+
+    assert following == ["hay_estar", "demonstratives", "reflexive_verbs"]
+
+
 def test_every_unit_has_its_own_id_and_place_in_the_order() -> None:
     assert len({unit.id for unit in UNITS}) == len(UNITS)
     assert len({(unit.level, unit.order) for unit in UNITS}) == len(UNITS)

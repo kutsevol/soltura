@@ -2,7 +2,7 @@ from soltura.grammar.units import Example, Exercise, GrammarUnit, Lesson
 
 UNIT = GrammarUnit(
     id="ser_estar",
-    level="A2",
+    level="A1",
     order=40,
     title="ser чи estar",
     lesson=Lesson(
