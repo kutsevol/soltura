@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.54.0 (2026-11-14)
+
+### Features
+
+- **reading**: Plan the new words of a text and list them under it
+  ([#88](https://github.com/kutsevol/soltura/pull/88),
+  [`603875b`](https://github.com/kutsevol/soltura/commit/603875b7267b57e9e870cd482c14ba95040a8cb9))
+
+
 ## v0.53.0 (2026-11-12)
 
 ### Features
