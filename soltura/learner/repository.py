@@ -441,6 +441,7 @@ async def get_due_recall_cards(
     result = await session.execute(
         select(MemoryCard).where(
             col(MemoryCard.learner_id) == learner_id,
+            col(MemoryCard.unit_kind) == UnitKind.WORD,
             col(MemoryCard.lexeme_id).in_(set(lexeme_ids)),
             col(MemoryCard.knowledge_type) == KnowledgeType.RECALL,
             col(MemoryCard.due) <= now,
@@ -459,6 +460,7 @@ async def get_due_card(
     result = await session.execute(
         select(MemoryCard).where(
             col(MemoryCard.learner_id) == learner_id,
+            col(MemoryCard.unit_kind) == UnitKind.WORD,
             col(MemoryCard.lexeme_id) == lexeme_id,
             col(MemoryCard.knowledge_type) == knowledge_type,
             col(MemoryCard.due) <= now,

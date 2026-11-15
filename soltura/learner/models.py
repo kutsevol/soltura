@@ -235,6 +235,7 @@ class MemoryCard(SQLModel, table=True):
     __table_args__ = (
         UniqueConstraint("learner_id", "unit_kind", "unit_key", "knowledge_type"),
         Index("ix_memory_card_learner_id_due", "learner_id", "due"),
+        Index("ix_memory_card_learner_id_lexeme_id", "learner_id", "lexeme_id"),
     )
 
     id: int | None = Field(default=None, primary_key=True, description="Card id")

@@ -228,6 +228,19 @@ def test_a_word_card_without_a_key_gets_its_lexeme_as_the_key_and_the_key_become
                 """,
             )
         )
+        # The downgrade brings the constraint on the lexeme back: a second card of the same
+        # learner, lexeme and knowledge type is refused again.
+        with pytest.raises(DBAPIError):
+            asyncio.run(
+                _run(
+                    database_url,
+                    """
+                    INSERT INTO memory_card
+                        (learner_id, lexeme_id, knowledge_type, unit_kind, unit_key, due)
+                    VALUES (1, 7, 'recall', 'conjugation', 'x', '2026-05-01 09:30+00')
+                    """,
+                )
+            )
     finally:
         command.downgrade(config, "base")
         command.upgrade(config, "head")

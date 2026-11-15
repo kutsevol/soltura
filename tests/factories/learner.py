@@ -35,8 +35,10 @@ class MemoryCardFactory(SQLAlchemyFactory[MemoryCard]):
 
     @post_generated
     @classmethod
-    def unit_key(cls, lexeme_id: int | None) -> str | None:
-        return None if lexeme_id is None else str(lexeme_id)
+    def unit_key(cls, lexeme_id: int | None) -> str:
+        if lexeme_id is None:
+            raise ValueError("A card with no lexeme needs a unit_key of its own")
+        return str(lexeme_id)
 
 
 class ReadingTextFactory(SQLAlchemyFactory[ReadingText]):

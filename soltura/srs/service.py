@@ -151,7 +151,11 @@ async def save_word(
     )
     result = await session.execute(
         select(MemoryCard)
-        .where(col(MemoryCard.learner_id) == learner_id, col(MemoryCard.lexeme_id) == lexeme_id)
+        .where(
+            col(MemoryCard.learner_id) == learner_id,
+            col(MemoryCard.unit_kind) == UnitKind.WORD,
+            col(MemoryCard.lexeme_id) == lexeme_id,
+        )
         .order_by(col(MemoryCard.knowledge_type))
     )
     cards = list(result.scalars())

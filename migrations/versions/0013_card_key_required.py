@@ -10,6 +10,7 @@ depends_on: str | Sequence[str] | None = None
 
 MEMORY_CARD = "memory_card"
 LEXEME_UNIQUE = "uq_memory_card_learner_id_lexeme_id_knowledge_type"
+LEXEME_INDEX = "ix_memory_card_learner_id_lexeme_id"
 
 memory_card = sa.table(
     MEMORY_CARD,
@@ -30,9 +31,12 @@ def upgrade() -> None:
     # The unit key is unique per learner, kind and knowledge type, and a word's key is its
     # lexeme: the constraint on the lexeme says nothing the key's does not.
     op.drop_constraint(LEXEME_UNIQUE, MEMORY_CARD, type_="unique")
+    # The dropped constraint's index served the lookups of a word's cards by learner and lexeme.
+    op.create_index(LEXEME_INDEX, MEMORY_CARD, ["learner_id", "lexeme_id"])
 
 
 def downgrade() -> None:
+    op.drop_index(LEXEME_INDEX, table_name=MEMORY_CARD)
     op.create_unique_constraint(
         LEXEME_UNIQUE, MEMORY_CARD, ["learner_id", "lexeme_id", "knowledge_type"]
     )
