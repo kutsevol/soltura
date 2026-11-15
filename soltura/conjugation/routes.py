@@ -11,6 +11,7 @@ from soltura.conjugation.views import (
     ENDINGS_HEADER,
     card_view,
     endings_view,
+    notes_view,
     progress_view,
     result_view,
     verb_view,
@@ -20,6 +21,7 @@ from soltura.learner.dependencies import LearnerIdDep
 from soltura.templating import templates
 from soltura.use_cases.conjugation import (
     answer_item,
+    answer_notes,
     build_session,
     conjugation_progress,
     endings_table,
@@ -83,7 +85,7 @@ async def answer(
     return templates.TemplateResponse(
         request,
         "conjugation/result.html",
-        {"result": result_view(result, answer), "queue_json": queue},
+        {"result": result_view(result, answer, answer_notes(result)), "queue_json": queue},
     )
 
 
@@ -109,7 +111,13 @@ def verb_page(request: Request, learner_id: LearnerIdDep, verb: str) -> HTMLResp
     if table is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return templates.TemplateResponse(
-        request, "conjugation/verb.html", {"verb": table.verb, "tenses": verb_view(table.forms)}
+        request,
+        "conjugation/verb.html",
+        {
+            "verb": table.verb,
+            "tenses": verb_view(table.forms),
+            "notes": notes_view(table.notes),
+        },
     )
 
 
