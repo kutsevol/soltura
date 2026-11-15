@@ -1,13 +1,17 @@
+import random
 import re
 from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import timedelta
+from typing import Annotated
+
+from pydantic import StringConstraints
 
 from soltura.conjugation.forms import Person, Tense, conjugate
 from soltura.conjugation.units import IMPERSONAL_VERBS, parse_unit_key
 from soltura.learner.models import Rating
-from soltura.practice.checking import SpanishCheck
+from soltura.practice.checking import SpanishCheck, check_spanish
 
 SESSION_SIZE = 18
 # A rolling window, so the cap needs no time zone.
@@ -81,11 +85,15 @@ MODEL_VERBS = ("hablar", "comer", "vivir")
 _INFINITIVE = re.compile(r"(?:[a-zñáéíóúü]{1,28}(?:ar|er|ir|ír)|ir)")
 
 
+def looks_like_verb(verb: str) -> bool:
+    # Text from an address or a form must look like a verb before it reaches the library;
+    # weather verbs have no personal forms, though the library conjugates them in full.
+    return bool(_INFINITIVE.fullmatch(verb)) and verb not in IMPERSONAL_VERBS
+
+
 def verb_forms(verb: str) -> dict[Tense, list[str]] | None:
-    # The verb comes from an address, so it must look like a word before it reaches the library.
     word = verb.strip().lower()
-    # Weather verbs have no personal forms, though the library conjugates them in full.
-    if not _INFINITIVE.fullmatch(word) or word in IMPERSONAL_VERBS:
+    if not looks_like_verb(word):
         return None
     forms: dict[Tense, list[str]] = {}
     for tense in Tense:
@@ -110,3 +118,37 @@ def regular_endings() -> dict[Tense, dict[str, list[str]]]:
                 raise ValueError(f"{verb} is not regular in the {tense} tense")
             endings[tense][verb[-2:]] = [str(form).removeprefix(stem) for form in forms]
     return endings
+
+
+@dataclass(frozen=True)
+class PracticeItem:
+    # The item comes back from a page, so its verb is checked where the item is read.
+    verb: Annotated[str, StringConstraints(max_length=30, pattern=r"^[a-zñáéíóúü]+$")]
+    tense: Tense
+    person: Person
+
+
+def practice_queue(verb: str, tenses: list[Tense], rng: random.Random) -> list[PracticeItem] | None:
+    # Every person of each chosen tense, once, in a mixed order; nothing is scheduled or stored.
+    word = verb.strip().lower()
+    if not verb_forms(word):
+        return None
+    items = [
+        PracticeItem(word, tense, person) for tense in dict.fromkeys(tenses) for person in Person
+    ]
+    rng.shuffle(items)
+    return items
+
+
+def check_practice(item: PracticeItem, answer: str) -> ConjugationResult:
+    expected = conjugate(item.verb, item.tense, item.person) if looks_like_verb(item.verb) else None
+    if expected is None:
+        raise ValueError(f"{item.verb} cannot be conjugated in the {item.tense} tense")
+    check = check_spanish(answer, expected, item.verb)
+    return ConjugationResult(
+        rating=CONJUGATION_RATING[check],
+        check=check,
+        expected=expected,
+        verb=item.verb,
+        tense=item.tense,
+    )

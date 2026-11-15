@@ -3,29 +3,36 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
-from pydantic import TypeAdapter
+from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from soltura.conjugation.service import ConjugationItem
+from soltura.conjugation.forms import Person, Tense
+from soltura.conjugation.service import ConjugationItem, PracticeItem
 from soltura.conjugation.views import (
     ENDINGS_HEADER,
     card_view,
     endings_view,
     notes_view,
+    practice_card_view,
     progress_view,
     result_view,
+    tense_choices,
     verb_view,
 )
 from soltura.db import get_session
 from soltura.learner.dependencies import LearnerIdDep
 from soltura.templating import templates
 from soltura.use_cases.conjugation import (
+    InvalidPractice,
+    PracticeProblem,
     answer_item,
     answer_notes,
+    answer_practice,
     build_session,
     conjugation_progress,
     endings_table,
     new_sets_held_back,
+    start_practice,
     verb_table,
 )
 from soltura.web import answer_duration_ms, now_ms, parse_state
@@ -36,6 +43,14 @@ SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 QUEUE = TypeAdapter(list[ConjugationItem])
 STATE_ERROR = "Bad conjugation state"
+PRACTICE_QUEUE = TypeAdapter(list[PracticeItem])
+PRACTICE_ITEM = TypeAdapter(PracticeItem)
+MAX_PRACTICE_QUEUE = len(Tense) * len(Person)
+TENSE_VALUES = frozenset(tense.value for tense in Tense)
+PRACTICE_MESSAGE = {
+    PracticeProblem.UNKNOWN_VERB: "Не вдалося відмінювати це дієслово. Введіть інфінітив, напр. comer.",
+    PracticeProblem.NO_TENSE: "Оберіть хоча б один час.",
+}
 
 
 def _card_context(item: ConjugationItem, queue: list[ConjugationItem]) -> dict[str, Any]:
@@ -137,4 +152,92 @@ async def progress_page(
     accuracy = await conjugation_progress(session, learner_id)
     return templates.TemplateResponse(
         request, "conjugation/progress.html", {"rows": progress_view(accuracy)}
+    )
+
+
+def _practice_context(item: PracticeItem, queue: list[PracticeItem]) -> dict[str, Any]:
+    return {
+        "card": practice_card_view(item, len(queue)),
+        "item": item,
+        "queue_json": PRACTICE_QUEUE.dump_json(queue).decode(),
+    }
+
+
+@router.get("/practice", response_class=HTMLResponse)
+def practice_page(request: Request, learner_id: LearnerIdDep, verb: str = "") -> HTMLResponse:
+    return templates.TemplateResponse(
+        request,
+        "conjugation/practice.html",
+        {"verb": verb.strip()[:30], "tenses": tense_choices()},
+    )
+
+
+@router.post("/practice/start", response_class=HTMLResponse)
+def practice_start(
+    request: Request,
+    learner_id: LearnerIdDep,
+    verb: Annotated[str, Form()] = "",
+    tense: Annotated[list[str] | None, Form()] = None,
+) -> HTMLResponse:
+    chosen = [Tense(value) for value in tense or [] if value in TENSE_VALUES]
+    try:
+        queue = start_practice(verb, chosen)
+    except InvalidPractice as error:
+        return templates.TemplateResponse(
+            request,
+            "conjugation/message.html",
+            {"message": PRACTICE_MESSAGE[error.problem]},
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        )
+    first, *rest = queue
+    return templates.TemplateResponse(
+        request, "conjugation/practice_card.html", _practice_context(first, rest)
+    )
+
+
+@router.post("/practice/answer", response_class=HTMLResponse)
+def practice_answer(
+    request: Request,
+    learner_id: LearnerIdDep,
+    verb: Annotated[str, Form()],
+    tense: Annotated[str, Form()],
+    person: Annotated[str, Form()],
+    queue: Annotated[str, Form()],
+    answer: Annotated[str, Form()] = "",
+    give_up: Annotated[bool, Form()] = False,
+) -> HTMLResponse:
+    if give_up:
+        answer = ""
+    rest = parse_state(PRACTICE_QUEUE, queue, STATE_ERROR)
+    if len(rest) >= MAX_PRACTICE_QUEUE:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=STATE_ERROR)
+    try:
+        item = PRACTICE_ITEM.validate_python({"verb": verb, "tense": tense, "person": person})
+        result = answer_practice(item, answer)
+    except (ValidationError, ValueError) as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=STATE_ERROR) from error
+    return templates.TemplateResponse(
+        request,
+        "conjugation/result.html",
+        {
+            "result": result_view(result, answer, answer_notes(result)),
+            "queue_json": queue,
+            "next_url": "/conjugation/practice/next",
+            "next_target": "#practice",
+        },
+    )
+
+
+@router.post("/practice/next", response_class=HTMLResponse)
+def practice_next(
+    request: Request, learner_id: LearnerIdDep, queue: Annotated[str, Form()]
+) -> HTMLResponse:
+    items = parse_state(PRACTICE_QUEUE, queue, STATE_ERROR)
+    if len(items) >= MAX_PRACTICE_QUEUE:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=STATE_ERROR)
+    if not items:
+        return templates.TemplateResponse(request, "conjugation/practice_done.html", {})
+    first, *rest = items
+    return templates.TemplateResponse(
+        request, "conjugation/practice_card.html", _practice_context(first, rest)
     )
