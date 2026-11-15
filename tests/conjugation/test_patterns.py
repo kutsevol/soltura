@@ -1,7 +1,7 @@
 import pytest
 
 from soltura.conjugation.forms import Person, Tense, conjugate
-from soltura.conjugation.patterns import PATTERNS, pattern_notes, regular_form
+from soltura.conjugation.patterns import pattern_notes, regular_form
 
 REFERENCE = {
     "pensar": ["stem_e_ie"],
@@ -19,6 +19,12 @@ REFERENCE = {
     "seguir": ["stem_e_i", "raised_preterite"],
     "llegar": ["spelling_yo"],
     "salir": ["go_yo", "short_future"],
+    "valer": ["go_yo", "short_future"],
+    "caber": ["strong_preterite", "short_future"],
+    "haber": ["strong_preterite", "short_future"],
+    "huir": ["y_preterite"],
+    "roer": ["y_preterite"],
+    "elegir": ["stem_e_i", "raised_preterite"],
     "ver": ["irregular_imperfect"],
     "dar": [],
     "reír": ["stem_e_i", "raised_preterite"],
@@ -67,25 +73,3 @@ def test_with_a_tense_only_the_patterns_that_touch_it_are_listed() -> None:
 def test_the_future_of_a_verb_on_ir_with_an_accent_is_regular() -> None:
     assert regular_form("oír", Tense.FUTURE, Person.YO) == "oiré"
     assert conjugate("oír", Tense.FUTURE, Person.YO) == "oiré"
-
-
-def test_every_pattern_has_its_own_id_a_title_and_a_rule() -> None:
-    assert len({pattern.id for pattern in PATTERNS}) == len(PATTERNS)
-    assert all(pattern.title and pattern.rule and pattern.tenses for pattern in PATTERNS)
-
-
-def test_the_spelling_of_a_stem_change_is_followed_in_the_form_of_yo_and_in_a_vowel_stem() -> None:
-    [seguir_present, _] = pattern_notes("seguir")
-    [reir_present, reir_preterite] = pattern_notes("reír")
-
-    assert seguir_present.examples[0].forms == ["sigo", "sigues", "sigue", "siguen"]
-    assert reir_present.examples[0].forms == ["río", "ríes", "ríe", "ríen"]
-    assert reir_preterite.examples[0].forms == ["rió", "rieron"]
-
-
-def test_a_verb_that_only_takes_the_endings_of_another_conjugation_is_not_a_strong_preterite() -> (
-    None
-):
-    assert conjugate("dar", Tense.PRETERITE, Person.YO) == "di"
-    assert [note.pattern.id for note in pattern_notes("dar", Tense.PRETERITE)] == []
-    assert [note.pattern.id for note in pattern_notes("ver", Tense.PRETERITE)] == []

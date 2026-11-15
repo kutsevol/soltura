@@ -1,7 +1,7 @@
 import unicodedata
 from collections.abc import Callable
 from dataclasses import dataclass
-from functools import cache
+from functools import cache, lru_cache
 
 from soltura.conjugation.forms import Person, Tense, conjugate
 from soltura.conjugation.service import regular_endings
@@ -128,10 +128,15 @@ def _is_zco(form: Form) -> bool:
     )
 
 
+@lru_cache(maxsize=512)
+def _preterite_yo(verb: str) -> str | None:
+    return conjugate(verb, Tense.PRETERITE, Person.YO)
+
+
 def _is_strong_preterite(form: Form) -> bool:
     # A strong preterite has no written accent on yo (tuve, fui) and a stem or endings of its
     # own. Dar and ver only take the endings of the other conjugations (di, dio; vi, vio).
-    yo = conjugate(form.verb, Tense.PRETERITE, Person.YO)
+    yo = _preterite_yo(form.verb)
     other = "er" if form.verb.endswith("ar") else "ir"
     other_ending = _endings()[Tense.PRETERITE][other][list(Person).index(form.person)]
     return (
@@ -145,7 +150,7 @@ def _is_strong_preterite(form: Form) -> bool:
 
 def _is_raised_preterite(form: Form) -> bool:
     # Only the verbs on -ir whose yo is regular: poder and venir have a strong preterite.
-    yo = conjugate(form.verb, Tense.PRETERITE, Person.YO)
+    yo = _preterite_yo(form.verb)
     if (
         form.tense != Tense.PRETERITE
         or form.person not in (Person.EL, Person.ELLOS)
@@ -294,6 +299,7 @@ PATTERNS = (
 )
 
 
+@lru_cache(maxsize=512)
 def _forms(verb: str, tenses: tuple[Tense, ...]) -> list[Form]:
     forms = []
     for tense in tenses:
