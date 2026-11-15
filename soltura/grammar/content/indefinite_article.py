@@ -13,7 +13,7 @@ UNIT = GrammarUnit(
             "Коли вже відомо, про яку саме річ ідеться, кажемо el, la: tengo un perro, el perro se llama Max.",
             "Після ser з назвою професії артикль зазвичай не ставимо: soy médico, es profesora.",
             "Перед іменами власними un і una не ставимо: Javier, España. Не кажемо un Javier.",
-            "З вказівним займенником чи числівником un не ставимо: este amigo, dos amigos. Un — це й «один»: un amigo, dos amigos. З otro теж без un: otro amigo, не un otro amigo.",
+            "З вказівним займенником чи числівником un не ставимо: este amigo, dos amigos. Сам un — це й числівник «один»: un amigo. З otro теж без un: otro amigo, не un otro amigo.",
         ),
         examples=(
             Example(spanish="Tengo un libro.", ukrainian="У мене є книжка."),
