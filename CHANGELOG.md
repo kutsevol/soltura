@@ -2,6 +2,21 @@
 
 <!-- version list -->
 
+## v0.61.0 (2026-11-15)
+
+### Features
+
+- **conjugation**: Drill any verb in the tenses the learner picks
+  ([#98](https://github.com/kutsevol/soltura/pull/98),
+  [`bfcce4d`](https://github.com/kutsevol/soltura/commit/bfcce4d19f6e0678a4bc987289c906dc68e85e4e))
+
+### Refactoring
+
+- **learner**: Make the card's unit key required and drop the lexeme constraint
+  ([#97](https://github.com/kutsevol/soltura/pull/97),
+  [`bef502e`](https://github.com/kutsevol/soltura/commit/bef502e4ee54542b34b587dac66cdae576ebdce0))
+
+
 ## v0.60.0 (2026-11-15)
 
 ### Features
