@@ -313,7 +313,7 @@ async def test_a_learner_who_has_every_set_is_not_told_the_cap_holds(
 ) -> None:
     assert learner.id is not None
     monkeypatch.setattr(settings.conjugation, "new_sets_per_day", 100)
-    for _ in range(8):
+    for _ in range(2 * len(Tense)):
         await _answer_the_whole_set(session, learner)
     await _created(session, NOW - timedelta(hours=1))
     monkeypatch.setattr(settings.conjugation, "new_sets_per_day", 1)

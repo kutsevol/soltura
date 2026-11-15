@@ -17,6 +17,8 @@ class Tense(StrEnum):
     PRETERITE = "preterite"
     IMPERFECT = "imperfect"
     FUTURE = "future"
+    CONDITIONAL = "conditional"
+    SUBJUNCTIVE = "subjunctive"
 
 
 class Person(StrEnum):
@@ -28,11 +30,15 @@ class Person(StrEnum):
     ELLOS = "ellos"
 
 
+# Each tense is a mood and a tense of verbecc: the conditional is a mood of its own with
+# one tense, and the subjunctive is the present of its mood.
 TENSES = {
-    Tense.PRESENT: TenseEs.Presente,
-    Tense.PRETERITE: TenseEs.PretéritoPerfectoSimple,
-    Tense.IMPERFECT: TenseEs.PretéritoImperfecto,
-    Tense.FUTURE: TenseEs.Futuro,
+    Tense.PRESENT: (MoodEs.Indicativo, TenseEs.Presente),
+    Tense.PRETERITE: (MoodEs.Indicativo, TenseEs.PretéritoPerfectoSimple),
+    Tense.IMPERFECT: (MoodEs.Indicativo, TenseEs.PretéritoImperfecto),
+    Tense.FUTURE: (MoodEs.Indicativo, TenseEs.Futuro),
+    Tense.CONDITIONAL: (MoodEs.Condicional, TenseEs.Presente),
+    Tense.SUBJUNCTIVE: (MoodEs.Subjuntivo, TenseEs.Presente),
 }
 
 PRONOUNS = {
@@ -52,6 +58,8 @@ IRREGULAR_FORMS: dict[str, dict[Tense, tuple[str, ...]]] = {
         Tense.PRETERITE: ("hube", "hubiste", "hubo", "hubimos", "hubisteis", "hubieron"),
         Tense.IMPERFECT: ("había", "habías", "había", "habíamos", "habíais", "habían"),
         Tense.FUTURE: ("habré", "habrás", "habrá", "habremos", "habréis", "habrán"),
+        Tense.CONDITIONAL: ("habría", "habrías", "habría", "habríamos", "habríais", "habrían"),
+        Tense.SUBJUNCTIVE: ("haya", "hayas", "haya", "hayamos", "hayáis", "hayan"),
     }
 }
 
@@ -81,9 +89,10 @@ def conjugate(verb: str, tense: Tense, person: Person) -> str | None:
         if not form.startswith(model[:-2]):
             raise ValueError(f"{model} is not regular in the {tense} tense")
         return verb[:-2] + form.removeprefix(model[:-2])
+    mood, tense_es = TENSES[tense]
     try:
         conjugation = get_conjugator().conjugate_mood_tense(
-            verb, MoodEs.Indicativo, TENSES[tense], conjugate_pronouns=False
+            verb, mood, tense_es, conjugate_pronouns=False
         )
     except (VerbNotFoundError, IndexError):
         # IndexError: for a verb whose template only has third-person endings (resultar,

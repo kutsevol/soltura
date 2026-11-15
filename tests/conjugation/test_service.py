@@ -50,6 +50,16 @@ def test_the_regular_endings_are_the_whole_table_of_the_three_conjugations() -> 
             "er": ["é", "ás", "á", "emos", "éis", "án"],
             "ir": ["é", "ás", "á", "emos", "éis", "án"],
         },
+        Tense.CONDITIONAL: {
+            "ar": ["ía", "ías", "ía", "íamos", "íais", "ían"],
+            "er": ["ía", "ías", "ía", "íamos", "íais", "ían"],
+            "ir": ["ía", "ías", "ía", "íamos", "íais", "ían"],
+        },
+        Tense.SUBJUNCTIVE: {
+            "ar": ["e", "es", "e", "emos", "éis", "en"],
+            "er": ["a", "as", "a", "amos", "áis", "an"],
+            "ir": ["a", "as", "a", "amos", "áis", "an"],
+        },
     }
 
 
@@ -74,6 +84,6 @@ def test_a_tense_with_no_answers_is_left_out_and_the_rest_follow_the_order_of_te
     assert [item.tense for item in tense_accuracy(answers)] == [Tense.PRETERITE, Tense.IMPERFECT]
 
 
-@pytest.mark.parametrize("key", [None, "", "ser", "ser|conditional|yo", "ser|present|you"])
+@pytest.mark.parametrize("key", [None, "", "ser", "ser|pluperfect|yo", "ser|present|you"])
 def test_an_answer_whose_card_names_no_form_is_not_counted(key: str | None) -> None:
     assert tense_accuracy([(Rating.GOOD, key)]) == []

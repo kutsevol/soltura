@@ -1,4 +1,4 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 
 from soltura.conjugation.forms import Person, Tense, conjugate
@@ -57,17 +57,40 @@ def introduced_sets(keys: Iterable[str]) -> set[UnitSet]:
     return sets
 
 
-def next_unit_set(verbs: Iterable[str], introduced: set[UnitSet]) -> UnitSet | None:
-    # Verbs arrive by frequency, and each verb's tenses in teaching order: the learner
-    # meets one verb in every tense before the next verb.
+# A learner meets the four basic tenses before the conditional and the subjunctive, in blocks
+# of the most frequent verbs: all the basic tenses of a block, then the other two for the
+# same verbs, then the next block. Otherwise the subjunctive of ser would come before the
+# present of estar.
+BASIC_TENSES = (Tense.PRESENT, Tense.PRETERITE, Tense.IMPERFECT, Tense.FUTURE)
+EXTRA_TENSES = (Tense.CONDITIONAL, Tense.SUBJUNCTIVE)
+BLOCK_SIZE = 20
+
+
+def _blocks(verbs: Iterable[str]) -> Iterator[list[str]]:
+    block: list[str] = []
     for verb in verbs:
-        if verb in IMPERSONAL_VERBS:
+        # A verb that has no personal forms or that the library cannot conjugate takes no place.
+        if verb in IMPERSONAL_VERBS or conjugate(verb, Tense.PRESENT, Person.YO) is None:
             continue
-        for tense in Tense:
-            candidate = UnitSet(verb, tense)
-            if candidate in introduced:
-                continue
-            if all(conjugate(verb, tense, person) for person in Person):
-                return candidate
-            break
+        block.append(verb)
+        if len(block) == BLOCK_SIZE:
+            yield block
+            block = []
+    if block:
+        yield block
+
+
+def next_unit_set(verbs: Iterable[str], introduced: set[UnitSet]) -> UnitSet | None:
+    # Verbs arrive by frequency. In a block, each verb comes in every basic tense before the
+    # next verb, and then in the other tenses.
+    for block in _blocks(verbs):
+        for tenses in (BASIC_TENSES, EXTRA_TENSES):
+            for verb in block:
+                for tense in tenses:
+                    candidate = UnitSet(verb, tense)
+                    if candidate in introduced:
+                        continue
+                    if all(conjugate(verb, tense, person) for person in Person):
+                        return candidate
+                    break
     return None

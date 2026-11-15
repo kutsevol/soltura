@@ -16,6 +16,8 @@ TENSE_LABEL = {
     Tense.PRETERITE: "минулий звершений · pretérito indefinido",
     Tense.IMPERFECT: "минулий тривалий · pretérito imperfecto",
     Tense.FUTURE: "майбутній час · futuro",
+    Tense.CONDITIONAL: "умовний · condicional",
+    Tense.SUBJUNCTIVE: "кон'юнктив · presente de subjuntivo",
 }
 
 PRONOUN_LABEL = {

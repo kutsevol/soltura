@@ -100,8 +100,9 @@ def regular_endings() -> dict[Tense, dict[str, list[str]]]:
     for tense in Tense:
         endings[tense] = {}
         for verb in MODEL_VERBS:
-            # The future is built on the whole infinitive, the other tenses on the stem.
-            stem = verb if tense == Tense.FUTURE else verb[:-2]
+            # The future and the conditional are built on the whole infinitive, the other
+            # tenses on the stem.
+            stem = verb if tense in (Tense.FUTURE, Tense.CONDITIONAL) else verb[:-2]
             forms = [conjugate(verb, tense, person) for person in Person]
             # A model verb that stops being regular must break here, not show a wrong table.
             if any(form is None or not form.startswith(stem) for form in forms):
