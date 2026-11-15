@@ -28,7 +28,7 @@ from soltura.learner.repository import (
     save_gist,
     save_reading_text,
 )
-from soltura.llm.client import LLMClient
+from soltura.llm.client import LLMClient, LLMUnavailableError
 from soltura.reading.progress import RECENT_TEXTS, ReadingProgress, reading_score
 from soltura.reading.service import (
     ANSWERS_SYSTEM,
@@ -49,6 +49,7 @@ from soltura.reading.service import (
     Gloss,
     PreparedText,
     TapResult,
+    as_data,
     due_lemmas,
     first_draft_prompt,
     is_plannable,
@@ -229,13 +230,13 @@ async def make_questions(
     generated = await llm(
         FactQuestions,
         system=QUESTIONS_SYSTEM,
-        prompt=f"Write {count} questions.\n\n<text>\n{text}\n</text>",
+        prompt=f"Write {count} questions.\n\n<text>\n{as_data(text)}\n</text>",
         effort="low",
         max_tokens=4_000,
     )
     questions = [question.strip() for question in generated.questions if question.strip()]
     if not questions:
-        raise ValueError("The model wrote no questions")
+        raise LLMUnavailableError("The model wrote no questions")
     return questions[:count]
 
 
@@ -252,18 +253,18 @@ async def check_answers(
     # these are, and only the learner could gain from a text that is not the one shown.
     await _require_own_text(session, learner_id, text_id)
     pairs = "\n".join(
-        f"<qa>\nQuestion {number}: {question}\nAnswer: {answer}\n</qa>"
+        f"<qa>\nQuestion {number}: {as_data(question)}\nAnswer: {as_data(answer)}\n</qa>"
         for number, (question, answer) in enumerate(zip(questions, answers, strict=True), start=1)
     )
     judged = await llm(
         FactVerdicts,
         system=ANSWERS_SYSTEM,
-        prompt=f"<text>\n{text}\n</text>\n\n{pairs}",
+        prompt=f"<text>\n{as_data(text)}\n</text>\n\n{pairs}",
         effort="low",
         max_tokens=4_000,
     )
     if len(judged.verdicts) != len(questions):
-        raise ValueError("The model judged a different number of answers than were asked")
+        raise LLMUnavailableError("The model judged a different number of answers than were asked")
     return judged.verdicts
 
 

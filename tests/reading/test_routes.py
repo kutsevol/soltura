@@ -454,6 +454,7 @@ async def test_the_answers_come_back_judged_with_a_reason_each(
     "data",
     [
         {"questions": ["А?"], "answers": ["  "]},
+        {"questions": [" "], "answers": ["а"]},
         {"questions": ["А?", "Б?"], "answers": ["а"]},
         {"questions": [], "answers": []},
         {"answers": ["а"]},
@@ -463,6 +464,7 @@ async def test_the_answers_come_back_judged_with_a_reason_each(
     ],
     ids=[
         "blank",
+        "blank question",
         "count mismatch",
         "none",
         "no questions",
@@ -530,3 +532,60 @@ async def test_the_questions_need_a_learner(
     response = await client.post("/reading/questions", data={"text_id": 1, "text": "Hola"})
 
     assert response.status_code == 401
+
+
+async def test_a_blank_text_on_the_answers_is_refused_before_the_model(
+    reading_client: AsyncClient, llm: FakeLLM, reading_text: ReadingText
+) -> None:
+    response = await reading_client.post(
+        "/reading/answers",
+        data={"text_id": reading_text.id, "text": " ", "questions": ["А?"], "answers": ["а"]},
+    )
+
+    assert response.status_code == 422
+    assert llm.prompts == []
+
+
+async def test_a_model_that_writes_no_questions_leaves_a_retry_message_not_a_blank_page(
+    reading_client: AsyncClient, llm: FakeLLM, reading_text: ReadingText
+) -> None:
+    llm.answer(FactQuestions(questions=[]))
+
+    response = await reading_client.post(
+        "/reading/questions", data={"text_id": reading_text.id, "text": EASY_TEXT.text}
+    )
+
+    assert response.status_code == 503
+    assert "Спробуйте ще раз" in response.text
+
+
+async def test_a_model_that_judges_another_number_of_answers_leaves_a_retry_message(
+    reading_client: AsyncClient, llm: FakeLLM, reading_text: ReadingText
+) -> None:
+    llm.answer(FactVerdicts(verdicts=[FactVerdict(verdict="correct", reason="Так.")]))
+
+    response = await reading_client.post(
+        "/reading/answers",
+        data={
+            "text_id": reading_text.id,
+            "text": EASY_TEXT.text,
+            "questions": ["А?", "Б?"],
+            "answers": ["а", "б"],
+        },
+    )
+
+    assert response.status_code == 503
+    assert "Спробуйте ще раз" in response.text
+
+
+async def test_fewer_questions_than_asked_are_shown_as_they_are(
+    reading_client: AsyncClient, llm: FakeLLM, reading_text: ReadingText
+) -> None:
+    llm.answer(FactQuestions(questions=["Куди він іде?"]))
+
+    response = await reading_client.post(
+        "/reading/questions", data={"text_id": reading_text.id, "text": EASY_TEXT.text}
+    )
+
+    assert response.status_code == 200
+    assert response.text.count('name="answers"') == 1

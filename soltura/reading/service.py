@@ -96,8 +96,15 @@ ANSWERS_SYSTEM = (
 # the model is called; the text limit is the gist check's.
 FACT_QUESTIONS_FIRST_BAND = 2
 FACT_QUESTIONS_ABOVE = 3
+MAX_QUESTIONS = FACT_QUESTIONS_ABOVE
 MAX_QUESTION = 300
 MAX_FACT_ANSWER = 500
+
+
+def as_data(value: str) -> str:
+    # Spanish text has no use for angle brackets, and a closing tag typed into a question or an
+    # answer would end the block the model is told to treat as data.
+    return value.replace("<", "‹").replace(">", "›")
 
 
 def question_count(vocabulary: int) -> int:

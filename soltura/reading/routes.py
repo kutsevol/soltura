@@ -10,11 +10,11 @@ from soltura.learner.dependencies import LearnerDep, LearnerIdDep
 from soltura.learner.models import StudyStep
 from soltura.llm.client import LLMClient, get_llm
 from soltura.reading.service import (
-    FACT_QUESTIONS_ABOVE,
     MAX_FACT_ANSWER,
     MAX_GIST_ANSWER,
     MAX_GIST_TEXT,
     MAX_QUESTION,
+    MAX_QUESTIONS,
 )
 from soltura.reading.topics import TOPICS
 from soltura.reading.views import FACT_LABEL, GIST_LABEL, progress_view, split_for_reading
@@ -192,9 +192,9 @@ async def fact_answers(
     asked = [question.strip() for question in questions or []]
     # A browser sends a newline as two characters, which the limit must not count twice.
     given = [answer.replace("\r\n", "\n").strip() for answer in answers or []]
-    if not asked or len(asked) > FACT_QUESTIONS_ABOVE or len(asked) != len(given):
+    if not asked or len(asked) > MAX_QUESTIONS or len(asked) != len(given):
         return _refused(request, "Запитання не збігаються з відповідями.")
-    if not all(given):
+    if not text.strip() or not all(asked) or not all(given):
         return _refused(request, "Напишіть відповідь на кожне запитання.")
     if (
         len(text) > MAX_GIST_TEXT
