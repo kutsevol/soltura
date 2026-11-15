@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.58.0 (2026-11-15)
+
+### Features
+
+- **words**: Keep the translation of a word being learned
+  ([#93](https://github.com/kutsevol/soltura/pull/93),
+  [`a4e9cd0`](https://github.com/kutsevol/soltura/commit/a4e9cd0c91aa43c34c7d2c5513aae06e1910bd15))
+
+
 ## v0.57.0 (2026-11-15)
 
 ### Features
