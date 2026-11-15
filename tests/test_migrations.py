@@ -2,9 +2,11 @@ import asyncio
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
@@ -178,6 +180,54 @@ def test_undoing_the_writing_migration_drops_the_writing_reviews(database_url: s
         assert asyncio.run(_run(database_url, values)) == [
             ("{warmup,reading_tap,conjugation,grammar,writing}",)
         ]
+    finally:
+        command.downgrade(config, "base")
+        command.upgrade(config, "head")
+
+
+def test_a_word_card_without_a_key_gets_its_lexeme_as_the_key_and_the_key_becomes_required(
+    database_url: str,
+) -> None:
+    config = _alembic_config(database_url)
+    command.downgrade(config, "0012")
+    try:
+        asyncio.run(
+            _run(
+                database_url,
+                "INSERT INTO learner (id, telegram_user_id) VALUES (1, 1)",
+                "INSERT INTO lexeme (id, lemma, pos, frequency_rank) VALUES (7, 'ser', 'AUX', 1)",
+                """
+                INSERT INTO memory_card
+                    (learner_id, lexeme_id, knowledge_type, unit_kind, unit_key, due)
+                VALUES (1, 7, 'recall', 'word', NULL, '2026-05-01 09:30+00')
+                """,
+            )
+        )
+
+        command.upgrade(config, "0013")
+
+        assert asyncio.run(_run(database_url, "SELECT unit_key FROM memory_card")) == [("7",)]
+        with pytest.raises(DBAPIError):
+            asyncio.run(
+                _run(
+                    database_url,
+                    """
+                    INSERT INTO memory_card (learner_id, lexeme_id, knowledge_type, unit_kind, due)
+                    VALUES (1, 7, 'recognize', 'word', '2026-05-01 09:30+00')
+                    """,
+                )
+            )
+
+        command.downgrade(config, "0012")
+        asyncio.run(
+            _run(
+                database_url,
+                """
+                INSERT INTO memory_card (learner_id, lexeme_id, knowledge_type, unit_kind, due)
+                VALUES (1, 7, 'recognize', 'word', '2026-05-01 09:30+00')
+                """,
+            )
+        )
     finally:
         command.downgrade(config, "base")
         command.upgrade(config, "head")
