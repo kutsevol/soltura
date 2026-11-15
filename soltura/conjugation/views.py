@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from soltura.conjugation.forms import Person, Tense
+from soltura.conjugation.patterns import PatternNote
 from soltura.conjugation.service import (
     MIN_ANSWERS,
     ConjugationItem,
@@ -40,6 +41,13 @@ class CardView:
 
 
 @dataclass(frozen=True)
+class NoteView:
+    title: str
+    rule: str
+    examples: list[str]
+
+
+@dataclass(frozen=True)
 class ResultView:
     label: str
     tone: str
@@ -47,6 +55,7 @@ class ResultView:
     explanation: str
     expected: str | None
     verb: str
+    notes: list[NoteView]
 
 
 @dataclass(frozen=True)
@@ -78,7 +87,21 @@ def _explanation(check: SpanishCheck) -> str:
     }[check]
 
 
-def result_view(result: ConjugationResult, answer: str) -> ResultView:
+def notes_view(notes: list[PatternNote]) -> list[NoteView]:
+    return [
+        NoteView(
+            title=note.pattern.title,
+            rule=note.pattern.rule,
+            examples=[
+                f"{TENSE_LABEL[example.tense]}: {', '.join(example.forms)}"
+                for example in note.examples
+            ],
+        )
+        for note in notes
+    ]
+
+
+def result_view(result: ConjugationResult, answer: str, notes: list[PatternNote]) -> ResultView:
     return ResultView(
         label=RATING_LABEL[result.rating],
         tone=result.rating.value,
@@ -86,6 +109,7 @@ def result_view(result: ConjugationResult, answer: str) -> ResultView:
         explanation=_explanation(result.check),
         expected=None if result.rating == Rating.GOOD else result.expected,
         verb=result.verb,
+        notes=notes_view(notes),
     )
 
 

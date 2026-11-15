@@ -16,5 +16,15 @@
       </table>
     </article>
   {% endfor %}
+  {% if notes %}
+    <article>
+      <h3>Особливості</h3>
+      {% for note in notes %}
+        <h4>{{ note.title }}</h4>
+        <p>{{ note.rule }}</p>
+        <p class="note">{{ note.examples | join(" · ") }}</p>
+      {% endfor %}
+    </article>
+  {% endif %}
   <p class="note"><a href="/conjugation/endings">Закінчення правильних дієслів</a> · <a href="/conjugation">До тренажера</a></p>
 {% endblock %}

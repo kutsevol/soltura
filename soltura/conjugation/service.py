@@ -44,6 +44,7 @@ class ConjugationResult:
     check: SpanishCheck
     expected: str
     verb: str
+    tense: Tense
 
 
 RECENT_ANSWERS = 200

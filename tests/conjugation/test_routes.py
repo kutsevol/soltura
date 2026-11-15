@@ -265,3 +265,56 @@ async def test_the_trainer_page_links_to_the_progress_page(learner_client: Async
     page = await learner_client.get("/conjugation")
 
     assert 'href="/conjugation/progress"' in page.text
+
+
+async def _answer_a_tener_card(
+    client: AsyncClient, session: AsyncSession, learner: Learner, answer: str
+) -> str:
+    assert learner.id is not None
+    await schedule_units(
+        session,
+        learner.id,
+        UnitKind.CONJUGATION,
+        ["tener|preterite|yo"],
+        KnowledgeType.RECALL,
+        datetime(2026, 10, 31, 12, 0, tzinfo=UTC),
+    )
+    card = (await session.execute(select(MemoryCard))).scalar_one()
+    response = await client.post(
+        "/conjugation/answer",
+        data={"card_id": card.id, "queue": "[]", "started_at": 0, "answer": answer},
+    )
+    assert response.status_code == 200
+    return response.text
+
+
+async def test_a_wrong_answer_names_the_patterns_of_the_verb_in_that_tense(
+    learner_client: AsyncClient, session: AsyncSession, learner: Learner
+) -> None:
+    result = await _answer_a_tener_card(learner_client, session, learner, "tengo")
+
+    assert "«Сильний» претерит" in result
+    assert "tuve, tuviste, tuvo, tuvimos, tuvisteis, tuvieron" in result
+    assert "Форма yo на -go" not in result
+
+
+async def test_a_right_answer_shows_no_note(
+    learner_client: AsyncClient, session: AsyncSession, learner: Learner
+) -> None:
+    result = await _answer_a_tener_card(learner_client, session, learner, "tuve")
+
+    assert "Правильно" in result
+    assert "«Сильний» претерит" not in result
+
+
+async def test_the_page_of_an_irregular_verb_lists_its_notes_and_a_regular_verb_has_none(
+    learner_client: AsyncClient,
+) -> None:
+    irregular = await learner_client.get("/conjugation/verbs/tener")
+    regular = await learner_client.get("/conjugation/verbs/hablar")
+
+    assert "Особливості" in irregular.text
+    for title in ("e → ie в корені", "Форма yo на -go", "«Сильний» претерит"):
+        assert title in irregular.text
+    assert "tengo" in irregular.text
+    assert "Особливості" not in regular.text

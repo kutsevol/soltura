@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.config import settings
 from soltura.conjugation.forms import Person, Tense, conjugate
+from soltura.conjugation.patterns import PatternNote, pattern_notes
 from soltura.conjugation.service import (
     CONJUGATION_RATING,
     NEW_SETS_WINDOW,
@@ -28,6 +29,7 @@ from soltura.conjugation.units import (
 from soltura.learner.models import (
     KnowledgeType,
     MemoryCard,
+    Rating,
     ReviewSource,
     UnitKind,
 )
@@ -46,11 +48,20 @@ from soltura.srs.service import due_queue, review, schedule_units
 class VerbTable:
     verb: str
     forms: dict[Tense, list[str]]
+    notes: list[PatternNote]
 
 
 def verb_table(verb: str) -> VerbTable | None:
     forms = verb_forms(verb)
-    return VerbTable(verb=verb.strip().lower(), forms=forms) if forms else None
+    if not forms:
+        return None
+    word = verb.strip().lower()
+    return VerbTable(verb=word, forms=forms, notes=pattern_notes(word))
+
+
+def answer_notes(result: ConjugationResult) -> list[PatternNote]:
+    # After an answer that was not right, the irregular patterns of the verb in the asked tense.
+    return [] if result.rating == Rating.GOOD else pattern_notes(result.verb, result.tense)
 
 
 def endings_table() -> dict[Tense, dict[str, list[str]]]:
@@ -136,7 +147,9 @@ async def answer_item(
         answer=answer.strip() or None,
         duration_ms=duration_ms,
     )
-    return ConjugationResult(rating=rating, check=check, expected=expected, verb=parsed[0])
+    return ConjugationResult(
+        rating=rating, check=check, expected=expected, verb=parsed[0], tense=parsed[1]
+    )
 
 
 async def conjugation_progress(session: AsyncSession, learner_id: int) -> list[TenseAccuracy]:
