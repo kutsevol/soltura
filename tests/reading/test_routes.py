@@ -41,6 +41,8 @@ async def test_the_reading_page_renders(reading_client: AsyncClient) -> None:
 
     assert response.status_code == 200
     assert 'hx-post="/reading/text"' in response.text
+    # The panel's close button and Escape are handled by the script of this page.
+    assert "closeGloss" in response.text and 'id="gloss"' in response.text
 
 
 async def test_a_topic_label_in_the_address_starts_the_text_for_that_topic(
@@ -115,7 +117,8 @@ async def test_tapping_and_saving_a_word(
     )
 
     assert tapped.status_code == 200
-    assert 'aria-label="Закрити"' in tapped.text and 'aria-label="Закрити"' in saved.text
+    assert 'class="close" aria-label="Закрити"' in tapped.text
+    assert 'class="close" aria-label="Закрити"' in saved.text
     assert "<em>ser</em>" in tapped.text
     assert '"lemma": "ser"' in tapped.text
     assert saved.status_code == 200

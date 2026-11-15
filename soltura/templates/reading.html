@@ -37,8 +37,23 @@
   <article id="gloss" aria-live="polite"></article>
   <p class="note"><a href="/reading/progress">Прогрес у читанні</a></p>
   <script>
+    // The panel of a tapped word closes with its button or with Escape, and focus goes back to
+    // the word that was tapped, so a keyboard user keeps their place in the text.
+    let tappedWord = null;
+    const closeGloss = () => {
+      const panel = document.getElementById("gloss");
+      if (!panel || !panel.hasChildNodes()) return;
+      panel.replaceChildren();
+      if (tappedWord && tappedWord.isConnected) tappedWord.focus();
+    };
+    document.addEventListener("htmx:beforeRequest", (event) => {
+      if (event.detail.elt.classList.contains("word")) tappedWord = event.detail.elt;
+    });
+    document.addEventListener("click", (event) => {
+      if (event.target.closest("#gloss .close")) closeGloss();
+    });
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") document.getElementById("gloss").replaceChildren();
+      if (event.key === "Escape" && !event.defaultPrevented) closeGloss();
     });
   </script>
 {% endblock %}
