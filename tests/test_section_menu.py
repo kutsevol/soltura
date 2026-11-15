@@ -3,7 +3,7 @@ import re
 import pytest
 from httpx import AsyncClient
 
-from soltura.templating import section_menu
+from soltura.templating import SECTIONS, section_menu
 
 
 def _current(path: str) -> str | None:
@@ -78,7 +78,6 @@ async def test_every_page_of_a_module_draws_its_menu_as_buttons_with_the_current
 
     assert response.status_code == 200
     assert f'<nav class="section-menu" aria-label="{label}">' in response.text
-    assert '<main class="container has-menu">' in response.text
     buttons = _buttons(response.text)
     assert [href for href, _, marked in buttons if marked] == [current]
     assert len(buttons) >= 2
@@ -101,7 +100,7 @@ async def test_from_any_page_of_the_trainer_every_other_page_is_one_button_away(
     assert {href for href, _, _ in _buttons(verb_page.text)} == set(pages)
 
 
-@pytest.mark.parametrize("path", ["/", "/words", "/help"])
+@pytest.mark.parametrize("path", ["/", "/words", "/help", "/study"])
 async def test_a_page_outside_the_modules_has_no_menu(
     learner_client: AsyncClient, path: str
 ) -> None:
@@ -109,3 +108,21 @@ async def test_a_page_outside_the_modules_has_no_menu(
 
     assert 'class="section-menu"' not in response.text
     assert '<main class="container">' in response.text
+
+
+def test_the_first_page_of_a_module_is_its_own_address() -> None:
+    assert all(pages[0][0] == prefix for prefix, (_, pages) in SECTIONS.items())
+
+
+async def test_the_text_links_the_menu_replaces_are_gone(learner_client: AsyncClient) -> None:
+    trainer = (await learner_client.get("/conjugation")).text
+    grammar = (await learner_client.get("/grammar")).text
+    reading = (await learner_client.get("/reading")).text
+    verb = (await learner_client.get("/conjugation/verbs/comer")).text
+
+    for html in (trainer, grammar, reading, verb):
+        assert 'class="note"><a href="/conjugation/endings"' not in html
+        assert 'class="note"><a href="/conjugation/progress"' not in html
+        assert 'class="note"><a href="/grammar/progress"' not in html
+        assert 'class="note"><a href="/reading/progress"' not in html
+    assert 'href="/conjugation/practice?verb=comer"' in verb

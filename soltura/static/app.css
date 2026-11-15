@@ -348,7 +348,8 @@ main.container {
 }
 
 /* The menu of a module's pages: a row of buttons above the page, a column in the left margin
-   when the window is wide enough to leave one. */
+   when the window is wide and tall enough. The root font grows with the window, so the width
+   is taken from the margin that is left, not from a fixed number of rem. */
 
 .section-menu {
   display: flex;
@@ -366,7 +367,7 @@ main .section-menu a {
   white-space: nowrap;
 }
 
-@media (min-width: 80rem) {
+@media (min-width: 80rem) and (min-height: 32rem) {
   .section-menu {
     position: fixed;
     top: 5rem;

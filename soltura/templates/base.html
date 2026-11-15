@@ -23,7 +23,7 @@
     </div>
   </header>
   {% set menu = section_menu(request.url.path) %}
-  <main class="container{% if menu %} has-menu{% endif %}">
+  <main class="container">
     {% if menu %}
       <nav class="section-menu" aria-label="{{ menu.label }}">
         {% for item in menu.items %}
