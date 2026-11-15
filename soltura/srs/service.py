@@ -9,6 +9,7 @@ from sqlmodel import col, select
 
 from soltura.config import settings
 from soltura.learner.models import (
+    MAX_TRANSLATION_LENGTH,
     CardState,
     KnowledgeType,
     LearnerLexeme,
@@ -67,13 +68,10 @@ def apply_fsrs_card(card: MemoryCard, fsrs_card: fsrs.Card) -> None:
     card.last_review = fsrs_card.last_review
 
 
-MAX_TRANSLATION_LENGTH = 200
-
-
 def clean_translation(translation: str | None) -> str | None:
     # A model writes the translation and a page sends it back, so it is trimmed to what the
     # column holds; an empty one is no translation.
-    return (translation or "").strip()[:MAX_TRANSLATION_LENGTH] or None
+    return (translation or "").strip()[:MAX_TRANSLATION_LENGTH].rstrip() or None
 
 
 async def fill_missing_translation(

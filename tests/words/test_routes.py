@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import func, select
+from sqlmodel import col, func, select
 
 from soltura.learner.models import KnowledgeType, LearnerLexeme, Lexeme, MemoryCard, ReviewLog
 from soltura.words.service import WordEntry
@@ -201,8 +201,17 @@ async def test_the_translation_of_a_previewed_word_is_kept_with_the_saved_word(
         },
     )
 
-    rows = (await session.execute(select(LearnerLexeme.translation))).scalars().all()
-    assert sorted(rows) == sorted([NIETO.translation, SUEGRA.translation])
+    rows = (
+        await session.execute(
+            select(Lexeme.lemma, LearnerLexeme.translation).join(
+                LearnerLexeme, col(LearnerLexeme.lexeme_id) == col(Lexeme.id)
+            )
+        )
+    ).all()
+    assert {lemma: translation for lemma, translation in rows} == {
+        "nieto": NIETO.translation,
+        "suegra": SUEGRA.translation,
+    }
 
 
 async def test_a_form_without_translations_still_saves_the_words(

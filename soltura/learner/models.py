@@ -95,6 +95,9 @@ class StudyStep(StrEnum):
     DONE = "done"
 
 
+MAX_TRANSLATION_LENGTH = 200
+
+
 def _enum_column(enum: type[StrEnum], name: str, **kwargs: Any) -> Column[Any]:
     return Column(
         Enum(enum, name=name, values_callable=lambda members: [m.value for m in members]),
@@ -198,7 +201,7 @@ class LearnerLexeme(SQLModel, table=True):
     )
     translation: str | None = Field(
         default=None,
-        sa_column=Column(String(200), nullable=True),
+        sa_column=Column(String(MAX_TRANSLATION_LENGTH), nullable=True),
         description="Ukrainian meaning of the lemma, kept when the word is saved; unset if never kept",
     )
     created_at: datetime = _created_at()

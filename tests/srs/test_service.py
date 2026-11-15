@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
 from soltura.learner.models import (
+    MAX_TRANSLATION_LENGTH,
     CardState,
     KnowledgeType,
     Learner,
@@ -21,7 +22,6 @@ from soltura.learner.models import (
     WordContext,
 )
 from soltura.srs.service import (
-    MAX_TRANSLATION_LENGTH,
     due_queue,
     interleave,
     review,
@@ -313,3 +313,7 @@ async def test_a_blank_translation_is_none_and_a_long_one_is_cut_to_the_column(
     await save_word(session, learner.id, lexemes[1].id, "Estoy en casa.", NOW, None, given)
 
     assert await _kept_translation(session) == kept
+
+
+async def test_the_translation_column_holds_what_a_translation_is_cut_to() -> None:
+    assert LearnerLexeme.__table__.c.translation.type.length == MAX_TRANSLATION_LENGTH  # type: ignore[attr-defined]

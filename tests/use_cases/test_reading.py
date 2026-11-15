@@ -821,3 +821,26 @@ async def test_saving_a_tapped_word_keeps_the_translation_that_came_with_it(
         await session.execute(select(Lexeme).where(col(Lexeme.lemma) == "empresa"))
     ).scalar_one()
     assert lexeme.id is not None and await _translation(session, lexeme.id) == "компанія"
+
+
+async def test_a_tap_fills_only_the_translation_of_the_tapping_learner(
+    session: AsyncSession,
+    learner: Learner,
+    other_learner: Learner,
+    lexemes: list[Lexeme],
+    llm: FakeLLM,
+    reading_text: ReadingText,
+) -> None:
+    assert learner.id is not None and other_learner.id is not None
+    assert lexemes[2].id is not None and reading_text.id is not None
+    await save_word(session, learner.id, lexemes[2].id, "Aunque llueve, salimos.", NOW)
+    await save_word(session, other_learner.id, lexemes[2].id, "Aunque llueve, salimos.", NOW)
+    llm.answer(Gloss(lemma="aunque", translation="хоча"))
+
+    await tap_word(session, llm, learner.id, reading_text.id, "Aunque", "Aunque es tarde.", NOW)
+
+    rows = (await session.execute(select(LearnerLexeme))).scalars().all()
+    assert {row.learner_id: row.translation for row in rows} == {
+        learner.id: "хоча",
+        other_learner.id: None,
+    }
