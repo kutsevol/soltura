@@ -27,6 +27,7 @@ from soltura.use_cases.reading import (
     reading_progress,
     save_tapped_word,
     tap_word,
+    translations_in_text,
 )
 from soltura.use_cases.study import next_step_offer
 
@@ -69,12 +70,13 @@ async def new_text(
     now = datetime.now(UTC)
     prepared = await prepare_text(session, llm, learner, now, topic=topic, source_text=source)
     offer = await next_step_offer(session, learner_id, StudyStep.READING, now)
+    translations = await translations_in_text(session, learner_id, prepared.text)
     return templates.TemplateResponse(
         request,
         "reading/text.html",
         {
             "prepared": prepared,
-            "paragraphs": split_for_reading(prepared.text),
+            "paragraphs": split_for_reading(prepared.text, translations),
             "topic": topic or prepared.title,
             "text_id": prepared.text_id,
             "study_step": offer,

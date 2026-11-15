@@ -5,6 +5,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col
 
 from soltura.app import create_app
 from soltura.config import settings
@@ -12,7 +13,9 @@ from soltura.db import get_session
 from soltura.learner.models import (
     GistResult,
     Learner,
+    LearnerLexeme,
     Lexeme,
+    LexemeStatus,
     MemoryCard,
     ReadingText,
     ReviewLog,
@@ -596,3 +599,28 @@ async def test_fewer_questions_than_asked_are_shown_as_they_are(
 
     assert response.status_code == 200
     assert response.text.count('name="answers"') == 1
+
+
+async def test_a_word_being_learned_shows_its_translation_above_it_and_stays_tappable(
+    reading_client: AsyncClient,
+    session: AsyncSession,
+    learner: Learner,
+    llm: FakeLLM,
+    know: KnowFn,
+) -> None:
+    await know(f"{EASY_TEXT.title}. {EASY_TEXT.text}")
+    playa = (await session.execute(select(Lexeme).where(col(Lexeme.lemma) == "playa"))).scalar_one()
+    row = await session.get(LearnerLexeme, (learner.id, playa.id))
+    assert row is not None
+    row.status, row.translation = LexemeStatus.LEARNING, "пляж, берег"
+    await session.flush()
+    llm.answer(EASY_TEXT)
+
+    response = await reading_client.post("/reading/text", data={"topic": "la playa"})
+
+    assert response.text.count("<ruby>") == 1
+    assert '<rt lang="uk">пляж</rt>' in response.text
+    assert re.search(
+        r"<ruby>\s*<button[^>]*hx-post=\"/reading/tap\"[^>]*>playa</button>", response.text
+    )
+    assert response.text.count('class="word"') == 13

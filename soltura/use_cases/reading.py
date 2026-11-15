@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from soltura.language.coverage import measure_coverage, words_to_replace
 from soltura.language.frequency import UNRANKED
-from soltura.language.nlp import analyze
+from soltura.language.nlp import analyze, lemmas_by_offset
 from soltura.language.range import vocabulary_range
 from soltura.learner.models import (
     GistResult,
@@ -20,6 +20,7 @@ from soltura.learner.models import Lexeme as LexemeRow
 from soltura.learner.repository import (
     add_tap,
     get_due_card,
+    get_learning_translations,
     get_lemmas_in_rank_window,
     get_lexemes_by_lemmas,
     get_reading_text,
@@ -269,6 +270,14 @@ async def check_answers(
     if len(judged.verdicts) != len(questions):
         raise LLMUnavailableError("The model judged a different number of answers than were asked")
     return judged.verdicts
+
+
+async def translations_in_text(session: AsyncSession, learner_id: int, text: str) -> dict[int, str]:
+    # The translation of each word of the text whose lemma the learner is learning and has a
+    # translation for, by where the word starts: one query for all the lemmas of the text.
+    lemmas = lemmas_by_offset(text)
+    kept = await get_learning_translations(session, learner_id, set(lemmas.values()))
+    return {offset: kept[lemma] for offset, lemma in lemmas.items() if lemma in kept}
 
 
 async def reading_progress(session: AsyncSession, learner_id: int) -> ReadingProgress:
