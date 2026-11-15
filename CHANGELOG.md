@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.62.0 (2026-11-15)
+
+### Features
+
+- **grammar**: Add the A1 units for the definite and the indefinite article
+  ([#99](https://github.com/kutsevol/soltura/pull/99),
+  [`cfd9523`](https://github.com/kutsevol/soltura/commit/cfd9523c55b4a2a0f2b652becab5def34a42a3f3))
+
+
 ## v0.61.0 (2026-11-15)
 
 ### Features
