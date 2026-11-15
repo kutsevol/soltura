@@ -167,4 +167,4 @@ async def test_the_progress_page_shows_a_started_unit_after_an_answer(
 async def test_the_grammar_page_links_to_the_progress(learner_client: AsyncClient) -> None:
     page = await learner_client.get("/grammar")
 
-    assert '<a href="/grammar/progress">' in page.text
+    assert '<a href="/grammar/progress" role="button" class="outline secondary">' in page.text
