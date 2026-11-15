@@ -16,7 +16,7 @@
           <button type="button" class="word"
                   hx-post="/reading/tap" hx-target="#gloss"
                   hx-vals='{{ {"word": segment.text, "sentence": sentence_text, "topic": topic, "text_id": text_id} | tojson }}'>{{ segment.text }}</button>
-          {%- if segment.translation -%}<rt>{{ segment.translation }}</rt></ruby>{%- endif -%}
+          {%- if segment.translation -%}<rp>(</rp><rt lang="uk">{{ segment.translation }}</rt><rp>)</rp></ruby>{%- endif -%}
         {%- else -%}
           {{ segment.text }}
         {%- endif -%}

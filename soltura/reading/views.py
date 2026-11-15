@@ -14,7 +14,7 @@ GIST_LABEL = {
 FACT_LABEL = {"correct": "Вірно", "partly": "Частково", "wrong": "Невірно"}
 
 
-MAX_SHOWN_TRANSLATION = 24
+MAX_SHOWN_TRANSLATION = 16
 
 
 def short_translation(translation: str) -> str:
@@ -42,7 +42,8 @@ def split_for_reading(
 ) -> list[list[list[Segment]]]:
     # paragraphs -> sentences -> segments, so the page can send a tapped word
     # together with the sentence it appears in. `translations` is keyed by where a word
-    # starts in `text`; a word that starts there carries the short form of its translation.
+    # starts in `text`, the very string given here (not a trimmed or re-joined copy); a word
+    # that starts there carries the short form of its translation.
     kept = translations or {}
     paragraphs: list[list[list[Segment]]] = []
     cursor = 0
@@ -50,11 +51,11 @@ def split_for_reading(
         stripped = paragraph.strip()
         if not stripped:
             continue
-        # Where this paragraph starts in the text, so each word has its position in it.
-        found = text.find(stripped, cursor)
-        base = found if found >= 0 else None
-        if found >= 0:
-            cursor = found + len(stripped)
+        # Where this paragraph starts in the text, so each word has its position in it. The
+        # paragraph is a slice of `text`, so it is always found; a miss would show a word
+        # the wrong translation, so it fails loudly instead.
+        base = text.index(stripped, cursor)
+        cursor = base + len(stripped)
         sentences: list[list[Segment]] = []
         for match in _SENTENCE.finditer(stripped):
             sentence = match.group()
@@ -62,11 +63,11 @@ def split_for_reading(
                 continue
             # The sentence pattern skips a stray full stop, so a sentence starts where its own
             # match does, not where the one before it ended.
-            position = base + match.start() if base is not None else None
+            position = base + match.start()
             segments: list[Segment] = []
             for part in _WORD.findall(sentence):
                 is_word = part[0].isalpha()
-                translation = kept.get(position) if is_word and position is not None else None
+                translation = kept.get(position) if is_word else None
                 segments.append(
                     Segment(
                         text=part,
@@ -74,8 +75,7 @@ def split_for_reading(
                         translation=short_translation(translation) if translation else None,
                     )
                 )
-                if position is not None:
-                    position += len(part)
+                position += len(part)
             sentences.append(segments)
         paragraphs.append(sentences)
     return paragraphs

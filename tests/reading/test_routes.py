@@ -619,7 +619,7 @@ async def test_a_word_being_learned_shows_its_translation_above_it_and_stays_tap
     response = await reading_client.post("/reading/text", data={"topic": "la playa"})
 
     assert response.text.count("<ruby>") == 1
-    assert "<rt>пляж</rt>" in response.text
+    assert '<rt lang="uk">пляж</rt>' in response.text
     assert re.search(
         r"<ruby>\s*<button[^>]*hx-post=\"/reading/tap\"[^>]*>playa</button>", response.text
     )

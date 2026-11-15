@@ -1,5 +1,6 @@
 import pytest
 
+from soltura.language.nlp import lemmas_by_offset
 from soltura.reading.views import MAX_SHOWN_TRANSLATION, short_translation, split_for_reading
 
 
@@ -56,3 +57,36 @@ def test_without_translations_no_word_has_one() -> None:
 )
 def test_the_line_above_a_word_is_its_first_meaning_and_short(given: str, shown: str) -> None:
     assert short_translation(given) == shown
+
+
+def _translated(text: str, translations: dict[int, str]) -> list[tuple[str, str | None]]:
+    return [
+        (segment.text, segment.translation)
+        for paragraph in split_for_reading(text, translations)
+        for sentence in paragraph
+        for segment in sentence
+        if segment.translation
+    ]
+
+
+def test_the_positions_hold_with_windows_line_breaks_repeated_paragraphs_and_stray_marks() -> None:
+    text = "...¿¡Dos?!\r\n\r\nUno dos.\r\n\r\nUno dos.\r\n  \r\n… Uno."
+    second_paragraph_dos = text.index("dos", text.index("Uno dos"))
+    last_uno = text.rindex("Uno")
+
+    shown = _translated(text, {second_paragraph_dos: "два", last_uno: "один"})
+
+    assert shown == [("dos", "два"), ("Uno", "один")]
+    assert text[second_paragraph_dos : second_paragraph_dos + 3] == "dos"
+    assert second_paragraph_dos < text.rindex("dos") < last_uno
+
+
+def test_the_translations_of_a_real_text_land_on_the_words_with_that_lemma() -> None:
+    text = "Voy a la playa.\r\n\r\nLa playa es grande. Mi hermano ama la playa.\r\n\r\n¿Y tú?"
+    lemmas = lemmas_by_offset(text)
+    translations = {offset: "пляж" for offset, lemma in lemmas.items() if lemma == "playa"}
+
+    shown = _translated(text, translations)
+
+    assert [word for word, _ in shown] == ["playa", "playa", "playa"]
+    assert len(translations) == 3
