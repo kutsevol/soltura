@@ -1,0 +1,76 @@
+from soltura.grammar.units import Example, Exercise, GrammarUnit, Lesson
+
+UNIT = GrammarUnit(
+    id="definite_article",
+    level="A1",
+    order=10,
+    title="Означений артикль: el, la, los, las",
+    lesson=Lesson(
+        points=(
+            "В українській артиклів немає, а в іспанській вони є. Означений артикль стоїть перед іменником, коли це конкретна, відома річ (el libro, la casa), і коли йдеться про річ загалом (el café — кава взагалі).",
+            "Він узгоджується з іменником у роді й числі: el (чоловічий рід, однина), la (жіночий рід, однина), los (чоловічий, множина), las (жіночий, множина): el libro, la casa, los libros, las casas. Перед жіночим іменником з наголошеним a- на початку в однині стоїть el: el agua; у множині las aguas.",
+            "Після a і de артикль el зливається з ними: a + el = al, de + el = del: voy al cine, la casa del profesor. З la, los, las злиття немає: a la playa, de las casas. Якщо El — частина назви, злиття на письмі немає: a El Salvador.",
+            "Імена людей і назви більшості країн у стандартній мові без артикля: María, Antonio, España, Italia. Не кажемо la María. З титулом артикль є: el señor García.",
+            "З присвійним і вказівним займенником перед іменником артикль не ставимо: mi libro, este libro. Не кажемо el mi libro чи el este libro.",
+            "З gustar, коли йдеться про річ загалом і перед іменником немає іншого слова, ставимо артикль: me gusta el café (не me gusta café), me gustan las películas.",
+        ),
+        examples=(
+            Example(spanish="El libro está en la mesa.", ukrainian="Книга на столі."),
+            Example(spanish="Las casas son grandes.", ukrainian="Будинки великі."),
+            Example(spanish="Voy al mercado.", ukrainian="Я йду на ринок."),
+            Example(spanish="Es la casa del profesor.", ukrainian="Це будинок учителя."),
+            Example(spanish="María vive en España.", ukrainian="Марія живе в Іспанії."),
+            Example(spanish="Me gusta el café.", ukrainian="Мені подобається кава."),
+        ),
+    ),
+    exercises=(
+        Exercise(
+            id="e1",
+            sentence="___ perro está en el parque.",
+            translation="Собака в парку.",
+            options=("El", "La"),
+            answer="El",
+            note="Perro — чоловічого роду (-o), тож el.",
+        ),
+        Exercise(
+            id="e2",
+            sentence="___ mesas son grandes.",
+            translation="Столи великі.",
+            options=("Los", "Las"),
+            answer="Las",
+            note="Mesas — жіночий рід, множина: las.",
+        ),
+        Exercise(
+            id="e3",
+            sentence="Voy ___ parque.",
+            translation="Я йду в парк.",
+            options=("al", "a la"),
+            answer="al",
+            note="Parque — чоловічого роду: a + el = al.",
+        ),
+        Exercise(
+            id="e4",
+            sentence="Es la casa ___ médico.",
+            translation="Це будинок лікаря.",
+            options=(),
+            answer="del",
+            note="De + el зливається в del.",
+        ),
+        Exercise(
+            id="e5",
+            sentence="Me gustan ___ películas.",
+            translation="Мені подобаються фільми.",
+            options=("los", "las"),
+            answer="las",
+            note="Фільми загалом — з артиклем: película жіночого роду, множина, тож las.",
+        ),
+        Exercise(
+            id="e6",
+            sentence="Me gusta ___ paella.",
+            translation="Мені подобається паелья.",
+            options=("el", "la"),
+            answer="la",
+            note="Paella — жіночого роду, тож la.",
+        ),
+    ),
+)
