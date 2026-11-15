@@ -9,7 +9,7 @@ UNIT = GrammarUnit(
         points=(
             "Правильні дієслова на -er і -ir відмінюються майже однаково: відкидаємо -er або -ir і додаємо закінчення. Comer (їсти): como, comes, come, comemos, coméis, comen. Vivir (жити): vivo, vives, vive, vivimos, vivís, viven.",
             "Різниця між -er і -ir лише у двох формах: nosotros — comemos, але vivimos; vosotros — coméis, але vivís. Усі інші закінчення (-o, -es, -e, -en) однакові.",
-            "Порівняйте з -ar: там у закінченнях літера a (hablas, habla, hablan), а в -er і -ir літера e (comes, come, comen; vives, vive, viven).",
+            "Порівняйте з -ar: там у закінченнях літера a (hablas, habla, hablan), а в -er і -ir літера e в особах tú, він і вони (comes, come, comen; vives, vive, viven).",
             "Часті правильні дієслова на -er: comer (їсти), beber (пити), leer (читати), aprender (вчити), correr (бігати), vender (продавати).",
             "Часті правильні дієслова на -ir: vivir (жити), escribir (писати), abrir (відкривати), recibir (отримувати), subir (підніматися).",
             "Не всі дієслова на -er і -ir такі прості (tener — tengo, hacer — hago): їх вивчимо пізніше.",
@@ -26,8 +26,8 @@ UNIT = GrammarUnit(
     exercises=(
         Exercise(
             id="e1",
-            sentence="Yo ___ pan con tomate.",
-            translation="Я їм хліб із помідором.",
+            sentence="Yo ___ fruta por la mañana.",
+            translation="Я їм фрукти вранці.",
             options=("como", "comes"),
             answer="como",
             note="Yo: закінчення -o.",
@@ -42,8 +42,8 @@ UNIT = GrammarUnit(
         ),
         Exercise(
             id="e3",
-            sentence="Nosotros ___ en Valencia.",
-            translation="Ми живемо у Валенсії.",
+            sentence="Nosotros ___ en Sevilla.",
+            translation="Ми живемо в Севільї.",
             options=("vivimos", "vivís"),
             answer="vivimos",
             note="Nosotros: у дієслів на -ir закінчення -imos.",

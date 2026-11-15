@@ -9,7 +9,7 @@ UNIT = GrammarUnit(
         points=(
             "Теперішній час (presente) каже, що відбувається зараз і що є постійно: estudio español — я вивчаю іспанську; trabajo en un banco — я працюю в банку. Українською так само, одна форма.",
             "Правильні дієслова на -ar міняють закінчення: відкидаємо -ar і додаємо -o, -as, -a, -amos, -áis, -an. Hablar: (yo) hablo, (tú) hablas, (él, ella, usted) habla, (nosotros) hablamos, (vosotros) habláis, (ellos, ustedes) hablan.",
-            "Наголос на письмі є лише у формі habláis. Форма habla — це і «він», і «вона», і «Ви»: хто саме, видно з контексту або з займенника: ella habla.",
+            "У дієсловах на -ar наголос на письмі є лише у формі habláis. Форма habla — це і «він», і «вона», і «Ви»: хто саме, видно з контексту або з займенника: ella habla.",
             "Часті правильні дієслова на -ar: hablar (говорити), trabajar (працювати), estudiar (вчити, вчитися), comprar (купувати), cenar (вечеряти), cocinar (готувати), viajar (подорожувати), escuchar (слухати), bailar (танцювати).",
             "Заперечення no стоїть перед дієсловом: no hablo inglés, no trabajamos hoy.",
             "Не всі дієслова на -ar змінюються так просто (pensar — pienso, jugar — juego): їх вивчимо пізніше.",
@@ -43,8 +43,8 @@ UNIT = GrammarUnit(
         ),
         Exercise(
             id="e2",
-            sentence="Tú ___ en un banco.",
-            translation="Ти працюєш у банку.",
+            sentence="Tú ___ en una tienda.",
+            translation="Ти працюєш у магазині.",
             options=("trabajas", "trabaja"),
             answer="trabajas",
             note="Tú: закінчення -as.",
