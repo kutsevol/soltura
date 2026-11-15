@@ -1,0 +1,76 @@
+from soltura.grammar.units import Example, Exercise, GrammarUnit, Lesson
+
+UNIT = GrammarUnit(
+    id="present_er_ir",
+    level="A1",
+    order=36,
+    title="Теперішній час: дієслова на -er і -ir",
+    lesson=Lesson(
+        points=(
+            "Правильні дієслова на -er і -ir відмінюються майже однаково: відкидаємо -er або -ir і додаємо закінчення. Comer (їсти): como, comes, come, comemos, coméis, comen. Vivir (жити): vivo, vives, vive, vivimos, vivís, viven.",
+            "Різниця між -er і -ir лише у двох формах: nosotros — comemos, але vivimos; vosotros — coméis, але vivís. Усі інші закінчення (-o, -es, -e, -en) однакові.",
+            "Порівняйте з -ar: там у закінченнях літера a (hablas, habla, hablan), а в -er і -ir літера e (comes, come, comen; vives, vive, viven).",
+            "Часті правильні дієслова на -er: comer (їсти), beber (пити), leer (читати), aprender (вчити), correr (бігати), vender (продавати).",
+            "Часті правильні дієслова на -ir: vivir (жити), escribir (писати), abrir (відкривати), recibir (отримувати), subir (підніматися).",
+            "Не всі дієслова на -er і -ir такі прості (tener — tengo, hacer — hago): їх вивчимо пізніше.",
+        ),
+        examples=(
+            Example(spanish="Como pan con tomate.", ukrainian="Я їм хліб із помідором."),
+            Example(spanish="¿Qué bebes?", ukrainian="Що ти п’єш?"),
+            Example(spanish="Mi hermano lee mucho.", ukrainian="Мій брат багато читає."),
+            Example(spanish="Vivimos en Valencia.", ukrainian="Ми живемо у Валенсії."),
+            Example(spanish="¿Dónde viven tus padres?", ukrainian="Де живуть твої батьки?"),
+            Example(spanish="Escribo un correo.", ukrainian="Я пишу електронного листа."),
+        ),
+    ),
+    exercises=(
+        Exercise(
+            id="e1",
+            sentence="Yo ___ pan con tomate.",
+            translation="Я їм хліб із помідором.",
+            options=("como", "comes"),
+            answer="como",
+            note="Yo: закінчення -o.",
+        ),
+        Exercise(
+            id="e2",
+            sentence="Tú ___ agua.",
+            translation="Ти п’єш воду.",
+            options=("bebes", "bebe"),
+            answer="bebes",
+            note="Tú: закінчення -es.",
+        ),
+        Exercise(
+            id="e3",
+            sentence="Nosotros ___ en Valencia.",
+            translation="Ми живемо у Валенсії.",
+            options=("vivimos", "vivís"),
+            answer="vivimos",
+            note="Nosotros: у дієслів на -ir закінчення -imos.",
+        ),
+        Exercise(
+            id="e4",
+            sentence="Vosotros ___ una carta.",
+            translation="Ви пишете листа.",
+            options=("escribís", "escriben"),
+            answer="escribís",
+            note="Vosotros: у дієслів на -ir закінчення -ís, з наголосом.",
+        ),
+        Exercise(
+            id="e5",
+            sentence="Mi padre ___ (leer) el periódico.",
+            translation="Мій тато читає газету.",
+            options=(),
+            answer="lee",
+            note="Він: закінчення -e.",
+        ),
+        Exercise(
+            id="e6",
+            sentence="Mis abuelos ___ (vivir) en Madrid.",
+            translation="Мої дідусь і бабуся живуть у Мадриді.",
+            options=(),
+            answer="viven",
+            note="Вони: закінчення -en.",
+        ),
+    ),
+)
