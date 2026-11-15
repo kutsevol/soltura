@@ -114,7 +114,6 @@ async def get_unit_keys(session: AsyncSession, learner_id: int, unit_kind: UnitK
         select(MemoryCard.unit_key).where(
             col(MemoryCard.learner_id) == learner_id,
             col(MemoryCard.unit_kind) == unit_kind,
-            col(MemoryCard.unit_key).is_not(None),
         )
     )
     return set(result.scalars())
@@ -169,14 +168,12 @@ async def get_card_progress(
         .where(
             col(MemoryCard.learner_id) == learner_id,
             col(MemoryCard.unit_kind) == unit_kind,
-            col(MemoryCard.unit_key).is_not(None),
         )
         .order_by(col(MemoryCard.id))
     )
     return [
         CardProgress(card.unit_key, card.stability, card.due, answers, right)
         for card, answers, right in result.all()
-        if card.unit_key is not None
     ]
 
 
@@ -444,6 +441,7 @@ async def get_due_recall_cards(
     result = await session.execute(
         select(MemoryCard).where(
             col(MemoryCard.learner_id) == learner_id,
+            col(MemoryCard.unit_kind) == UnitKind.WORD,
             col(MemoryCard.lexeme_id).in_(set(lexeme_ids)),
             col(MemoryCard.knowledge_type) == KnowledgeType.RECALL,
             col(MemoryCard.due) <= now,
@@ -462,6 +460,7 @@ async def get_due_card(
     result = await session.execute(
         select(MemoryCard).where(
             col(MemoryCard.learner_id) == learner_id,
+            col(MemoryCard.unit_kind) == UnitKind.WORD,
             col(MemoryCard.lexeme_id) == lexeme_id,
             col(MemoryCard.knowledge_type) == knowledge_type,
             col(MemoryCard.due) <= now,

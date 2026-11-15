@@ -1,5 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
+import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
@@ -343,3 +345,16 @@ async def test_the_rank_window_holds_the_ranks_after_the_first_up_to_the_second_
 
     assert sorted(window) == [("primera", "NOUN"), ("ultima", "VERB")]
     assert await get_lemmas_in_rank_window(session, 5000, 5300, ("NOUN",)) == []
+
+
+async def test_a_card_cannot_be_saved_without_a_unit_key(
+    session: AsyncSession, learner: Learner, lexemes: list[Lexeme]
+) -> None:
+    assert learner.id is not None and lexemes[0].id is not None
+    card = MemoryCardFactory.build(
+        learner_id=learner.id, lexeme_id=lexemes[0].id, unit_key=None, unit_kind=UnitKind.WORD
+    )
+    session.add(card)
+
+    with pytest.raises(IntegrityError):
+        await session.flush()

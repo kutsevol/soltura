@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from polyfactory.decorators import post_generated
 from polyfactory.factories.sqlalchemy_factory import SQLAlchemyFactory
 
@@ -35,8 +37,9 @@ class MemoryCardFactory(SQLAlchemyFactory[MemoryCard]):
 
     @post_generated
     @classmethod
-    def unit_key(cls, lexeme_id: int | None) -> str | None:
-        return None if lexeme_id is None else str(lexeme_id)
+    def unit_key(cls, lexeme_id: int | None) -> str:
+        # A card of another unit has no lexeme; a test that cares about its key gives one.
+        return str(lexeme_id) if lexeme_id is not None else f"unit-{uuid4().hex[:12]}"
 
 
 class ReadingTextFactory(SQLAlchemyFactory[ReadingText]):

@@ -233,9 +233,9 @@ class WordContext(SQLModel, table=True):
 class MemoryCard(SQLModel, table=True):
     __tablename__ = "memory_card"
     __table_args__ = (
-        UniqueConstraint("learner_id", "lexeme_id", "knowledge_type"),
         UniqueConstraint("learner_id", "unit_kind", "unit_key", "knowledge_type"),
         Index("ix_memory_card_learner_id_due", "learner_id", "due"),
+        Index("ix_memory_card_learner_id_lexeme_id", "learner_id", "lexeme_id"),
     )
 
     id: int | None = Field(default=None, primary_key=True, description="Card id")
@@ -248,11 +248,8 @@ class MemoryCard(SQLModel, table=True):
         sa_column=_enum_column(UnitKind, "unit_kind", server_default=UnitKind.WORD.value),
         description="What the card schedules: a word, a conjugated form or a grammar item",
     )
-    # Nullable until a later release tightens it: the migration backfills existing rows,
-    # and code from before it still inserts cards without a key.
-    unit_key: str | None = Field(
-        default=None,
-        sa_column=Column(String(64), nullable=True),
+    unit_key: str = Field(
+        sa_column=Column(String(64), nullable=False),
         description="Identifies the unit within its kind; for a word, its lexeme id",
     )
     lexeme_id: int | None = Field(
