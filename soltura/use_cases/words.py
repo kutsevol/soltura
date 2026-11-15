@@ -36,8 +36,12 @@ async def add_words(
     lemmas: list[str],
     sentences: list[str],
     now: datetime,
+    translations: list[str] | None = None,
 ) -> list[str]:
     pairs = list(zip(lemmas, sentences, strict=False))
+    # A page from before translations were kept sends none; one that sends them sends one each.
+    if translations is not None and len(translations) != len(lemmas):
+        raise InvalidAddForm
     if (
         not 0 < len(lemmas) <= MAX_WORDS
         or len(lemmas) != len(sentences)
@@ -45,8 +49,9 @@ async def add_words(
         or any(not 0 < len(sentence.strip()) <= MAX_SENTENCE_LENGTH for _, sentence in pairs)
     ):
         raise InvalidAddForm
-    for lemma, sentence in pairs:
-        await save_tapped_word(session, learner_id, lemma, sentence, now)
+    kept: list[str | None] = [*translations] if translations else [None] * len(pairs)
+    for (lemma, sentence), translation in zip(pairs, kept, strict=True):
+        await save_tapped_word(session, learner_id, lemma, sentence, now, None, translation)
     return [lemma.strip().lower() for lemma in lemmas]
 
 

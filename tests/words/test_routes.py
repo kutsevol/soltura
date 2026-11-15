@@ -4,7 +4,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import func, select
 
-from soltura.learner.models import KnowledgeType, Lexeme, MemoryCard, ReviewLog
+from soltura.learner.models import KnowledgeType, LearnerLexeme, Lexeme, MemoryCard, ReviewLog
 from soltura.words.service import WordEntry
 from tests.fakes import FakeLLM
 
@@ -187,6 +187,49 @@ async def test_save_all_saves_every_word_with_its_two_cards_due_now_and_lists_th
     assert all(card.due <= datetime.now(UTC) for card in cards)
     for entry in (NIETO, SUEGRA):
         assert entry.lemma in page.text and entry.sentence in page.text
+
+
+async def test_the_translation_of_a_previewed_word_is_kept_with_the_saved_word(
+    learner_client: AsyncClient, session: AsyncSession
+) -> None:
+    await learner_client.post(
+        "/words/add",
+        data={
+            "lemma": ["nieto", "suegra"],
+            "sentence": [NIETO.sentence, SUEGRA.sentence],
+            "translation": [NIETO.translation, SUEGRA.translation],
+        },
+    )
+
+    rows = (await session.execute(select(LearnerLexeme.translation))).scalars().all()
+    assert sorted(rows) == sorted([NIETO.translation, SUEGRA.translation])
+
+
+async def test_a_form_without_translations_still_saves_the_words(
+    learner_client: AsyncClient, session: AsyncSession
+) -> None:
+    response = await learner_client.post(
+        "/words/add", data={"lemma": ["nieto"], "sentence": [NIETO.sentence]}
+    )
+
+    assert response.status_code == 200
+    assert (await session.execute(select(LearnerLexeme.translation))).scalars().all() == [None]
+
+
+async def test_translations_that_do_not_match_the_words_are_rejected(
+    learner_client: AsyncClient, session: AsyncSession
+) -> None:
+    response = await learner_client.post(
+        "/words/add",
+        data={
+            "lemma": ["nieto", "suegra"],
+            "sentence": [NIETO.sentence, SUEGRA.sentence],
+            "translation": [NIETO.translation],
+        },
+    )
+
+    assert response.status_code == 422
+    assert await _count(session, MemoryCard) == 0
 
 
 async def test_saving_with_mismatched_or_empty_fields_is_rejected(

@@ -14,6 +14,7 @@
     {% for result in found %}
       <input type="hidden" name="lemma" value="{{ result.lookup.lemma }}">
       <input type="hidden" name="sentence" value="{{ result.lookup.sentence }}">
+      <input type="hidden" name="translation" value="{{ result.lookup.translation }}">
     {% endfor %}
     <button type="submit">{% if found | length > 1 %}Зберегти все ({{ found | length }}){% else %}Зберегти{% endif %}</button>
   </form>

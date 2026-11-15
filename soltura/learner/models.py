@@ -196,6 +196,11 @@ class LearnerLexeme(SQLModel, table=True):
         sa_column=_enum_column(LexemeOrigin, "lexeme_origin"),
         description="How the lemma entered the learner model",
     )
+    translation: str | None = Field(
+        default=None,
+        sa_column=Column(String(200), nullable=True),
+        description="Ukrainian meaning of the lemma, kept when the word is saved; unset if never kept",
+    )
     created_at: datetime = _created_at()
     updated_at: datetime = _updated_at()
 

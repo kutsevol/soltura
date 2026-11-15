@@ -113,8 +113,11 @@ async def save(
     lemma: Annotated[str, Form()],
     sentence: Annotated[str, Form()],
     topic: Annotated[str, Form()] = "",
+    translation: Annotated[str, Form()] = "",
 ) -> HTMLResponse:
-    await save_tapped_word(session, learner_id, lemma, sentence, datetime.now(UTC), topic or None)
+    await save_tapped_word(
+        session, learner_id, lemma, sentence, datetime.now(UTC), topic or None, translation
+    )
     return templates.TemplateResponse(request, "reading/saved.html", {"lemma": lemma})
 
 
