@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.57.0 (2026-11-15)
+
+### Features
+
+- **reading**: Add a close button and Escape to the word panel
+  ([#92](https://github.com/kutsevol/soltura/pull/92),
+  [`e6aa22e`](https://github.com/kutsevol/soltura/commit/e6aa22e03cdaf4433f03330bffbdbb99f5ac98c4))
+
+
 ## v0.56.0 (2026-11-15)
 
 ### Features
