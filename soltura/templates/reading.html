@@ -36,4 +36,9 @@
   </article>
   <article id="gloss" aria-live="polite"></article>
   <p class="note"><a href="/reading/progress">Прогрес у читанні</a></p>
+  <script>
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") document.getElementById("gloss").replaceChildren();
+    });
+  </script>
 {% endblock %}

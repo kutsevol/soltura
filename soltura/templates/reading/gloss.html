@@ -1,3 +1,4 @@
+<button type="button" class="close" aria-label="Закрити" onclick="document.getElementById('gloss').replaceChildren()">×</button>
 <p>
   <strong>{{ result.word }}</strong>{% if result.lemma != result.word | lower %} → <em>{{ result.lemma }}</em>{% endif %}:
   {{ result.translation }}

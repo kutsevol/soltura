@@ -441,6 +441,29 @@ button.word:focus-visible {
   display: none;
 }
 
+/* The close button sits in the corner of the card; the first line leaves room for it. */
+
+#gloss .close {
+  all: unset;
+  position: absolute;
+  top: 0.4rem;
+  right: 0.6rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--pico-muted-color);
+  cursor: pointer;
+}
+
+#gloss .close:hover,
+#gloss .close:focus-visible {
+  color: var(--pico-color);
+}
+
+#gloss .close + p {
+  padding-right: 2rem;
+}
+
 /* Paired answer buttons: the grid gap already separates them. */
 
 .grid > button {

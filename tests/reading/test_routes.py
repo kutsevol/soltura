@@ -115,6 +115,7 @@ async def test_tapping_and_saving_a_word(
     )
 
     assert tapped.status_code == 200
+    assert 'aria-label="Закрити"' in tapped.text and 'aria-label="Закрити"' in saved.text
     assert "<em>ser</em>" in tapped.text
     assert '"lemma": "ser"' in tapped.text
     assert saved.status_code == 200
