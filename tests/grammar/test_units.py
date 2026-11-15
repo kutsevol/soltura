@@ -39,7 +39,7 @@ def test_a_learner_part_way_through_gets_the_unstarted_a1_units_before_the_next_
         following.append(unit.id)
         started.add(unit.id)
 
-    assert following == ["hay_estar", "demonstratives", "reflexive_verbs"]
+    assert following == ["definite_article", "indefinite_article", "hay_estar"]
 
 
 def test_every_unit_has_its_own_id_and_place_in_the_order() -> None:

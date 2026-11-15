@@ -1,0 +1,80 @@
+from soltura.grammar.units import Example, Exercise, GrammarUnit, Lesson
+
+UNIT = GrammarUnit(
+    id="indefinite_article",
+    level="A1",
+    order=15,
+    title="Неозначений артикль: un, una, unos, unas",
+    lesson=Lesson(
+        points=(
+            "Неозначений артикль стоїть перед іменником, коли річ нова або якась одна з багатьох: tengo un libro — у мене є (якась) книжка.",
+            "Він узгоджується з іменником у роді й числі: un (чоловічий рід, однина), una (жіночий, однина), unos (чоловічий, множина), unas (жіночий, множина): un libro, una casa, unos libros, unas casas.",
+            "У множині unos і unas означають «кілька, якісь»: hay unos libros en la mesa — на столі є кілька книжок.",
+            "Коли вже відомо, про яку саме річ ідеться, кажемо el, la: tengo un perro, el perro se llama Max.",
+            "Після ser з назвою професії артикль зазвичай не ставимо: soy médico, es profesora.",
+            "Перед іменами власними un і una не ставимо: Javier, España. Не кажемо un Javier.",
+            "З вказівним займенником чи числівником un не ставимо: este amigo, dos amigos. Un — це й «один»: un amigo, dos amigos. З otro теж без un: otro amigo, не un otro amigo.",
+        ),
+        examples=(
+            Example(spanish="Tengo un libro.", ukrainian="У мене є книжка."),
+            Example(spanish="Tengo una hermana.", ukrainian="У мене є сестра."),
+            Example(spanish="Hay unos libros en la mesa.", ukrainian="На столі є кілька книжок."),
+            Example(spanish="Compro unas manzanas.", ukrainian="Я купую кілька яблук."),
+            Example(
+                spanish="Tengo un perro. El perro se llama Max.",
+                ukrainian="У мене є собака. Собаку звати Макс.",
+            ),
+            Example(spanish="Soy médico.", ukrainian="Я лікар."),
+        ),
+    ),
+    exercises=(
+        Exercise(
+            id="e1",
+            sentence="Tengo ___ coche.",
+            translation="У мене є машина.",
+            options=("un", "una"),
+            answer="un",
+            note="Coche — чоловічого роду, однина: un.",
+        ),
+        Exercise(
+            id="e2",
+            sentence="Tengo ___ amiga en Madrid.",
+            translation="У мене є подруга в Мадриді.",
+            options=("un", "una"),
+            answer="una",
+            note="Amiga — жіночого роду, однина: una.",
+        ),
+        Exercise(
+            id="e3",
+            sentence="En el jardín hay ___ árboles.",
+            translation="У саду є кілька дерев.",
+            options=("unos", "unas"),
+            answer="unos",
+            note="Árboles — чоловічий рід, множина: unos.",
+        ),
+        Exercise(
+            id="e4",
+            sentence="Compro ___ naranjas.",
+            translation="Я купую кілька апельсинів.",
+            options=("unos", "unas"),
+            answer="unas",
+            note="Naranjas — жіночий рід, множина: unas.",
+        ),
+        Exercise(
+            id="e5",
+            sentence="Tengo ___ gato. El gato se llama Luna.",
+            translation="У мене є кіт. Кота звати Луна.",
+            options=(),
+            answer="un",
+            note="Кота згадуємо вперше — неозначений артикль, чоловічий рід, однина: un.",
+        ),
+        Exercise(
+            id="e6",
+            sentence="Tengo un coche. ___ coche es rojo.",
+            translation="У мене є машина. Машина червона.",
+            options=("El", "Un"),
+            answer="El",
+            note="Про машину вже сказали, тепер це відома річ: el.",
+        ),
+    ),
+)
