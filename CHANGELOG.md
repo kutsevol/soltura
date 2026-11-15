@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.64.0 (2026-11-15)
+
+### Features
+
+- **grammar**: Add the A1 units for the personal pronouns and the present tense
+  ([#101](https://github.com/kutsevol/soltura/pull/101),
+  [`071d523`](https://github.com/kutsevol/soltura/commit/071d523f8d3cdc4d0ea08458b121c322cb62754a))
+
+
 ## v0.63.0 (2026-11-15)
 
 ### Features
