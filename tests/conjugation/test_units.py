@@ -1,6 +1,6 @@
 import pytest
 
-from soltura.conjugation.forms import Person, Tense
+from soltura.conjugation.forms import Person, Tense, conjugate
 from soltura.conjugation.units import (
     BASIC_TENSES,
     BLOCK_SIZE,
@@ -112,3 +112,65 @@ def test_haber_and_pasar_are_offered_in_their_place_by_frequency() -> None:
         for verb in ("haber", "pasar", "ser")
         for tense in tenses
     ]
+
+
+def test_defective_verbs_are_never_offered_in_any_tense() -> None:
+    verbs = ["resultar", "suceder", "ser"]
+    sets = []
+    introduced: set[UnitSet] = set()
+    while (next_set := next_unit_set(verbs, introduced)) is not None:
+        sets.append(next_set)
+        introduced.add(next_set)
+
+    assert {unit.verb for unit in sets} == {"ser"}
+    assert len(sets) == len(Tense)
+
+
+def test_a_learner_part_way_through_the_old_order_is_offered_every_set_once() -> None:
+    verbs = [*BLOCK, "preguntar"]
+    done = {UnitSet(verb, tense) for verb in verbs for tense in BASIC_TENSES}
+    done |= {UnitSet("preguntar", Tense.CONDITIONAL)}
+    offered: list[UnitSet] = []
+    introduced = set(done)
+    while (next_set := next_unit_set(verbs, introduced)) is not None:
+        offered.append(next_set)
+        introduced.add(next_set)
+
+    assert len(offered) == len(set(offered))
+    assert not set(offered) & done
+    assert {unit for unit in offered} | done == {
+        UnitSet(verb, tense) for verb in verbs for tense in Tense
+    }
+    # The 20 verbs of the first block get their two new tenses before the 21st gets its last one.
+    assert offered[-1] == UnitSet("preguntar", Tense.SUBJUNCTIVE)
+
+
+def test_a_verb_without_all_six_forms_in_the_present_takes_no_place_in_a_block(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    real = conjugate
+
+    def gappy(verb: str, tense: Tense, person: Person) -> str | None:
+        if verb == "comer" and tense == Tense.PRESENT and person == Person.NOSOTROS:
+            return None
+        return real(verb, tense, person)
+
+    monkeypatch.setattr("soltura.conjugation.units.conjugate", gappy)
+    verbs = ["comer", "hablar"]
+    introduced = {UnitSet("hablar", tense) for tense in BASIC_TENSES}
+
+    assert next_unit_set(verbs, introduced) == UnitSet("hablar", Tense.CONDITIONAL)
+
+
+def test_a_conditional_that_cannot_be_conjugated_does_not_hide_the_subjunctive(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    real = conjugate
+
+    def gappy(verb: str, tense: Tense, person: Person) -> str | None:
+        return None if tense == Tense.CONDITIONAL else real(verb, tense, person)
+
+    monkeypatch.setattr("soltura.conjugation.units.conjugate", gappy)
+    introduced = {UnitSet("hablar", tense) for tense in BASIC_TENSES}
+
+    assert next_unit_set(["hablar"], introduced) == UnitSet("hablar", Tense.SUBJUNCTIVE)

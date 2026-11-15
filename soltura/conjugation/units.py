@@ -69,8 +69,11 @@ BLOCK_SIZE = 20
 def _blocks(verbs: Iterable[str]) -> Iterator[list[str]]:
     block: list[str] = []
     for verb in verbs:
-        # A verb that has no personal forms or that the library cannot conjugate takes no place.
-        if verb in IMPERSONAL_VERBS or conjugate(verb, Tense.PRESENT, Person.YO) is None:
+        # A verb that has no personal forms or that the library cannot conjugate in the present
+        # takes no place: it would otherwise get a conditional without its basic tenses.
+        if verb in IMPERSONAL_VERBS or not all(
+            conjugate(verb, Tense.PRESENT, person) for person in Person
+        ):
             continue
         block.append(verb)
         if len(block) == BLOCK_SIZE:
@@ -92,5 +95,8 @@ def next_unit_set(verbs: Iterable[str], introduced: set[UnitSet]) -> UnitSet | N
                         continue
                     if all(conjugate(verb, tense, person) for person in Person):
                         return candidate
-                    break
+                    # In the basic pass a verb that cannot take a tense is left there; the
+                    # conditional and the subjunctive do not depend on each other.
+                    if tenses is BASIC_TENSES:
+                        break
     return None
