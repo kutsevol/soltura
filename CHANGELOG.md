@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.59.0 (2026-11-15)
+
+### Features
+
+- **conjugation**: Teach the conditional and the present subjunctive
+  ([#95](https://github.com/kutsevol/soltura/pull/95),
+  [`a50f354`](https://github.com/kutsevol/soltura/commit/a50f3548e2a2dedc3f097eb65d955f75c65b4901))
+
+
 ## v0.58.0 (2026-11-15)
 
 ### Features
