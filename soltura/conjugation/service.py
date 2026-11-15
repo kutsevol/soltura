@@ -4,6 +4,9 @@ from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import timedelta
+from typing import Annotated
+
+from pydantic import StringConstraints
 
 from soltura.conjugation.forms import Person, Tense, conjugate
 from soltura.conjugation.units import IMPERSONAL_VERBS, parse_unit_key
@@ -119,7 +122,8 @@ def regular_endings() -> dict[Tense, dict[str, list[str]]]:
 
 @dataclass(frozen=True)
 class PracticeItem:
-    verb: str
+    # The item comes back from a page, so its verb is checked where the item is read.
+    verb: Annotated[str, StringConstraints(max_length=30, pattern=r"^[a-zñáéíóúü]+$")]
     tense: Tense
     person: Person
 

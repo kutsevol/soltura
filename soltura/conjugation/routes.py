@@ -46,6 +46,7 @@ STATE_ERROR = "Bad conjugation state"
 PRACTICE_QUEUE = TypeAdapter(list[PracticeItem])
 PRACTICE_ITEM = TypeAdapter(PracticeItem)
 MAX_PRACTICE_QUEUE = len(Tense) * len(Person)
+TENSE_VALUES = frozenset(tense.value for tense in Tense)
 PRACTICE_MESSAGE = {
     PracticeProblem.UNKNOWN_VERB: "Не вдалося відмінювати це дієслово. Введіть інфінітив, напр. comer.",
     PracticeProblem.NO_TENSE: "Оберіть хоча б один час.",
@@ -178,7 +179,7 @@ def practice_start(
     verb: Annotated[str, Form()] = "",
     tense: Annotated[list[str] | None, Form()] = None,
 ) -> HTMLResponse:
-    chosen = [Tense(value) for value in tense or [] if value in {item.value for item in Tense}]
+    chosen = [Tense(value) for value in tense or [] if value in TENSE_VALUES]
     try:
         queue = start_practice(verb, chosen)
     except InvalidPractice as error:
@@ -208,13 +209,13 @@ def practice_answer(
     if give_up:
         answer = ""
     rest = parse_state(PRACTICE_QUEUE, queue, STATE_ERROR)
+    if len(rest) >= MAX_PRACTICE_QUEUE:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=STATE_ERROR)
     try:
         item = PRACTICE_ITEM.validate_python({"verb": verb, "tense": tense, "person": person})
         result = answer_practice(item, answer)
     except (ValidationError, ValueError) as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=STATE_ERROR) from error
-    if len(rest) >= MAX_PRACTICE_QUEUE:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=STATE_ERROR)
     return templates.TemplateResponse(
         request,
         "conjugation/result.html",
@@ -232,7 +233,9 @@ def practice_next(
     request: Request, learner_id: LearnerIdDep, queue: Annotated[str, Form()]
 ) -> HTMLResponse:
     items = parse_state(PRACTICE_QUEUE, queue, STATE_ERROR)
-    if not items or len(items) >= MAX_PRACTICE_QUEUE:
+    if len(items) >= MAX_PRACTICE_QUEUE:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=STATE_ERROR)
+    if not items:
         return templates.TemplateResponse(request, "conjugation/practice_done.html", {})
     first, *rest = items
     return templates.TemplateResponse(

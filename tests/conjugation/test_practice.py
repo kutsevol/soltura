@@ -242,3 +242,90 @@ async def test_the_verb_page_and_the_trainer_link_to_the_drill(learner_client: A
 
     assert 'href="/conjugation/practice?verb=comer"' in verb_page.text
     assert 'href="/conjugation/practice"' in trainer.text
+
+
+def _queue(count: int) -> str:
+    return "[" + ",".join(['{"verb":"comer","tense":"present","person":"yo"}'] * count) + "]"
+
+
+async def test_the_size_limit_of_a_queue_is_the_same_on_answer_and_next(
+    learner_client: AsyncClient,
+) -> None:
+    card = await _start(learner_client)
+    answer = _answer_data(card, "como")
+
+    allowed = await learner_client.post(
+        "/conjugation/practice/answer", data={**answer, "queue": _queue(MAX_PRACTICE_QUEUE - 1)}
+    )
+    next_allowed = await learner_client.post(
+        "/conjugation/practice/next", data={"queue": _queue(MAX_PRACTICE_QUEUE - 1)}
+    )
+    answer_refused = await learner_client.post(
+        "/conjugation/practice/answer", data={**answer, "queue": _queue(MAX_PRACTICE_QUEUE)}
+    )
+    next_refused = await learner_client.post(
+        "/conjugation/practice/next", data={"queue": _queue(MAX_PRACTICE_QUEUE)}
+    )
+
+    assert (allowed.status_code, next_allowed.status_code) == (200, 200)
+    assert (answer_refused.status_code, next_refused.status_code) == (400, 400)
+
+
+@pytest.mark.parametrize(
+    "queue",
+    [
+        '[{"verb":"ser;drop","tense":"present","person":"yo"}]',
+        '[{"verb":"' + "a" * 31 + '","tense":"present","person":"yo"}]',
+        '[{"verb":"comer","tense":"pluperfect","person":"yo"}]',
+        '[{"verb":"comer","tense":"present","person":"usted"}]',
+        '[{"verb":"COMER","tense":"present","person":"yo"}]',
+    ],
+    ids=["shape", "length", "tense", "person", "case"],
+)
+async def test_a_tampered_item_in_the_queue_is_refused_on_answer_and_on_next(
+    learner_client: AsyncClient, queue: str
+) -> None:
+    card = await _start(learner_client)
+
+    answered = await learner_client.post(
+        "/conjugation/practice/answer", data={**_answer_data(card, "como"), "queue": queue}
+    )
+    next_card = await learner_client.post("/conjugation/practice/next", data={"queue": queue})
+
+    assert (answered.status_code, next_card.status_code) == (400, 400)
+
+
+@pytest.mark.parametrize("verb", ["llover", "COMER", "lavarse"])
+async def test_a_verb_the_trainer_would_not_conjugate_is_refused_in_the_answer_form(
+    learner_client: AsyncClient, verb: str
+) -> None:
+    card = await _start(learner_client)
+
+    response = await learner_client.post(
+        "/conjugation/practice/answer", data={**_answer_data(card, "como"), "verb": verb}
+    )
+
+    assert response.status_code == 400
+
+
+async def test_giving_up_shows_the_expected_form(learner_client: AsyncClient) -> None:
+    card = await _start(learner_client)
+    data = {**_answer_data(card, "ignored"), "give_up": "1"}
+    form = conjugate(data["verb"], Tense(data["tense"]), Person(data["person"]))
+
+    response = await learner_client.post("/conjugation/practice/answer", data=data)
+
+    assert "Ваша відповідь" not in response.text
+    assert f"Очікувалось: <strong>{form}</strong>" in response.text
+
+
+async def test_a_verb_in_the_address_is_cut_and_escaped_and_a_mixed_case_verb_starts(
+    learner_client: AsyncClient,
+) -> None:
+    page = await learner_client.get(
+        "/conjugation/practice", params={"verb": "<script>alert(1)</script>" + "x" * 40}
+    )
+    card = await _start(learner_client, "Hablar")
+
+    assert "<script>" not in page.text and "x" * 6 not in page.text
+    assert "<strong>hablar</strong>" in card
