@@ -2,12 +2,14 @@ from datetime import datetime
 from functools import cache
 
 import fsrs
+from sqlalchemy import func, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
 from soltura.config import settings
 from soltura.learner.models import (
+    MAX_TRANSLATION_LENGTH,
     CardState,
     KnowledgeType,
     LearnerLexeme,
@@ -66,6 +68,32 @@ def apply_fsrs_card(card: MemoryCard, fsrs_card: fsrs.Card) -> None:
     card.last_review = fsrs_card.last_review
 
 
+def clean_translation(translation: str | None) -> str | None:
+    # A model writes the translation and a page sends it back, so it is trimmed to what the
+    # column holds; an empty one is no translation.
+    return (translation or "").strip()[:MAX_TRANSLATION_LENGTH].rstrip() or None
+
+
+async def fill_missing_translation(
+    session: AsyncSession, learner_id: int, lexeme_id: int, translation: str | None
+) -> None:
+    # Only a word being learned that has no translation yet: a word that was never saved
+    # stays out of the learner's words, and a translation already kept is not replaced.
+    cleaned = clean_translation(translation)
+    if cleaned is None:
+        return
+    await session.execute(
+        update(LearnerLexeme)
+        .where(
+            col(LearnerLexeme.learner_id) == learner_id,
+            col(LearnerLexeme.lexeme_id) == lexeme_id,
+            col(LearnerLexeme.status) == LexemeStatus.LEARNING,
+            col(LearnerLexeme.translation).is_(None),
+        )
+        .values(translation=cleaned)
+    )
+
+
 async def save_word(
     session: AsyncSession,
     learner_id: int,
@@ -73,6 +101,7 @@ async def save_word(
     sentence: str,
     now: datetime,
     topic: str | None = None,
+    translation: str | None = None,
 ) -> list[MemoryCard]:
     # A tapped word is being learned even if onboarding had marked it known: the tap
     # is the evidence that it is not.
@@ -81,11 +110,18 @@ async def save_word(
         lexeme_id=lexeme_id,
         status=LexemeStatus.LEARNING,
         origin=LexemeOrigin.READING,
+        translation=clean_translation(translation),
     )
     await session.execute(
         lexeme_upsert.on_conflict_do_update(
             index_elements=["learner_id", "lexeme_id"],
-            set_={"status": LexemeStatus.LEARNING},
+            # Saving a word again keeps the translation it already has.
+            set_={
+                "status": LexemeStatus.LEARNING,
+                "translation": func.coalesce(
+                    LearnerLexeme.translation, lexeme_upsert.excluded.translation
+                ),
+            },
         )
     )
     session.add(

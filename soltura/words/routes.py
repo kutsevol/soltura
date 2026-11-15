@@ -95,10 +95,11 @@ async def add_words_route(
     learner_id: LearnerIdDep,
     lemma: Annotated[list[str] | None, Form()] = None,
     sentence: Annotated[list[str] | None, Form()] = None,
+    translation: Annotated[list[str] | None, Form()] = None,
 ) -> HTMLResponse:
     try:
         lemmas = await add_words(
-            session, learner_id, lemma or [], sentence or [], datetime.now(UTC)
+            session, learner_id, lemma or [], sentence or [], datetime.now(UTC), translation
         )
     except InvalidAddForm:
         return _message(request, ADD_FORM_MESSAGE)

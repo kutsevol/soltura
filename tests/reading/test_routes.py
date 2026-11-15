@@ -117,6 +117,9 @@ async def test_tapping_and_saving_a_word(
     )
 
     assert tapped.status_code == 200
+    save_values = re.search(r"hx-vals='([^']*)'", tapped.text)
+    assert save_values is not None
+    assert json.loads(save_values.group(1))["translation"] == "бути"
     assert 'class="close" aria-label="Закрити"' in tapped.text
     assert 'class="close" aria-label="Закрити"' in saved.text
     assert "<em>ser</em>" in tapped.text

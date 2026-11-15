@@ -8,4 +8,4 @@
 {% endif %}
 <button type="button"
         hx-post="/reading/save" hx-target="#gloss"
-        hx-vals='{{ {"lemma": result.lemma, "sentence": sentence, "topic": topic} | tojson }}'>Зберегти слово</button>
+        hx-vals='{{ {"lemma": result.lemma, "sentence": sentence, "topic": topic, "translation": result.translation} | tojson }}'>Зберегти слово</button>

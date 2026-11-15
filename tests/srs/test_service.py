@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
 from soltura.learner.models import (
+    MAX_TRANSLATION_LENGTH,
     CardState,
     KnowledgeType,
     Learner,
@@ -20,7 +21,12 @@ from soltura.learner.models import (
     UnitKind,
     WordContext,
 )
-from soltura.srs.service import due_queue, interleave, review, save_word
+from soltura.srs.service import (
+    due_queue,
+    interleave,
+    review,
+    save_word,
+)
 from tests.factories import MemoryCardFactory
 
 NOW = datetime(2026, 10, 31, 12, 0, tzinfo=UTC)
@@ -253,3 +259,61 @@ async def test_forgetting_a_reviewed_card_sends_it_to_relearning(
     assert stored is not None
     assert stored.state == CardState.RELEARNING
     assert stored.due < NOW + timedelta(days=4)
+
+
+async def _kept_translation(session: AsyncSession) -> str | None:
+    kept: str | None = (await session.execute(select(LearnerLexeme.translation))).scalar_one()
+    return kept
+
+
+async def test_a_saved_word_keeps_its_translation_and_saving_it_again_does_not_replace_it(
+    session: AsyncSession, learner: Learner, lexemes: list[Lexeme]
+) -> None:
+    assert learner.id is not None and lexemes[1].id is not None
+
+    await save_word(session, learner.id, lexemes[1].id, "Estoy en casa.", NOW, None, " estar ")
+    first = await _kept_translation(session)
+    await save_word(session, learner.id, lexemes[1].id, "Estoy bien.", NOW, None, "бути")
+
+    assert (first, await _kept_translation(session)) == ("estar", "estar")
+    assert len((await session.execute(select(MemoryCard))).scalars().all()) == 2
+
+
+async def test_saving_a_word_again_fills_a_translation_it_never_had(
+    session: AsyncSession, learner: Learner, lexemes: list[Lexeme]
+) -> None:
+    assert learner.id is not None and lexemes[1].id is not None
+    await save_word(session, learner.id, lexemes[1].id, "Estoy en casa.", NOW)
+
+    assert await _kept_translation(session) is None
+    await save_word(session, learner.id, lexemes[1].id, "Estoy bien.", NOW, None, "бути")
+
+    assert await _kept_translation(session) == "бути"
+
+
+@pytest.mark.parametrize(
+    ("given", "kept"),
+    [
+        ("  ", None),
+        ("", None),
+        (None, None),
+        ("x" * (MAX_TRANSLATION_LENGTH + 50), "x" * MAX_TRANSLATION_LENGTH),
+    ],
+    ids=["blank", "empty", "none", "long"],
+)
+async def test_a_blank_translation_is_none_and_a_long_one_is_cut_to_the_column(
+    session: AsyncSession,
+    learner: Learner,
+    lexemes: list[Lexeme],
+    given: str | None,
+    kept: str | None,
+) -> None:
+    assert learner.id is not None and lexemes[1].id is not None
+
+    await save_word(session, learner.id, lexemes[1].id, "Estoy en casa.", NOW, None, given)
+
+    assert await _kept_translation(session) == kept
+
+
+async def test_the_translation_column_holds_what_a_translation_is_cut_to() -> None:
+    assert LearnerLexeme.__table__.c.translation.type.length == MAX_TRANSLATION_LENGTH  # type: ignore[attr-defined]

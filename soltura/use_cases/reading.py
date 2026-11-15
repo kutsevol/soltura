@@ -60,7 +60,7 @@ from soltura.reading.service import (
 )
 from soltura.reading.topics import find_topic
 from soltura.reading.variation import pick_variation, variation_prompt
-from soltura.srs.service import review, save_word
+from soltura.srs.service import fill_missing_translation, review, save_word
 
 
 async def prepare_text(
@@ -167,6 +167,8 @@ async def tap_word(
     reviewed = False
     lexemes = await get_lexemes_by_lemmas(session, [lemma])
     if lexemes and lexemes[0].id is not None:
+        # A word already being learned that has no translation yet gets this one.
+        await fill_missing_translation(session, learner_id, lexemes[0].id, gloss.translation)
         # Looking a due word up is a failed recognition, the only signal reading gives.
         card = await get_due_card(session, learner_id, lexemes[0].id, KnowledgeType.RECOGNIZE, now)
         if card is not None:
@@ -184,6 +186,7 @@ async def save_tapped_word(
     sentence: str,
     now: datetime,
     topic: str | None = None,
+    translation: str | None = None,
 ) -> list[MemoryCard]:
     lemma = lemma.strip().lower()
     # The LLM's lemma can be one the frequency seed never ranked; it still gets a
@@ -196,7 +199,7 @@ async def save_tapped_word(
     [lexeme] = await get_lexemes_by_lemmas(session, [lemma])
     if lexeme.id is None:
         raise ValueError(f"Lexeme for {lemma!r} has no id")
-    return await save_word(session, learner_id, lexeme.id, sentence, now, topic)
+    return await save_word(session, learner_id, lexeme.id, sentence, now, topic, translation)
 
 
 async def check_gist(

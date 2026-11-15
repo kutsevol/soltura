@@ -750,3 +750,97 @@ async def test_a_closing_tag_in_a_question_an_answer_or_the_text_cannot_end_its_
     judged = llm.prompts[0]
     assert (judged.count("<qa>"), judged.count("</qa>"), judged.count("<text>")) == (2, 2, 1)
     assert llm.prompts[1].count("</text>") == 1
+
+
+async def _translation(session: AsyncSession, lexeme_id: int) -> str | None:
+    kept: str | None = (
+        await session.execute(
+            select(LearnerLexeme.translation).where(col(LearnerLexeme.lexeme_id) == lexeme_id)
+        )
+    ).scalar_one_or_none()
+    return kept
+
+
+async def test_a_tap_on_a_learning_word_without_a_translation_keeps_the_models_one(
+    session: AsyncSession,
+    learner: Learner,
+    lexemes: list[Lexeme],
+    llm: FakeLLM,
+    reading_text: ReadingText,
+) -> None:
+    assert learner.id is not None and lexemes[2].id is not None and reading_text.id is not None
+    await save_word(session, learner.id, lexemes[2].id, "Aunque llueve, salimos.", NOW)
+    llm.answer(
+        Gloss(lemma="aunque", translation="хоча"), Gloss(lemma="aunque", translation="навіть")
+    )
+
+    await tap_word(session, llm, learner.id, reading_text.id, "Aunque", "Aunque es tarde.", NOW)
+    first = await _translation(session, lexemes[2].id)
+    await tap_word(session, llm, learner.id, reading_text.id, "Aunque", "Aunque es tarde.", NOW)
+
+    assert (first, await _translation(session, lexemes[2].id)) == ("хоча", "хоча")
+
+
+async def test_a_tap_on_a_word_that_is_not_being_learned_keeps_nothing(
+    session: AsyncSession,
+    learner: Learner,
+    lexemes: list[Lexeme],
+    llm: FakeLLM,
+    reading_text: ReadingText,
+) -> None:
+    assert learner.id is not None and lexemes[2].id is not None and reading_text.id is not None
+    session.add(
+        LearnerLexeme(
+            learner_id=learner.id,
+            lexeme_id=lexemes[2].id,
+            status=LexemeStatus.KNOWN,
+            origin=LexemeOrigin.ONBOARDING,
+        )
+    )
+    await session.flush()
+    llm.answer(Gloss(lemma="aunque", translation="хоча"))
+
+    await tap_word(session, llm, learner.id, reading_text.id, "aunque", "Aunque es tarde.", NOW)
+
+    assert await _translation(session, lexemes[2].id) is None
+    assert (
+        await session.execute(select(LearnerLexeme))
+    ).scalars().one().status == LexemeStatus.KNOWN
+
+
+async def test_saving_a_tapped_word_keeps_the_translation_that_came_with_it(
+    session: AsyncSession, learner: Learner
+) -> None:
+    assert learner.id is not None
+
+    await save_tapped_word(
+        session, learner.id, "Empresa", "Trabajo en una empresa.", NOW, None, "компанія"
+    )
+
+    lexeme = (
+        await session.execute(select(Lexeme).where(col(Lexeme.lemma) == "empresa"))
+    ).scalar_one()
+    assert lexeme.id is not None and await _translation(session, lexeme.id) == "компанія"
+
+
+async def test_a_tap_fills_only_the_translation_of_the_tapping_learner(
+    session: AsyncSession,
+    learner: Learner,
+    other_learner: Learner,
+    lexemes: list[Lexeme],
+    llm: FakeLLM,
+    reading_text: ReadingText,
+) -> None:
+    assert learner.id is not None and other_learner.id is not None
+    assert lexemes[2].id is not None and reading_text.id is not None
+    await save_word(session, learner.id, lexemes[2].id, "Aunque llueve, salimos.", NOW)
+    await save_word(session, other_learner.id, lexemes[2].id, "Aunque llueve, salimos.", NOW)
+    llm.answer(Gloss(lemma="aunque", translation="хоча"))
+
+    await tap_word(session, llm, learner.id, reading_text.id, "Aunque", "Aunque es tarde.", NOW)
+
+    rows = (await session.execute(select(LearnerLexeme))).scalars().all()
+    assert {row.learner_id: row.translation for row in rows} == {
+        learner.id: "хоча",
+        other_learner.id: None,
+    }
