@@ -10,6 +10,9 @@ GIST_LABEL = {
 }
 
 
+FACT_LABEL = {"correct": "Вірно", "partly": "Частково", "wrong": "Невірно"}
+
+
 @dataclass(frozen=True)
 class Segment:
     text: str

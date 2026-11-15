@@ -28,27 +28,34 @@ from soltura.learner.repository import (
     save_gist,
     save_reading_text,
 )
-from soltura.llm.client import LLMClient
+from soltura.llm.client import LLMClient, LLMUnavailableError
 from soltura.reading.progress import RECENT_TEXTS, ReadingProgress, reading_score
 from soltura.reading.service import (
+    ANSWERS_SYSTEM,
     GIST_SYSTEM,
     GLOSS_SYSTEM,
     MAX_SIMPLIFICATIONS,
     NEW_WORD_PARTS_OF_SPEECH,
     NEW_WORD_WINDOW,
+    QUESTIONS_SYSTEM,
     RECENT_TITLES,
     TARGET_COVERAGE,
     WRITER_SYSTEM,
+    FactQuestions,
+    FactVerdict,
+    FactVerdicts,
     GeneratedText,
     GistVerdict,
     Gloss,
     PreparedText,
     TapResult,
+    as_data,
     due_lemmas,
     first_draft_prompt,
     is_plannable,
     lemmas_counted_as_known,
     pick_new_words,
+    question_count,
     simplify_prompt,
 )
 from soltura.reading.topics import find_topic
@@ -213,6 +220,52 @@ async def check_gist(
     await save_gist(session, text_id, GistResult(verdict.verdict))
     await session.commit()
     return verdict
+
+
+async def make_questions(
+    session: AsyncSession, llm: LLMClient, learner_id: int, text_id: int, text: str
+) -> list[str]:
+    await _require_own_text(session, learner_id, text_id)
+    count = question_count(await vocabulary_range(session, learner_id))
+    generated = await llm(
+        FactQuestions,
+        system=QUESTIONS_SYSTEM,
+        prompt=f"Write {count} questions.\n\n<text>\n{as_data(text)}\n</text>",
+        effort="low",
+        max_tokens=4_000,
+    )
+    questions = [question.strip() for question in generated.questions if question.strip()]
+    if not questions:
+        raise LLMUnavailableError("The model wrote no questions")
+    return questions[:count]
+
+
+async def check_answers(
+    session: AsyncSession,
+    llm: LLMClient,
+    learner_id: int,
+    text_id: int,
+    text: str,
+    questions: list[str],
+    answers: list[str],
+) -> list[FactVerdict]:
+    # Like the gist check, the text comes back from the page: the id says whose answers
+    # these are, and only the learner could gain from a text that is not the one shown.
+    await _require_own_text(session, learner_id, text_id)
+    pairs = "\n".join(
+        f"<qa>\nQuestion {number}: {as_data(question)}\nAnswer: {as_data(answer)}\n</qa>"
+        for number, (question, answer) in enumerate(zip(questions, answers, strict=True), start=1)
+    )
+    judged = await llm(
+        FactVerdicts,
+        system=ANSWERS_SYSTEM,
+        prompt=f"<text>\n{as_data(text)}\n</text>\n\n{pairs}",
+        effort="low",
+        max_tokens=4_000,
+    )
+    if len(judged.verdicts) != len(questions):
+        raise LLMUnavailableError("The model judged a different number of answers than were asked")
+    return judged.verdicts
 
 
 async def reading_progress(session: AsyncSession, learner_id: int) -> ReadingProgress:

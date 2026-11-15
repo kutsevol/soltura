@@ -35,4 +35,12 @@
 </form>
 <div id="gist" aria-live="polite"></div>
 
+<form class="questions" hx-post="/reading/questions" hx-target="#questions" hx-indicator="#questions-loading">
+  <input type="hidden" name="text_id" value="{{ text_id }}">
+  <input type="hidden" name="text" value="{{ prepared.text }}">
+  <button type="submit" class="secondary">Запитання за текстом</button>
+  <span id="questions-loading" class="htmx-indicator" aria-busy="true">Складаю запитання…</span>
+</form>
+<div id="questions" aria-live="polite"></div>
+
 {% include "study/next.html" %}
