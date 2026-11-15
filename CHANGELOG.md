@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.60.0 (2026-11-15)
+
+### Features
+
+- **conjugation**: Add notes on irregular verb patterns
+  ([#96](https://github.com/kutsevol/soltura/pull/96),
+  [`d7ef8aa`](https://github.com/kutsevol/soltura/commit/d7ef8aa2e2fd3c5ce837672581f36b85c83e0c85))
+
+
 ## v0.59.0 (2026-11-15)
 
 ### Features
