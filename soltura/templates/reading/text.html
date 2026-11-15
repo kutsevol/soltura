@@ -12,9 +12,11 @@
       {%- set sentence_text = sentence | map(attribute="text") | join("") | trim -%}
       {%- for segment in sentence -%}
         {%- if segment.is_word -%}
+          {%- if segment.translation -%}<ruby>{%- endif -%}
           <button type="button" class="word"
                   hx-post="/reading/tap" hx-target="#gloss"
                   hx-vals='{{ {"word": segment.text, "sentence": sentence_text, "topic": topic, "text_id": text_id} | tojson }}'>{{ segment.text }}</button>
+          {%- if segment.translation -%}<rt>{{ segment.translation }}</rt></ruby>{%- endif -%}
         {%- else -%}
           {{ segment.text }}
         {%- endif -%}

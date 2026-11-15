@@ -38,6 +38,13 @@ def analyze(text: str) -> list[Token]:
     ]
 
 
+def lemmas_by_offset(text: str) -> dict[int, str]:
+    # Every alphabetic token, names included, keyed by where it starts in the text: a page
+    # that splits the text its own way finds the lemma of a word by the word's position, and a
+    # word the tokenizer cut differently finds none rather than another word's.
+    return {token.idx: token.lemma_.lower() for token in load_pipeline()(text) if token.is_alpha}
+
+
 def analyze_words(words: list[str], batch_size: int = 1000) -> list[list[Token]]:
     # A word on its own has no context, and the tagger often calls a common lowercase
     # noun such as "casa" a proper noun, so isolated words keep their PROPN tokens.

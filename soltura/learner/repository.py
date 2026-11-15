@@ -422,6 +422,22 @@ async def get_lemmas_in_rank_window(
     return [(lemma, pos) for lemma, pos in result.all()]
 
 
+async def get_learning_translations(
+    session: AsyncSession, learner_id: int, lemmas: Iterable[str]
+) -> dict[str, str]:
+    result = await session.execute(
+        select(Lexeme.lemma, LearnerLexeme.translation)
+        .join(LearnerLexeme, col(LearnerLexeme.lexeme_id) == col(Lexeme.id))
+        .where(
+            col(LearnerLexeme.learner_id) == learner_id,
+            col(LearnerLexeme.status) == LexemeStatus.LEARNING,
+            col(LearnerLexeme.translation).is_not(None),
+            col(Lexeme.lemma).in_(set(lemmas)),
+        )
+    )
+    return {lemma: translation for lemma, translation in result.all() if translation}
+
+
 async def get_due_recall_cards(
     session: AsyncSession, learner_id: int, lexeme_ids: Iterable[int], now: datetime
 ) -> list[MemoryCard]:

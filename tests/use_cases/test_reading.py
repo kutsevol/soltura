@@ -1,5 +1,6 @@
 import random
 from datetime import UTC, datetime
+from typing import Any
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,7 +22,12 @@ from soltura.learner.models import (
     ReviewLog,
     ReviewSource,
 )
-from soltura.learner.repository import get_recent_titles, save_placement_run, save_reading_text
+from soltura.learner.repository import (
+    get_learning_translations,
+    get_recent_titles,
+    save_placement_run,
+    save_reading_text,
+)
 from soltura.llm.client import LLMUnavailableError
 from soltura.reading.service import (
     NEW_WORD_WINDOW,
@@ -43,6 +49,7 @@ from soltura.use_cases.reading import (
     reading_progress,
     save_tapped_word,
     tap_word,
+    translations_in_text,
 )
 from tests.conftest import EASY_TEXT, HARD_TEXT, KnowFn, RankFn
 from tests.factories import LexemeFactory
@@ -844,3 +851,53 @@ async def test_a_tap_fills_only_the_translation_of_the_tapping_learner(
         learner.id: "хоча",
         other_learner.id: None,
     }
+
+
+async def _learn(
+    session: AsyncSession,
+    learner_id: int,
+    lemma: str,
+    translation: str | None,
+    status: LexemeStatus = LexemeStatus.LEARNING,
+) -> None:
+    lexeme = LexemeFactory.build(lemma=lemma, frequency_rank=100)
+    session.add(lexeme)
+    await session.flush()
+    assert lexeme.id is not None
+    session.add(
+        LearnerLexeme(
+            learner_id=learner_id,
+            lexeme_id=lexeme.id,
+            status=status,
+            origin=LexemeOrigin.READING,
+            translation=translation,
+        )
+    )
+    await session.flush()
+
+
+async def test_only_the_words_being_learned_with_a_translation_are_translated_in_a_text(
+    session: AsyncSession,
+    learner: Learner,
+    other_learner: Learner,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert learner.id is not None and other_learner.id is not None
+    text = "Hoy hace sol. Voy a la playa con mi hermano y comemos pan. La playa es grande."
+    await _learn(session, learner.id, "playa", "пляж")
+    await _learn(session, learner.id, "hermano", None)
+    await _learn(session, learner.id, "pan", "хліб", LexemeStatus.KNOWN)
+    await _learn(session, other_learner.id, "sol", "сонце")
+    calls = []
+    real = get_learning_translations
+
+    async def counted(*args: Any) -> dict[str, str]:
+        calls.append(args)
+        return await real(*args)
+
+    monkeypatch.setattr("soltura.use_cases.reading.get_learning_translations", counted)
+
+    translations = await translations_in_text(session, learner.id, text)
+
+    assert translations == {text.index("playa"): "пляж", text.rindex("playa"): "пляж"}
+    assert len(calls) == 1
