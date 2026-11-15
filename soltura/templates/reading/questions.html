@@ -1,0 +1,13 @@
+<form hx-post="/reading/answers" hx-target="#questions" hx-indicator="#answers-loading">
+  <input type="hidden" name="text_id" value="{{ text_id }}">
+  <input type="hidden" name="text" value="{{ text }}">
+  {% for question in questions %}
+    <label>
+      {{ question }}
+      <input type="hidden" name="questions" value="{{ question }}">
+      <textarea name="answers" rows="2" maxlength="{{ max_answer }}" required></textarea>
+    </label>
+  {% endfor %}
+  <button type="submit" class="secondary">Перевірити</button>
+  <span id="answers-loading" class="htmx-indicator" aria-busy="true">Перевіряю…</span>
+</form>

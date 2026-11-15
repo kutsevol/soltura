@@ -1,0 +1,7 @@
+{% for row in rows %}
+  <article>
+    <p>{{ row.question }}</p>
+    <p class="note">{{ row.answer }}</p>
+    <p><strong>{{ row.label }}</strong> · {{ row.reason }}</p>
+  </article>
+{% endfor %}

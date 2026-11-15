@@ -19,8 +19,13 @@ from soltura.learner.models import (
 )
 from soltura.llm.client import LLMClient, get_llm
 from soltura.reading.service import (
+    MAX_FACT_ANSWER,
     MAX_GIST_ANSWER,
     MAX_GIST_TEXT,
+    MAX_QUESTION,
+    FactQuestions,
+    FactVerdict,
+    FactVerdicts,
     GeneratedText,
     GistVerdict,
     Gloss,
@@ -369,3 +374,159 @@ async def test_the_progress_page_shows_the_score_and_counts_and_marks_a_text_tha
     assert "Розуміння текстів: 75%" in response.text
     assert "Перевірено слів: 7" in response.text
     assert "текст був занадто складним для вашого рівня" in response.text
+
+
+async def test_a_text_offers_the_questions_button(
+    reading_client: AsyncClient, llm: FakeLLM, know: KnowFn
+) -> None:
+    await know(f"{EASY_TEXT.title}. {EASY_TEXT.text}")
+    llm.answer(EASY_TEXT)
+
+    response = await reading_client.post("/reading/text", data={"topic": "la playa"})
+
+    assert 'hx-post="/reading/questions"' in response.text
+
+
+async def test_the_questions_come_back_as_a_form_with_a_box_for_each(
+    reading_client: AsyncClient, llm: FakeLLM, reading_text: ReadingText
+) -> None:
+    llm.answer(FactQuestions(questions=["Куди він іде?", "З ким?", "<b>Що?</b>"]))
+
+    response = await reading_client.post(
+        "/reading/questions", data={"text_id": reading_text.id, "text": EASY_TEXT.text}
+    )
+
+    assert response.status_code == 200
+    # A learner with no placement run is measured against the baseline, so three are asked.
+    assert response.text.count('name="answers"') == 3
+    assert 'name="questions" value="Куди він іде?"' in response.text
+    assert f'name="text_id" value="{reading_text.id}"' in response.text
+    assert "<b>" not in response.text
+
+
+@pytest.mark.parametrize("text", ["  ", "a" * (MAX_GIST_TEXT + 1)], ids=["blank", "long"])
+async def test_a_questions_request_with_no_usable_text_is_refused_before_the_model(
+    reading_client: AsyncClient, llm: FakeLLM, reading_text: ReadingText, text: str
+) -> None:
+    response = await reading_client.post(
+        "/reading/questions", data={"text_id": reading_text.id, "text": text}
+    )
+
+    assert response.status_code == 422
+    assert response.headers["content-type"].startswith("text/html")
+    assert llm.prompts == []
+
+
+async def test_the_answers_come_back_judged_with_a_reason_each(
+    reading_client: AsyncClient, llm: FakeLLM, session: AsyncSession, reading_text: ReadingText
+) -> None:
+    llm.answer(
+        FactVerdicts(
+            verdicts=[
+                FactVerdict(verdict="correct", reason="Він іде на пляж."),
+                FactVerdict(verdict="partly", reason="<script>alert(1)</script>"),
+            ]
+        )
+    )
+
+    response = await reading_client.post(
+        "/reading/answers",
+        data={
+            "text_id": reading_text.id,
+            "text": EASY_TEXT.text,
+            "questions": ["Куди він іде?", "З ким?"],
+            "answers": ["На пляж", "З другом"],
+        },
+    )
+
+    assert response.status_code == 200
+    assert "Вірно" in response.text and "Частково" in response.text
+    assert "Він іде на пляж." in response.text
+    assert "<script>" not in response.text and "&lt;script&gt;" in response.text
+    assert len(llm.prompts) == 1
+    await session.refresh(reading_text)
+    assert reading_text.gist is None
+    for table in (MemoryCard, ReviewLog):
+        assert (await session.execute(select(table))).scalars().all() == []
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        {"questions": ["А?"], "answers": ["  "]},
+        {"questions": ["А?", "Б?"], "answers": ["а"]},
+        {"questions": [], "answers": []},
+        {"answers": ["а"]},
+        {"questions": ["А?"] * 4, "answers": ["а"] * 4},
+        {"questions": ["А" * (MAX_QUESTION + 1)], "answers": ["а"]},
+        {"questions": ["А?"], "answers": ["а" * (MAX_FACT_ANSWER + 1)]},
+    ],
+    ids=[
+        "blank",
+        "count mismatch",
+        "none",
+        "no questions",
+        "too many",
+        "long question",
+        "long answer",
+    ],
+)
+async def test_answers_that_do_not_match_the_questions_or_are_empty_or_long_are_refused_before_the_model(
+    reading_client: AsyncClient, llm: FakeLLM, reading_text: ReadingText, data: dict[str, list[str]]
+) -> None:
+    response = await reading_client.post(
+        "/reading/answers", data={"text_id": reading_text.id, "text": EASY_TEXT.text, **data}
+    )
+
+    assert response.status_code == 422
+    assert response.headers["content-type"].startswith("text/html")
+    assert llm.prompts == []
+
+
+async def test_the_answer_limits_are_inclusive_and_a_newline_counts_once(
+    reading_client: AsyncClient, llm: FakeLLM, reading_text: ReadingText
+) -> None:
+    llm.answer(FactVerdicts(verdicts=[FactVerdict(verdict="correct", reason="Так.")]))
+    answer = "\r\n".join(["b" * 9] * (MAX_FACT_ANSWER // 10))
+
+    response = await reading_client.post(
+        "/reading/answers",
+        data={
+            "text_id": reading_text.id,
+            "text": "a" * MAX_GIST_TEXT,
+            "questions": ["А" * MAX_QUESTION],
+            "answers": [answer],
+        },
+    )
+
+    assert response.status_code == 200
+
+
+async def test_questions_or_answers_for_another_learners_text_are_forbidden(
+    reading_client: AsyncClient, llm: FakeLLM, other_reading_text: ReadingText
+) -> None:
+    asked = await reading_client.post(
+        "/reading/questions", data={"text_id": other_reading_text.id, "text": EASY_TEXT.text}
+    )
+    answered = await reading_client.post(
+        "/reading/answers",
+        data={
+            "text_id": other_reading_text.id,
+            "text": EASY_TEXT.text,
+            "questions": ["А?"],
+            "answers": ["а"],
+        },
+    )
+
+    assert (asked.status_code, answered.status_code) == (403, 403)
+    assert llm.prompts == []
+
+
+async def test_the_questions_need_a_learner(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings.auth, "dev_telegram_user_id", None)
+
+    response = await client.post("/reading/questions", data={"text_id": 1, "text": "Hola"})
+
+    assert response.status_code == 401

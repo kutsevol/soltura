@@ -9,12 +9,20 @@ from soltura.db import get_session
 from soltura.learner.dependencies import LearnerDep, LearnerIdDep
 from soltura.learner.models import StudyStep
 from soltura.llm.client import LLMClient, get_llm
-from soltura.reading.service import MAX_GIST_ANSWER, MAX_GIST_TEXT
+from soltura.reading.service import (
+    FACT_QUESTIONS_ABOVE,
+    MAX_FACT_ANSWER,
+    MAX_GIST_ANSWER,
+    MAX_GIST_TEXT,
+    MAX_QUESTION,
+)
 from soltura.reading.topics import TOPICS
-from soltura.reading.views import GIST_LABEL, progress_view, split_for_reading
+from soltura.reading.views import FACT_LABEL, GIST_LABEL, progress_view, split_for_reading
 from soltura.templating import templates
 from soltura.use_cases.reading import (
+    check_answers,
     check_gist,
+    make_questions,
     prepare_text,
     reading_progress,
     save_tapped_word,
@@ -140,6 +148,74 @@ async def gist(
         "reading/gist.html",
         {"verdict": verdict, "label": GIST_LABEL[verdict.verdict]},
     )
+
+
+def _refused(request: Request, message: str) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request, "reading/error.html", {"message": message}, status_code=422
+    )
+
+
+@router.post("/questions", response_class=HTMLResponse)
+async def fact_questions(
+    request: Request,
+    session: SessionDep,
+    learner_id: LearnerIdDep,
+    llm: LLMDep,
+    text_id: Annotated[int, Form()],
+    text: Annotated[str, Form()],
+) -> HTMLResponse:
+    if not text.strip() or len(text) > MAX_GIST_TEXT:
+        return _refused(request, "Текст порожній або задовгий.")
+    try:
+        asked = await make_questions(session, llm, learner_id, text_id, text)
+    except PermissionError as error:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN) from error
+    return templates.TemplateResponse(
+        request,
+        "reading/questions.html",
+        {"questions": asked, "text_id": text_id, "text": text, "max_answer": MAX_FACT_ANSWER},
+    )
+
+
+@router.post("/answers", response_class=HTMLResponse)
+async def fact_answers(
+    request: Request,
+    session: SessionDep,
+    learner_id: LearnerIdDep,
+    llm: LLMDep,
+    text_id: Annotated[int, Form()],
+    text: Annotated[str, Form()],
+    questions: Annotated[list[str] | None, Form()] = None,
+    answers: Annotated[list[str] | None, Form()] = None,
+) -> HTMLResponse:
+    asked = [question.strip() for question in questions or []]
+    # A browser sends a newline as two characters, which the limit must not count twice.
+    given = [answer.replace("\r\n", "\n").strip() for answer in answers or []]
+    if not asked or len(asked) > FACT_QUESTIONS_ABOVE or len(asked) != len(given):
+        return _refused(request, "Запитання не збігаються з відповідями.")
+    if not all(given):
+        return _refused(request, "Напишіть відповідь на кожне запитання.")
+    if (
+        len(text) > MAX_GIST_TEXT
+        or any(len(question) > MAX_QUESTION for question in asked)
+        or any(len(answer) > MAX_FACT_ANSWER for answer in given)
+    ):
+        return _refused(request, "Відповідь, запитання або текст задовгі.")
+    try:
+        verdicts = await check_answers(session, llm, learner_id, text_id, text, asked, given)
+    except PermissionError as error:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN) from error
+    rows = [
+        {
+            "question": question,
+            "answer": answer,
+            "label": FACT_LABEL[verdict.verdict],
+            "reason": verdict.reason,
+        }
+        for question, answer, verdict in zip(asked, given, verdicts, strict=True)
+    ]
+    return templates.TemplateResponse(request, "reading/answers.html", {"rows": rows})
 
 
 @router.get("/progress", response_class=HTMLResponse)
