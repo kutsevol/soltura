@@ -2,6 +2,21 @@
 
 <!-- version list -->
 
+## v0.56.0 (2026-11-15)
+
+### Features
+
+- **reading**: Ask fact questions about a text and judge the answers
+  ([#91](https://github.com/kutsevol/soltura/pull/91),
+  [`4d85f59`](https://github.com/kutsevol/soltura/commit/4d85f599428c9c1d0f66b633c2cd38aa9ddf8610))
+
+### Testing
+
+- **grammar**: Assert the level label on the progress page
+  ([#90](https://github.com/kutsevol/soltura/pull/90),
+  [`2232019`](https://github.com/kutsevol/soltura/commit/2232019918c82a354533126452207c8f1bf5cbf6))
+
+
 ## v0.55.0 (2026-11-14)
 
 ### Features
