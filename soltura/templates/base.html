@@ -22,7 +22,15 @@
       <a href="/help" class="help-link" aria-label="Як це працює">?</a>
     </div>
   </header>
+  {% set menu = section_menu(request.url.path) %}
   <main class="container">
+    {% if menu %}
+      <nav class="section-menu" aria-label="{{ menu.label }}">
+        {% for item in menu.items %}
+          <a href="{{ item.href }}" role="button"{% if item.current %} aria-current="page"{% else %} class="outline secondary"{% endif %}>{{ item.label }}</a>
+        {% endfor %}
+      </nav>
+    {% endif %}
     {% block content %}{% endblock %}
   </main>
   <nav class="tabbar" aria-label="Розділи">
