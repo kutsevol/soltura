@@ -1,5 +1,7 @@
+import random
 from dataclasses import dataclass
 from datetime import datetime
+from enum import StrEnum
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,7 +16,10 @@ from soltura.conjugation.service import (
     ConjugationItem,
     ConjugationResult,
     ConjugationSession,
+    PracticeItem,
     TenseAccuracy,
+    check_practice,
+    practice_queue,
     regular_endings,
     tense_accuracy,
     verb_forms,
@@ -150,6 +155,32 @@ async def answer_item(
     return ConjugationResult(
         rating=rating, check=check, expected=expected, verb=parsed[0], tense=parsed[1]
     )
+
+
+class PracticeProblem(StrEnum):
+    UNKNOWN_VERB = "unknown_verb"
+    NO_TENSE = "no_tense"
+
+
+class InvalidPractice(Exception):
+    def __init__(self, problem: PracticeProblem) -> None:
+        super().__init__(problem)
+        self.problem = problem
+
+
+def start_practice(
+    verb: str, tenses: list[Tense], rng: random.Random | None = None
+) -> list[PracticeItem]:
+    if not tenses:
+        raise InvalidPractice(PracticeProblem.NO_TENSE)
+    queue = practice_queue(verb, tenses, rng or random.Random())
+    if queue is None:
+        raise InvalidPractice(PracticeProblem.UNKNOWN_VERB)
+    return queue
+
+
+def answer_practice(item: PracticeItem, answer: str) -> ConjugationResult:
+    return check_practice(item, answer)
 
 
 async def conjugation_progress(session: AsyncSession, learner_id: int) -> list[TenseAccuracy]:

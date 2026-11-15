@@ -6,6 +6,7 @@ from soltura.conjugation.service import (
     MIN_ANSWERS,
     ConjugationItem,
     ConjugationResult,
+    PracticeItem,
     TenseAccuracy,
 )
 from soltura.learner.models import Rating
@@ -45,6 +46,35 @@ class NoteView:
     title: str
     rule: str
     examples: list[str]
+
+
+@dataclass(frozen=True)
+class PracticeCardView:
+    verb: str
+    tense: str
+    pronoun: str
+    remaining: int
+
+
+@dataclass(frozen=True)
+class TenseChoice:
+    value: str
+    label: str
+    checked: bool
+
+
+def tense_choices() -> list[TenseChoice]:
+    # Only the present is ticked, so a beginner starts with one tense.
+    return [TenseChoice(tense.value, TENSE_LABEL[tense], tense == Tense.PRESENT) for tense in Tense]
+
+
+def practice_card_view(item: PracticeItem, remaining: int) -> PracticeCardView:
+    return PracticeCardView(
+        verb=item.verb,
+        tense=TENSE_LABEL[item.tense],
+        pronoun=PRONOUN_LABEL[item.person],
+        remaining=remaining,
+    )
 
 
 @dataclass(frozen=True)

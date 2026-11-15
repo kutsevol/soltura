@@ -9,7 +9,7 @@
   <p class="note">{{ note.examples | join(" · ") }}</p>
 {% endfor %}
 <p class="note"><a href="/conjugation/verbs/{{ result.verb | urlencode }}">Усі форми: {{ result.verb }}</a></p>
-<form hx-post="/conjugation/next" hx-target="#card">
+<form hx-post="{{ next_url | default('/conjugation/next') }}" hx-target="{{ next_target | default('#card') }}">
   <input type="hidden" name="queue" value="{{ queue_json }}">
   <button type="submit" autofocus>Далі</button>
 </form>
