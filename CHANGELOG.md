@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.63.0 (2026-11-15)
+
+### Features
+
+- Give each module a menu of buttons for its pages
+  ([#100](https://github.com/kutsevol/soltura/pull/100),
+  [`c8b1093`](https://github.com/kutsevol/soltura/commit/c8b1093b37659cfb3eb4061f77ed9baef9321e36))
+
+
 ## v0.62.0 (2026-11-15)
 
 ### Features
