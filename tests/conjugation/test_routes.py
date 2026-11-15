@@ -110,9 +110,11 @@ async def test_the_page_of_a_verb_lists_every_tense_and_person(learner_client: A
     page = await learner_client.get("/conjugation/verbs/ser")
 
     assert page.status_code == 200
-    assert page.text.count("<tr>") == 24
+    assert page.text.count("<tr>") == 36
     assert "<td>soy</td>" in page.text and "<td>fueron</td>" in page.text
+    assert "<td>serían</td>" in page.text and "<td>seáis</td>" in page.text
     assert "presente" in page.text and "futuro" in page.text
+    assert "condicional" in page.text and "subjuntivo" in page.text
 
 
 @pytest.mark.parametrize("verb", ["zzzar", "llover", "resultar", "dar%20%C3%A9l", "x"])

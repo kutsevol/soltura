@@ -64,6 +64,8 @@ def test_haber_has_its_own_auxiliary_forms_in_every_tense() -> None:
         Tense.PRETERITE: ["hube", "hubiste", "hubo", "hubimos", "hubisteis", "hubieron"],
         Tense.IMPERFECT: ["había", "habías", "había", "habíamos", "habíais", "habían"],
         Tense.FUTURE: ["habré", "habrás", "habrá", "habremos", "habréis", "habrán"],
+        Tense.CONDITIONAL: ["habría", "habrías", "habría", "habríamos", "habríais", "habrían"],
+        Tense.SUBJUNCTIVE: ["haya", "hayas", "haya", "hayamos", "hayáis", "hayan"],
     }
 
 
@@ -73,6 +75,15 @@ def test_pasar_takes_the_endings_of_a_regular_ar_verb() -> None:
         Tense.PRETERITE: ["pasé", "pasaste", "pasó", "pasamos", "pasasteis", "pasaron"],
         Tense.IMPERFECT: ["pasaba", "pasabas", "pasaba", "pasábamos", "pasabais", "pasaban"],
         Tense.FUTURE: ["pasaré", "pasarás", "pasará", "pasaremos", "pasaréis", "pasarán"],
+        Tense.CONDITIONAL: [
+            "pasaría",
+            "pasarías",
+            "pasaría",
+            "pasaríamos",
+            "pasaríais",
+            "pasarían",
+        ],
+        Tense.SUBJUNCTIVE: ["pase", "pases", "pase", "pasemos", "paséis", "pasen"],
     }
 
 
@@ -97,3 +108,57 @@ def test_a_regular_model_that_is_not_regular_breaks_loudly(
 
     with pytest.raises(ValueError, match="not regular"):
         conjugate("contar", Tense.PRETERITE, Person.YO)
+
+
+CONDITIONAL_AND_SUBJUNCTIVE = {
+    "ser": (
+        ("sería", "serías", "sería", "seríamos", "seríais", "serían"),
+        ("sea", "seas", "sea", "seamos", "seáis", "sean"),
+    ),
+    "ir": (
+        ("iría", "irías", "iría", "iríamos", "iríais", "irían"),
+        ("vaya", "vayas", "vaya", "vayamos", "vayáis", "vayan"),
+    ),
+    "tener": (
+        ("tendría", "tendrías", "tendría", "tendríamos", "tendríais", "tendrían"),
+        ("tenga", "tengas", "tenga", "tengamos", "tengáis", "tengan"),
+    ),
+    "hacer": (
+        ("haría", "harías", "haría", "haríamos", "haríais", "harían"),
+        ("haga", "hagas", "haga", "hagamos", "hagáis", "hagan"),
+    ),
+    "poder": (
+        ("podría", "podrías", "podría", "podríamos", "podríais", "podrían"),
+        ("pueda", "puedas", "pueda", "podamos", "podáis", "puedan"),
+    ),
+    "querer": (
+        ("querría", "querrías", "querría", "querríamos", "querríais", "querrían"),
+        ("quiera", "quieras", "quiera", "queramos", "queráis", "quieran"),
+    ),
+    "venir": (
+        ("vendría", "vendrías", "vendría", "vendríamos", "vendríais", "vendrían"),
+        ("venga", "vengas", "venga", "vengamos", "vengáis", "vengan"),
+    ),
+    "decir": (
+        ("diría", "dirías", "diría", "diríamos", "diríais", "dirían"),
+        ("diga", "digas", "diga", "digamos", "digáis", "digan"),
+    ),
+    "saber": (
+        ("sabría", "sabrías", "sabría", "sabríamos", "sabríais", "sabrían"),
+        ("sepa", "sepas", "sepa", "sepamos", "sepáis", "sepan"),
+    ),
+    "poner": (
+        ("pondría", "pondrías", "pondría", "pondríamos", "pondríais", "pondrían"),
+        ("ponga", "pongas", "ponga", "pongamos", "pongáis", "pongan"),
+    ),
+}
+
+
+@pytest.mark.parametrize("verb", list(CONDITIONAL_AND_SUBJUNCTIVE))
+def test_the_conditional_and_the_present_subjunctive_of_irregular_verbs_are_right(
+    verb: str,
+) -> None:
+    conditional, subjunctive = CONDITIONAL_AND_SUBJUNCTIVE[verb]
+
+    assert tuple(conjugate(verb, Tense.CONDITIONAL, person) for person in Person) == conditional
+    assert tuple(conjugate(verb, Tense.SUBJUNCTIVE, person) for person in Person) == subjunctive
