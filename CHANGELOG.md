@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.66.0 (2026-11-16)
+
+### Features
+
+- **grammar**: Add the A1 units for the numbers, the quantity words and the links
+  ([#103](https://github.com/kutsevol/soltura/pull/103),
+  [`b1bdf0f`](https://github.com/kutsevol/soltura/commit/b1bdf0f941c2efde88b52928c3b7e718ff09ed61))
+
+
 ## v0.65.0 (2026-11-16)
 
 ### Features
