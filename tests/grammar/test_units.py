@@ -32,6 +32,8 @@ def test_the_registry_lists_the_units_in_teaching_order() -> None:
         "ser_estar",
     ]
     assert [unit_id for unit_id in ids if unit_id in verb_units] == verb_units
+    later_units = ["ser_estar", "question_words", "hay_estar", "demonstratives", "possessives"]
+    assert [unit_id for unit_id in ids if unit_id in later_units] == later_units
 
 
 def test_a_new_learner_starts_with_an_a1_unit() -> None:
@@ -44,7 +46,7 @@ def test_a_learner_part_way_through_gets_the_unstarted_a1_units_before_the_next_
     started = {"articles", "gender_of_nouns", "adjective_agreement", "ser_estar"}
 
     following: list[str] = []
-    while (unit := next_unit(started)) is not None and len(following) < 7:
+    while (unit := next_unit(started)) is not None and len(following) < 8:
         following.append(unit.id)
         started.add(unit.id)
 
@@ -55,6 +57,7 @@ def test_a_learner_part_way_through_gets_the_unstarted_a1_units_before_the_next_
         "present_ar",
         "present_er_ir",
         "present_ir",
+        "question_words",
         "hay_estar",
     ]
 
