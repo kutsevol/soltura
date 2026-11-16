@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v0.65.0 (2026-11-16)
+
+### Features
+
+- **grammar**: Add the A1 units for the possessives and the question words
+  ([#102](https://github.com/kutsevol/soltura/pull/102),
+  [`b569a39`](https://github.com/kutsevol/soltura/commit/b569a3918a951d1960873aa8860a23315f269076))
+
+
 ## v0.64.0 (2026-11-15)
 
 ### Features
