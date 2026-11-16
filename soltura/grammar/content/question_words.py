@@ -61,8 +61,8 @@ UNIT = GrammarUnit(
         ),
         Exercise(
             id="e5",
-            sentence="¿___ lees? Leo un libro.",
-            translation="Що ти читаєш? Я читаю книгу.",
+            sentence="¿___ bebes? Bebo agua.",
+            translation="Що ти п’єш? Я п’ю воду.",
             options=(),
             answer="Qué",
             note="Питаємо про предмет: qué, з наголосом.",

@@ -9,7 +9,7 @@ UNIT = GrammarUnit(
         points=(
             "Присвійні кажуть, чиє: mi (мій, моя), tu (твій, твоя), su (його, її, Ваш, їхній), nuestro (наш), vuestro (ваш, коли кажемо «ти» кільком людям).",
             "Mi, tu і su узгоджуються з предметом за числом, а за родом не змінюються: mi libro, mi casa, mis libros, mis casas. Nuestro і vuestro змінюються і за родом, і за числом: nuestro libro, nuestra casa, nuestros libros, nuestras casas.",
-            "Узгоджуємо з тим, що належить, а не з власником: nuestra casa, бо casa — жіночого роду, хоч би хто там жив.",
+            "Узгоджуємо з тим, що належить, а не з власником: nuestra casa, бо casa — жіночого роду, незалежно від того, хто там живе.",
             "Присвійне стоїть перед іменником і без артикля: mi libro, а не el mi libro і не libro mi.",
             "Su може означати його, її, Ваш або їхній. Хто саме, видно з контексту; щоб уточнити, замість su кажемо артикль, іменник і de él, de ella, de usted, de ellos, de ellas: la casa de ella.",
             "Tu (твій) пишемо без наголосу, а tú (ти) — з наголосом: tu casa, tú vives.",
