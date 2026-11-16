@@ -9,7 +9,7 @@ UNIT = GrammarUnit(
         points=(
             "También — «теж, також»: додаємо до того, що сказали. Soy alemán. — Yo también. («Я німець. — Я теж.»)",
             "Tampoco — «теж ні, також не»: додаємо до заперечення. No hablo francés. — Yo tampoco. («Я не розмовляю французькою. — Я теж ні.»)",
-            "Правило просте: після «так» — también, після «ні» — tampoco. Не кажемо yo también no і yo no también: у запереченні tampoco.",
+            "Правило просте: після «так» — también, після «ні» — tampoco. Не кажемо yo también no і yo no también: у запереченні tampoco. Коли не погоджуємося, кажемо Yo no або Yo sí: Soy alemán. — Yo no. No hablo francés. — Yo sí.",
             "Tampoco, як і no, робить речення заперечним. Перед дієсловом no не потрібне: Yo tampoco voy. Після дієслова no треба: No voy tampoco.",
             "Часто відповідаємо без дієслова: Yo también, Yo tampoco, а про когось іншого: Mi hermana también, Mis padres tampoco.",
         ),

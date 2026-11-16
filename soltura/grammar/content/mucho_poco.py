@@ -11,14 +11,14 @@ UNIT = GrammarUnit(
             "Mucho і poco узгоджуються з іменником у роді й числі: mucho, mucha, muchos, muchas; poco, poca, pocos, pocas: muchos amigos, poca leche.",
             "Bastante змінюється лише за числом: bastante dinero, bastantes problemas.",
             "З незлічуваним іменником (dinero, tiempo, leche, agua, gente) ставимо однину: mucho dinero, poca agua. Слово gente — збірне, в однині й жіночого роду: mucha gente. Agua жіночого роду, хоч і el agua: mucha agua. З лічильним іменником ставимо множину: muchos amigos, pocas casas.",
-            "Так само з hay: hay poca leche. Про погоду кажуть hace mucho calor, hace mucho frío — це готові вирази. Перед прикметником і прислівником кажемо muy, а не mucho: muy grande, muy bien.",
+            "Так само з hay: hay poca leche. З tengo так само: tengo mucho calor, tengo mucho frío — «мені дуже жарко, дуже холодно». Перед прикметником і прислівником кажемо muy, а не mucho: muy grande, muy bien.",
         ),
         examples=(
             Example(
                 spanish="Tengo muchos amigos en España.",
                 ukrainian="У мене багато друзів в Іспанії.",
             ),
-            Example(spanish="Hace mucho calor.", ukrainian="Дуже спекотно."),
+            Example(spanish="Tengo mucho calor.", ukrainian="Мені дуже жарко."),
             Example(
                 spanish="Hay poca leche en la nevera.", ukrainian="У холодильнику мало молока."
             ),

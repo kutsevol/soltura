@@ -12,7 +12,6 @@ UNIT = GrammarUnit(
             "Pero — «але»: протиставлення. Hablo español, pero no hablo francés.",
             "Ni — «ні... ні» у запереченні: No como ni carne ni pescado. Можна й коротше, з одним ni: No como carne ni pescado («не їм м’яса ні риби»).",
             "Uno... otro — «один... інший» без іменника, про жінок una... otra: Uno habla español, otro habla francés.",
-            "Перед словами на i- і hi- замість y кажуть e, а перед o- і ho- замість o кажуть u (padre e hijo, siete u ocho): докладніше пізніше.",
         ),
         examples=(
             Example(
@@ -54,7 +53,7 @@ UNIT = GrammarUnit(
             id="e3",
             sentence="Mi hermano estudia ___ trabaja.",
             translation="Мій брат вчиться й працює.",
-            options=("y", "pero"),
+            options=("y", "ni"),
             answer="y",
             note="З’єднуємо дві дії: y.",
         ),
