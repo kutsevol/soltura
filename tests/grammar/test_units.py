@@ -32,7 +32,18 @@ def test_the_registry_lists_the_units_in_teaching_order() -> None:
         "ser_estar",
     ]
     assert [unit_id for unit_id in ids if unit_id in verb_units] == verb_units
-    later_units = ["ser_estar", "question_words", "hay_estar", "demonstratives", "possessives"]
+    later_units = [
+        "ser_estar",
+        "question_words",
+        "hay_estar",
+        "demonstratives",
+        "possessives",
+        "numbers",
+        "mucho_poco",
+        "tambien_tampoco",
+        "conjunctions",
+        "reflexive_verbs",
+    ]
     assert [unit_id for unit_id in ids if unit_id in later_units] == later_units
 
 
